@@ -482,25 +482,30 @@ class Gcm_Reunion_Controller extends Controller
 
             $response = $reunion->save();
 
-            // $convocados = json_decode($request->convocadosA, true);
+            $convocados = json_decode($request->convocados, true);
+            for ($i=0; $i < count($convocados); $i++) {
+                DB::table('gcm_convocados_reunion')->where('id_reunion', '=', $convocados[$i]['id_reunion'])->delete();
+            }
+        
+            $convocadosI = json_decode($request->convocadosI, true);
+            for ($i=0; $i < count($convocadosI); $i++) {
+                
+                $convocado = new Gcm_Convocado_Reunion;
+                $convocado->id_reunion = $convocadosI[$i]['id_reunion'];
+                $convocado->id_usuario = $convocadosI[$i]['id_usuario'];
+                $convocado->id_relacion = $convocadosI[$i]['id_relacion'];
+                $convocado->tipo = $convocadosI[$i]['tipo'];
+                $convocado->identificacion = $convocadosI[$i]['identificacion'];
+                $convocado->razon_social = $convocadosI[$i]['razon_social'];
+                $convocado->correo = $convocadosI[$i]['correo'];
+                $convocado->rol = $convocadosI[$i]['rol'];
+                $convocado->telefono = $convocadosI[$i]['telefono'];
+                $convocado->participacion = 0;
+                // $convocado->nit = $convocadosI[$i]['nit'];
+                // $convocado->entity = $convocadosI[$i]['entity'];
 
-            // for ($i=0; $i < count($convocadosA); $i++) {
-            //     $convocado = new Gcm_Convocado_Reunion;
-            //     $convocado->id_reunion = $convocados[$i]['id_reunion'];
-            //     $convocado->id_usuario = $convocados[$i]['id_usuario'];
-            //     $convocado->id_relacion = $convocados[$i]['id_relacion'];
-            //     $convocado->tipo = $convocados[$i]['tipo'];
-            //     $convocado->identificacion = $convocados[$i]['identificacion'];
-            //     $convocado->razon_social = $convocados[$i]['razon_social'];
-            //     $convocado->correo = $convocados[$i]['correo'];
-            //     $convocado->rol = $convocados[$i]['rol'];
-            //     $convocado->participacion = $convocados[$i]['participacion'];
-            //     $convocado->nit = $convocados[$i]['nit'];
-            //     $convocado->entity = $convocados[$i]['entity'];
-            //     $convocado->telefono = $convocados[$i]['telefono'];
-
-            //     $response = $convocado->save();
-            // }
+                $response = $convocado->save();
+            }
             
             DB::commit();
             return response()->json(["response" => $response], 200);

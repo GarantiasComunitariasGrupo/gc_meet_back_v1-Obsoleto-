@@ -24,6 +24,7 @@ class Gcm_Convocado_Reunion extends Model
         'correo',
         'razon_social',
         'rol',
-        'participacion'
+        'participacion',
+        'telefono'
     ];
 }
