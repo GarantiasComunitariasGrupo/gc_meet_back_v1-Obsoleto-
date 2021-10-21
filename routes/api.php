@@ -8,6 +8,7 @@ use App\Http\Controllers\Gcm_Rol_Controller;
 use App\Http\Controllers\Gcm_Recurso_Controller;
 use App\Http\Controllers\Gcm_TipoReunion_Controller;
 use App\Http\Controllers\Gcm_Reunion_Controller;
+use App\Http\Controllers\Gcm_Acceso_Reunion_Controller;
 
 /*
 |--------------------------------------------------------------------------
@@ -188,4 +189,14 @@ Route::group([
     Route::get('/traer-convocadosA/{id_reunion}', [Gcm_Reunion_Controller::class, 'getConvocadosA']);
     Route::get('/traer-convocadosI/{id_reunion}', [Gcm_Reunion_Controller::class, 'getConvocadosI']);
     Route::get('/autocompletar/{identificacion}', [Gcm_Reunion_Controller::class, 'autocompletar']);
+});
+
+Route::group([
+    'prefix' => 'acceso-reunion'
+], function ($router) {
+    Route::get('lista-convocados-reunion/{id_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'getListaConvocados']);
+    Route::post('/guardar-acceso-reunion', [Gcm_Acceso_Reunion_Controller::class, 'guardarAccesoReunion']);
+    Route::post('/guardar-representante-reunion', [Gcm_Acceso_Reunion_Controller::class, 'guardarRepresentante']);
+    Route::get('/consultar-representante/{id_reunion}/{id_recurso}', [Gcm_Acceso_Reunion_Controller::class, 'consultarRepresentante']);
+    Route::post('/cancelarInvitacion', [Gcm_Acceso_Reunion_Controller::class, 'cancelarInvitacion']);
 });

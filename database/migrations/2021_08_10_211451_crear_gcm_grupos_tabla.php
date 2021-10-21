@@ -20,6 +20,7 @@ class CrearGcmGruposTabla extends Migration
             $table->string('descripcion', 255)->required();
             $table->string('estado', 2)->index()->required();
             $table->string('imagen', 255)->nullable();
+            $table->string('url_logo', 255)->nullable();
         });
     }
 
