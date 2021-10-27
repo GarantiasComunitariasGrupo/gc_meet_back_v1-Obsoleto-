@@ -21,7 +21,7 @@ class CrearGcmTipoReunionesTabla extends Migration
             $table->string('honorifico_participante', 50)->required();
             $table->string('honorifico_invitado', 50)->required();
             $table->string('honorifico_representante', 50)->required();
-            $table->string('imagen', 255)->required();
+            $table->string('imagen', 255)->nullable();
             $table->string('estado', 2)->index()->required();
             $table->unique(['id_grupo', 'titulo']);
         });

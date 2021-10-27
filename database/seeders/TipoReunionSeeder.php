@@ -20,7 +20,7 @@ class TipoReunionSeeder extends Seeder
             'honorifico_participante' => 'Participantes',
             'honorifico_invitado' => 'Invitados',
             'honorifico_representante' => 'Representantes',
-            'imagen' => 'ejemplo',
+            'imagen' => null,
             'estado' => 1,
         ]);
     }
