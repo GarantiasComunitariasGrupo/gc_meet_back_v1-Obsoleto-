@@ -20,6 +20,7 @@ class Gcm_Tipo_Reunion extends Model
         'honorifico_participante',
         'honorifico_invitado',
         'honorifico_representante',
-        'estado'
+        'imagen',
+        'estado',
     ];
 }

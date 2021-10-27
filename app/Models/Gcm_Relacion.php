@@ -18,7 +18,6 @@ class Gcm_Relacion extends Model
         'id_grupo',
         'id_rol',
         'id_recurso',
-        'participacion',
         'estado',
     ];
 }

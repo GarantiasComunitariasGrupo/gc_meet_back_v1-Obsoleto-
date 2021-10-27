@@ -32,6 +32,6 @@ class TestMail extends Mailable
      */
     public function build()
     {
-        return $this->subject('Registro en plataforma de junstas y asambleas')->view('emails.mensaje')->with('data', $this->detalle);
+        return $this->subject('Registro en plataforma de juntas y asambleas')->view('emails.mensaje')->with('data', $this->detalle);
     }
 }

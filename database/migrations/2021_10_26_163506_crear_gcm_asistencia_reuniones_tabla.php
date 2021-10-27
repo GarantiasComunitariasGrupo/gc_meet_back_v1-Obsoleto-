@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CrearGcmAsistenciaReuniones extends Migration
+class CrearGcmAsistenciaReunionesTabla extends Migration
 {
     /**
      * Run the migrations.
@@ -15,10 +15,10 @@ class CrearGcmAsistenciaReuniones extends Migration
     {
         Schema::create('gcm_asistencia_reuniones', function (Blueprint $table) {
             $table->unsignedBigInteger('id_convocado_reunion')->primary();
+            $table->foreign('id_convocado_reunion')->references('id_convocado_reunion')->on('gcm_convocados_reunion');
             $table->dateTime('fecha_ingreso')->required();
             $table->dateTime('fecha_salida')->nullable();
-            $table->string('direccion_ip', 50)->required();
-            $table->foreign('id_convocado_reunion')->references('id_convocado_reunion')->on('gcm_convocados_reunion');
+            $table->string('estado', 1)->required();
         });
     }
 

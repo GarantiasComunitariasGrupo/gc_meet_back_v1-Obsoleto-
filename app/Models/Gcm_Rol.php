@@ -15,10 +15,8 @@ class Gcm_Rol extends Model
 
     protected $fillable = [
         'id_rol',
-        'id_usuario',
         'descripcion',
-        'estado',
         'relacion',
-        'fecha',
+        'estado',
     ];
 }

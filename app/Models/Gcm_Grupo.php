@@ -15,9 +15,10 @@ class Gcm_Grupo extends Model
 
     protected $fillable = [
         'id_grupo',
-        'id_usuario',
+        'acceso',
         'descripcion',
-        'estado',
         'imagen',
+        'logo',
+        'estado',
     ];
 }

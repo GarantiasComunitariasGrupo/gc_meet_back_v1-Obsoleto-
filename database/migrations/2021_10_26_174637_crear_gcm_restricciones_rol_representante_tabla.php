@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CrearGcmRestriccionesRepresentantesTable extends Migration
+class CrearGcmRestriccionesRolRepresentanteTabla extends Migration
 {
     /**
      * Run the migrations.
@@ -13,14 +13,14 @@ class CrearGcmRestriccionesRepresentantesTable extends Migration
      */
     public function up()
     {
-        Schema::create('gcm_restricciones_representantes', function (Blueprint $table) {
+        Schema::create('gcm_restricciones_rol_representante', function (Blueprint $table) {
             $table->unsignedBigInteger('id_tipo_reunion');
             $table->foreign('id_tipo_reunion')->references('id_tipo_reunion')->on('gcm_tipo_reuniones');
-            $table->string('tipo', 2)->required();
-            $table->string('id_elemento', 20)->required();
+            $table->unsignedBigInteger('id_rol');
+            $table->foreign('id_rol')->references('id_rol')->on('gcm_roles');
             $table->string('descripcion', 5000)->required();
             $table->string('estado', 2)->index()->required();
-            $table->primary(['id_tipo_reunion', 'tipo', 'id_elemento'], 'pk_restricciones_representantes');
+            $table->primary(['id_tipo_reunion', 'id_rol'], 'id_rrr');
         });
     }
 
@@ -31,6 +31,6 @@ class CrearGcmRestriccionesRepresentantesTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('gcm_restricciones_representantes');
+        Schema::dropIfExists('gcm_restricciones_rol_representante');
     }
 }

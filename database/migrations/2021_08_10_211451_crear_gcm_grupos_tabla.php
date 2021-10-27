@@ -15,12 +15,12 @@ class CrearGcmGruposTabla extends Migration
     {
         Schema::create('gcm_grupos', function (Blueprint $table) {
             $table->bigIncrements('id_grupo');
-            $table->unsignedBigInteger('id_usuario'); 
-            $table->foreign('id_usuario')->references('id_usuario')->on('gcm_usuarios');
-            $table->string('descripcion', 255)->required();
-            $table->string('estado', 2)->index()->required();
+            $table->string('acceso', 20)->nullable();
+            $table->foreign('acceso')->references('id_usuario')->on('gcm_usuarios');
+            $table->string('descripcion', 255)->unique()->required();
             $table->string('imagen', 255)->nullable();
-            $table->string('url_logo', 255)->nullable();
+            $table->string('logo', 255)->nullable();
+            $table->string('estado', 2)->index()->required();
         });
     }
 
