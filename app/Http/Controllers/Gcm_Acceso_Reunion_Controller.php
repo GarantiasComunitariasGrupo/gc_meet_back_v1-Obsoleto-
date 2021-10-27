@@ -12,39 +12,32 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
     public function getListaConvocados($idReunion)
     {
-        $queryInvitados = DB::table('gcm_convocados_reunion')
-        ->where('tipo', 1)
-        ->where('id_reunion', $idReunion)
-        ->select(DB::raw('*, NULL AS id_recurso'));
-
-        $base = DB::query()->fromSub(function ($query) use ($queryInvitados, $idReunion) {
-            $query->from('gcm_convocados_reunion AS cr')
-            ->leftJoin(DB::raw('gcm_relaciones AS rl'), 'cr.id_relacion', '=', 'rl.id_relacion')
-            ->leftJoin(DB::raw('gcm_recursos AS rs'), 'rl.id_recurso', '=', 'rs.id_recurso')
-            ->leftJoin(DB::raw('gcm_roles AS rls'), 'rl.id_rol', '=', 'rls.id_rol')
-            ->where('tipo', 0)
-            ->where('id_reunion', $idReunion)
-            ->unionAll($queryInvitados)->select([
-                'cr.id_convocado_reunion', 'cr.id_reunion',
-                'cr.id_usuario', 'cr.id_relacion', 'cr.fecha',
-                'cr.tipo', 'rs.identificacion', 'rs.correo',
-                'rs.razon_social', DB::raw('rls.descripcion AS rol'),
-                'rl.participacion', 'rs.telefono', 'rs.id_recurso'
-            ]);
-        }, 'convocados')
-        ->leftJoin(DB::raw('gcm_recursos AS rs'), 'convocados.identificacion', '=', 'rs.representante')
-        ->get([DB::raw('convocados.*, rs.identificacion AS nit, rs.razon_social AS entity')]);
+        $base = DB::table(DB::raw('gcm_convocados_reunion AS gcr'))
+        ->join(DB::raw('gcm_relaciones AS grc'), 'gcr.id_relacion', '=', 'grc.id_relacion')
+        ->join(DB::raw('gcm_recursos AS grs'), 'grc.id_recurso', '=', 'grs.id_recurso')
+        ->join(DB::raw('gcm_roles AS grl'), 'grc.id_rol', '=', 'grl.id_rol')
+        ->where(DB::raw('gcr.id_reunion'), $idReunion)
+        ->select([
+            DB::raw('grs.*'),
+            DB::raw('grl.id_rol'),
+            DB::raw('grl.descripcion AS rol'),
+            'grc.id_grupo',
+            'gcr.id_convocado_reunion',
+            'gcr.nit',
+            'gcr.razon_social',
+            'gcr.participacion',
+            'gcr.representacion'
+        ])->get();
 
         return $base;
     }
 
     public function guardarAccesoReunion(Request $request)
     {
-        $direccionIp = $_SERVER['REMOTE_ADDR'];
         $response = array();
         $datetime = date('Y-m-d h:i:s');
 
-        $save = DB::statement("INSERT INTO gcm_asistencia_reuniones (id_convocado_reunion, fecha_ingreso, direccion_ip) VALUES ($request->id_convocado_reunion, '{$datetime}', '{$direccionIp}') ON DUPLICATE KEY UPDATE fecha_salida = '{$datetime}'");
+        $save = DB::statement("INSERT INTO gcm_asistencia_reuniones (id_convocado_reunion, fecha_ingreso, estado) VALUES ($request->id_convocado_reunion, '{$datetime}', 1) ON DUPLICATE KEY UPDATE estado = 1");
 
         return response()->json(['ok' => ($save) ? true : false]);
     }
@@ -67,14 +60,32 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
                 if ($move) {
                     
-                    $guardarRepresentante = Gcm_Registro_Representante::create([
-                        'id_recurso' => $request->id_recurso,
-                        'id_reunion' => $request->id_reunion,
-                        'identificacion' => $request->identificacion,
-                        'url_archivo' => 'firmas/' . $filename
-                    ]);
+                    DB::beginTransaction();
 
-                    $response = array('ok' => ($guardarRepresentante) ? true : false, 'response' => $guardarRepresentante);
+                    try {
+                    
+                        /**
+                         * Consultar participacion de quien hace la invitación
+                         */
+
+                         /**
+                          * Consultar recurso
+                          */
+
+                        /**
+                         * Consultar relacion
+                         */
+                        
+                        $recurso;
+                        $relacion;
+                        $convocado;
+
+                        DB::commit();
+                    } catch (\Throwable $th) {
+                        DB::rollback();
+                    }
+
+                    // $response = array('ok' => ($guardarRepresentante) ? true : false, 'response' => $guardarRepresentante);
 
                 } else {
                     $response = array('ok' => false, 'response' => 'No se pudo mover el archivo');

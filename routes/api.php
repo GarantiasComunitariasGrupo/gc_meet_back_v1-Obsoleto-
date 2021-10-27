@@ -193,6 +193,7 @@ Route::group([
 ], function ($router) {
     Route::get('lista-convocados-reunion/{id_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'getListaConvocados']);
     Route::post('/guardar-acceso-reunion', [Gcm_Acceso_Reunion_Controller::class, 'guardarAccesoReunion']);
+    Route::post('/actualizar-acceso-reunion', [Gcm_Acceso_Reunion_Controller::class, 'actualizarAccesoReunion']);
     Route::post('/guardar-representante-reunion', [Gcm_Acceso_Reunion_Controller::class, 'guardarRepresentante']);
     Route::get('/consultar-representante/{id_reunion}/{id_recurso}', [Gcm_Acceso_Reunion_Controller::class, 'consultarRepresentante']);
     Route::post('/cancelarInvitacion', [Gcm_Acceso_Reunion_Controller::class, 'cancelarInvitacion']);
