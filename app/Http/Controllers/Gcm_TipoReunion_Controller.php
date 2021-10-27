@@ -273,17 +273,20 @@ class Gcm_TipoReunion_Controller extends Controller
     public function editarRestriccion($id_tipo_reunion, $id_rol, Request $request) {
 
         $validator = Validator::make($request->all(), [
-            'tipo'=>'required|max:2',
-            'id_elemento'=>'required|max:20',
+            'id_tipo_reunion'=>'required',
+            'id_rol'=>'required',
             'descripcion'=>'required|max:5000',
             'estado'=>'required|max:2',
         ],
+
         [
-            'tipo.required' => '*Rellena este campo',
-            'id_elemento.required' => '*Rellena este campo',
+            'id_tipo_reunion.required' => '*Rellena este campo',
+            'id_rol.required' => '*Rellena este campo',
             'descripcion.required' => '*Rellena este campo',
+            'descripcion.max' => '*Maximo 5000 caracteres',
             'estado.required' => '*Rellena este campo',
         ]
+
         );
 
         if ($validator->fails()) {
@@ -291,18 +294,6 @@ class Gcm_TipoReunion_Controller extends Controller
         }
 
         try {
-
-            $restriccion = Gcm_Restriccion_Representante::where([
-                ['id_tipo_reunion', $request->id_tipo_reunion], 
-                ['tipo', $request->tipo], 
-                ['id_elemento', $request->id_elemento]])->update(
-                ['id_tipo_reunion'=> $request->id_tipo_reunion,
-                'tipo'=> $request->tipo,
-                'id_elemento'=> $request->id_elemento,
-                'descripcion'=> $request->descripcion,
-                'estado'=> $request->estado]);
-    
-            $response = $restriccion;
             
             return response()->json(["response" => $response], 200);
         } catch (\Throwable $th) {
@@ -316,7 +307,7 @@ class Gcm_TipoReunion_Controller extends Controller
     public function cambiarEstadoRestriccion(Request $request) {
         $res;
         try {
-            $restriccion = Gcm_Restriccion_Representante::where([['id_tipo_reunion', $request->id_tipo_reunion], ['tipo',$request->tipo], ['id_elemento', $request->id_elemento]])->update(['estado'=> $request->estado]);
+            $restriccion = Gcm_Restriccion_Representante::where([['id_tipo_reunion', $request->id_tipo_reunion], ['id_rol', $request->id_rol]])->update(['estado'=> $request->estado]);
             
             $res = response()->json(["response" => 'se cambio'], 200);
         } catch (\Throwable $th) {
@@ -328,8 +319,8 @@ class Gcm_TipoReunion_Controller extends Controller
     /**
      * Elimina una restriccion de la base de datos
      */
-    public function eliminarRestriccion($id_tipo_reunion, $tipo, $id_elemento) {
-        $restriccion = Gcm_Restriccion_Representante::where([['id_tipo_reunion', $id_tipo_reunion], ['tipo', $tipo], ['id_elemento', $id_elemento]]);
+    public function eliminarRestriccion($id_tipo_reunion, $id_rol) {
+        $restriccion = Gcm_Restriccion_Representante::where([['id_tipo_reunion', $id_tipo_reunion], ['id_rol', $id_rol]]);
         $res;
         try {
             $restriccion->delete();
