@@ -5,22 +5,23 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Gcm_Pregunta extends Model
+class Gcm_Programacion extends Model
 {
     use HasFactory;
 
-    protected $table = 'gcm_preguntas';
-    protected $primaryKey = 'id_pregunta';
+    protected $table = 'gcm_programacion';
+    protected $primaryKey = 'id_programa';
     public $timestamps = false;
 
     protected $fillable = [
-        'id_pregunta',
+        'id_programa',
         'id_reunion',
-        'descripcion',
         'titulo',
+        'descripcion',
         'orden',
+        'numeracion',
         'tipo',
         'relacion',
-        'extra',
+        'estado',
     ];
 }

@@ -5,19 +5,18 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Gcm_Relacion extends Model
+class Gcm_Asistencia_Reunion extends Model
 {
     use HasFactory;
 
-    protected $table = 'gcm_relaciones';
-    protected $primaryKey = 'id_relacion';
+    protected $table = 'gcm_asistencia_reuniones';
+    protected $primaryKey = 'id_convocado_reunion';
     public $timestamps = false;
 
     protected $fillable = [
-        'id_relacion',
-        'id_grupo',
-        'id_rol',
-        'id_recurso',
+        'id_convocado_reunion',
+        'fecha_ingreso',
+        'fecha_salida',
         'estado',
     ];
 }

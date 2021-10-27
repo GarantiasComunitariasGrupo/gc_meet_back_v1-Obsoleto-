@@ -18,11 +18,10 @@ class CrearGcmReunionesTabla extends Migration
             $table->unsignedBigInteger('id_tipo_reunion');
             $table->foreign('id_tipo_reunion')->references('id_tipo_reunion')->on('gcm_tipo_reuniones');
             $table->string('descripcion', 5000)->nullable();
-            $table->timestampTz('fecha_creacion', $precision = 0);
+            $table->timestampTz('fecha_actualizacion', $precision = 0);
             $table->date('fecha_reunion')->required();
             $table->time('hora')->required();
-            $table->string('lugar', 100)->nullable();
-            $table->integer('quorum')->nullable();
+            $table->string('quorum')->index()->required();
             $table->string('estado', 2)->index()->required();
         });
     }

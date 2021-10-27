@@ -135,11 +135,11 @@ Route::group([
     Route::post('/agregar-convocados', [Gcm_Reunion_Controller::class, 'agregarConvocados']);
     Route::get('/traer-convocado/{id_convocado_reunion}', [Gcm_Reunion_Controller::class, 'getConvocado']);
     Route::delete('/eliminar-convocado/{id_convocado_reunion}', [Gcm_Reunion_Controller::class, 'eliminarConvocado']);
-    // Pregunta
-    Route::get('/traer-preguntas/{id_reunion}', [Gcm_Reunion_Controller::class, 'getPreguntas']);
-    Route::post('/agregar-preguntas', [Gcm_Reunion_Controller::class, 'agregarPreguntas']);
-    Route::delete('/eliminar-pregunta/{id_pregunta}', [Gcm_Reunion_Controller::class, 'eliminarPregunta']);
-    Route::get('/traer-pregunta/{id_pregunta}', [Gcm_Reunion_Controller::class, 'getPregunta']);
+    // Programa
+    Route::get('/traer-programas/{id_reunion}', [Gcm_Reunion_Controller::class, 'getProgramas']);
+    Route::post('/agregar-programas', [Gcm_Reunion_Controller::class, 'agregarProgramas']);
+    Route::delete('/eliminar-programa/{id_programa}', [Gcm_Reunion_Controller::class, 'eliminarPrograma']);
+    Route::get('/traer-programa/{id_programa}', [Gcm_Reunion_Controller::class, 'getPrograma']);
     // Grupo
     Route::get('/traer-grupos/{id_usuario}', [Gcm_Reunion_Controller::class, 'getGrupos']);
 });
@@ -153,11 +153,10 @@ Route::group([
     // Reuniones
     Route::get('/traer-reuniones/{id_grupo}', [Gcm_Reunion_Controller::class, 'getReuniones']);
     Route::get('/traer-reunion/{id_reunion}', [Gcm_Reunion_Controller::class, 'getReunion']);
-    Route::get('/traer-id_reunion/{id_grupo}', [Gcm_Reunion_Controller::class, 'traerId']);
     // Grupos
     Route::get('/traer-grupos/{id_usuario}', [Gcm_Reunion_Controller::class, 'getGrupos']);
-    // Preguntas
-    Route::get('/traer-preguntas/{id_reunion}', [Gcm_Reunion_Controller::class, 'getPreguntas']);
+    // Programas
+    Route::get('/traer-programas/{id_reunion}', [Gcm_Reunion_Controller::class, 'getProgramas']);
     // Convocados
     Route::get('/traer-convocados/{id_reunion}', [Gcm_Reunion_Controller::class, 'getConvocados']);
 });
@@ -179,13 +178,11 @@ Route::group([
     Route::get('/traer-roles/{id_reunion}', [Gcm_Reunion_Controller::class, 'getRoles']);
     // Tipos de reuniones
     Route::get('/traer-tiposReuniones/{id_reunion}', [Gcm_Reunion_Controller::class, 'getTiposReuniones']);
-    // Preguntas
-    Route::get('/traer-preguntas/{id_reunion}', [Gcm_Reunion_Controller::class, 'getPreguntas']);
+    // Programas
+    Route::get('/traer-programas/{id_reunion}', [Gcm_Reunion_Controller::class, 'getProgramas']);
     // Recursos
     Route::get('/traer-recursos', [Gcm_Reunion_Controller::class, 'getRecursos']);
     // Convocados
     Route::get('/traer-convocados/{id_reunion}', [Gcm_Reunion_Controller::class, 'getConvocados']);
-    Route::get('/traer-convocadosA/{id_reunion}', [Gcm_Reunion_Controller::class, 'getConvocadosA']);
-    Route::get('/traer-convocadosI/{id_reunion}', [Gcm_Reunion_Controller::class, 'getConvocadosI']);
     Route::get('/autocompletar/{identificacion}', [Gcm_Reunion_Controller::class, 'autocompletar']);
 });

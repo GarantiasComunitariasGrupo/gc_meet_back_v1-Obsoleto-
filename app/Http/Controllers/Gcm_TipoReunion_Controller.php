@@ -27,7 +27,7 @@ class Gcm_TipoReunion_Controller extends Controller
     }
 
     /**
-     * Trae todos los tipos de reunion registrados en la bd
+     * Trae todos los tipos de reunion registrados en la bd donde su estado sea activo
      */
     public function listarTiposReunionSelect() {
         $tiposReunion = Gcm_Tipo_Reunion::where([['estado', '1']])->get();
@@ -35,7 +35,7 @@ class Gcm_TipoReunion_Controller extends Controller
     }
 
     /**
-     * Registra un nuevo ipo reunion en la base de datos
+     * Registra un nuevo tipo reunion en la base de datos
      */
     public function agregarTipoReunion(Request $request) {
 
@@ -45,6 +45,7 @@ class Gcm_TipoReunion_Controller extends Controller
             'honorifico_participante'=>'required|regex:/^[\pL\s\-]+$/u|max:50',
             'honorifico_invitado'=>'required|regex:/^[\pL\s\-]+$/u|max:50',
             'honorifico_representante'=>'required|regex:/^[\pL\s\-]+$/u|max:50',
+            'imagen'=>'required|max:255',
             'estado'=>'required|max:2',
         ],
 
@@ -54,17 +55,18 @@ class Gcm_TipoReunion_Controller extends Controller
             'titulo.max' => '*Máximo 255 caracteres',
             'titulo.regex' => '*Ingresa sólo letras',
             'honorifico_participante.required' => '*Rellena este campo',
-            'honorifico_participante.max' => '*Máximo 255 caracteres',
+            'honorifico_participante.max' => '*Máximo 50 caracteres',
             'honorifico_participante.regex' => '*Ingresa sólo letras',
             'honorifico_invitado.required' => '*Rellena este campo',
-            'honorifico_invitado.max' => '*Máximo 255 caracteres',
+            'honorifico_invitado.max' => '*Máximo 50 caracteres',
             'honorifico_invitado.regex' => '*Ingresa sólo letras',
             'honorifico_representante.required' => '*Rellena este campo',
-            'honorifico_representante.max' => '*Máximo 255 caracteres',
+            'honorifico_representante.max' => '*Máximo 50 caracteres',
             'honorifico_representante.regex' => '*Ingresa sólo letras',
+            'imagen.required' => '*Rellena este campo',
+            'imagen.max' => '*Máximo 255 caracteres',
             'estado.required' => '*Rellena este campo',
         ]
-
         );
 
         if ($validator->fails()) {
@@ -78,6 +80,7 @@ class Gcm_TipoReunion_Controller extends Controller
             $tipoReunionNew->honorifico_participante = $request->honorifico_participante;
             $tipoReunionNew->honorifico_invitado = $request->honorifico_invitado;
             $tipoReunionNew->honorifico_representante = $request->honorifico_representante;
+            $tipoReunionNew->imagen = $request->imagen;
             $tipoReunionNew->estado = $request->estado;
     
             $response = $tipoReunionNew->save();
@@ -107,6 +110,7 @@ class Gcm_TipoReunion_Controller extends Controller
             'honorifico_participante'=>'required|regex:/^[\pL\s\-]+$/u|max:50',
             'honorifico_invitado'=>'required|regex:/^[\pL\s\-]+$/u|max:50',
             'honorifico_representante'=>'required|regex:/^[\pL\s\-]+$/u|max:50',
+            'imagen'=>'required|max:255',
             'estado'=>'required|max:2',
         ],
 
@@ -116,17 +120,18 @@ class Gcm_TipoReunion_Controller extends Controller
             'titulo.max' => '*Máximo 255 caracteres',
             'titulo.regex' => '*Ingresa sólo letras',
             'honorifico_participante.required' => '*Rellena este campo',
-            'honorifico_participante.max' => '*Máximo 255 caracteres',
+            'honorifico_participante.max' => '*Máximo 50 caracteres',
             'honorifico_participante.regex' => '*Ingresa sólo letras',
             'honorifico_invitado.required' => '*Rellena este campo',
-            'honorifico_invitado.max' => '*Máximo 255 caracteres',
+            'honorifico_invitado.max' => '*Máximo 50 caracteres',
             'honorifico_invitado.regex' => '*Ingresa sólo letras',
             'honorifico_representante.required' => '*Rellena este campo',
-            'honorifico_representante.max' => '*Máximo 255 caracteres',
+            'honorifico_representante.max' => '*Máximo 50 caracteres',
             'honorifico_representante.regex' => '*Ingresa sólo letras',
+            'imagen.required' => '*Rellena este campo',
+            'imagen.max' => '*Máximo 255 caracteres',
             'estado.required' => '*Rellena este campo',
         ]
-
         );
 
         if ($validator->fails()) {
@@ -140,6 +145,7 @@ class Gcm_TipoReunion_Controller extends Controller
             $tipoReunion->honorifico_participante = $request->honorifico_participante;
             $tipoReunion->honorifico_invitado = $request->honorifico_invitado;
             $tipoReunion->honorifico_representante = $request->honorifico_representante;
+            $tipoReunion->imagen = $request->imagen;
             $tipoReunion->estado = $request->estado;
     
             $response = $tipoReunion->save();
@@ -210,16 +216,17 @@ class Gcm_TipoReunion_Controller extends Controller
     public function agregarRestriccion(Request $request) {
 
         $validator = Validator::make($request->all(), [
-            'tipo'=>'required|max:2',
-            'id_elemento'=>'required|max:20',
+            'id_tipo_reunion'=>'required',
+            'id_rol'=>'required',
             'descripcion'=>'required|max:5000',
             'estado'=>'required|max:2',
         ],
 
         [
-            'tipo.required' => '*Rellena este campo',
-            'id_elemento.required' => '*Rellena este campo',
+            'id_tipo_reunion.required' => '*Rellena este campo',
+            'id_rol.required' => '*Rellena este campo',
             'descripcion.required' => '*Rellena este campo',
+            'descripcion.max' => '*Maximo 5000 caracteres',
             'estado.required' => '*Rellena este campo',
         ]
 
@@ -232,8 +239,7 @@ class Gcm_TipoReunion_Controller extends Controller
         try {
             $restriccionNueva = new Gcm_Restriccion_Representante;
             $restriccionNueva->id_tipo_reunion = $request->id_tipo_reunion;
-            $restriccionNueva->tipo = $request->tipo;
-            $restriccionNueva->id_elemento = $request->id_elemento;
+            $restriccionNueva->id_rol = $request->id_rol;
             $restriccionNueva->descripcion = $request->descripcion;
             $restriccionNueva->estado = $request->estado;
     
@@ -248,8 +254,8 @@ class Gcm_TipoReunion_Controller extends Controller
     /**
      * Trae todos los datos de una restriccion
      */
-    public function getRestriccion($id_tipo_reunion, $tipo, $id_elemento) {
-        $restriccion = Gcm_Restriccion_Representante::where(['id_tipo_reunion' => $id_tipo_reunion, 'tipo' => $tipo, 'id_elemento' => $id_elemento])->get();
+    public function getRestriccion($id_tipo_reunion, $id_rol) {
+        $restriccion = Gcm_Restriccion_Representante::where(['id_tipo_reunion' => $id_tipo_reunion, 'id_rol' => $id_rol])->get();
         return $restriccion;
     }
 
@@ -264,7 +270,7 @@ class Gcm_TipoReunion_Controller extends Controller
     /**
      * Actualiza todos los datos de una restriccion 
      */
-    public function editarRestriccion($id_tipo_reunion, $tipo, $id_elemento, Request $request) {
+    public function editarRestriccion($id_tipo_reunion, $id_rol, Request $request) {
 
         $validator = Validator::make($request->all(), [
             'tipo'=>'required|max:2',

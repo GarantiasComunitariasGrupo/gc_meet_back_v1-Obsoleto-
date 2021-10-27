@@ -14,15 +14,12 @@ class CrearGcmUsuariosTabla extends Migration
     public function up()
     {
         Schema::create('gcm_usuarios', function (Blueprint $table) {
-            $table->bigIncrements('id_usuario');
-            $table->string('identificacion', 20)->unique()->required();
-            $table->string('nombres', 50)->required();
-            $table->string('apellidos', 50)->required();
-            $table->string('correo', 255)->index()->required();
-            $table->string('telefono', 20)->index()->nullable();
+            $table->string('id_usuario', 20)->primary();
+            $table->string('nombre', 255)->required();
+            $table->string('correo', 255)->unique()->nullable();
             $table->string('contrasena', 255);
-            $table->string('tipo', 2)->index()->required();
             $table->string('estado', 2)->index()->required();
+            $table->string('tipo', 2)->index()->required();
         });
     }
 

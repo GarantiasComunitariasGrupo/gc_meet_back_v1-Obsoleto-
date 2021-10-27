@@ -21,14 +21,11 @@ class Gcm_Usuario extends Authenticatable
      */
     protected $fillable = [
         'id_usuario',
-        'identificacion',
-        'nombres',
-        'apellidos',
+        'nombre',
         'correo',
-        'telefono',
         'contrasena',
-        'tipo',
         'estado',
+        'tipo',
     ];
 
     /**

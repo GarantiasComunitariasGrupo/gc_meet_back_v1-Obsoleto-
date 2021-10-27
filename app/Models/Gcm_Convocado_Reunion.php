@@ -16,15 +16,13 @@ class Gcm_Convocado_Reunion extends Model
     protected $fillable = [
         'id_convocado_reunion',
         'id_reunion',
-        'id_usuario',
+        'representacion',
         'id_relacion',
         'fecha',
         'tipo',
-        'identificacion',
-        'correo',
+        'nit',
         'razon_social',
-        'rol',
         'participacion',
-        'telefono'
+        'soporte'
     ];
 }

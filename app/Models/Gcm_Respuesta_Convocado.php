@@ -5,20 +5,17 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Gcm_Grupo extends Model
+class Gcm_Respuesta_Convocado extends Model
 {
     use HasFactory;
 
-    protected $table = 'gcm_grupos';
-    protected $primaryKey = 'id_grupo';
+    protected $table = 'gcm_respuestas_convocados';
+    protected $primaryKey = ['id_convocado_reunion', 'id_programa'];
     public $timestamps = false;
 
     protected $fillable = [
-        'id_grupo',
-        'acceso',
+        'id_convocado_reunion',
+        'id_programa',
         'descripcion',
-        'imagen',
-        'logo',
-        'estado',
     ];
 }

@@ -17,18 +17,16 @@ class CrearGcmConvocadosReunionTable extends Migration
             $table->bigIncrements('id_convocado_reunion');
             $table->unsignedBigInteger('id_reunion');
             $table->foreign('id_reunion')->references('id_reunion')->on('gcm_reuniones');
-            $table->unsignedBigInteger('id_usuario');
-            $table->foreign('id_usuario')->references('id_usuario')->on('gcm_usuarios');
-            $table->unsignedBigInteger('id_relacion')->nullable()->index();
+            $table->unsignedBigInteger('representacion')->nullable();
+            $table->foreign('representacion')->references('id_convocado_reunion')->on('gcm_convocados_reunion');
+            $table->unsignedBigInteger('id_relacion');
             $table->foreign('id_relacion')->references('id_relacion')->on('gcm_relaciones');
             $table->timestampTz('fecha', $precision = 0);
             $table->string('tipo', 2)->index()->required();
-            $table->string('identificacion', 20)->index()->nullable();
-            $table->string('correo', 255)->index()->nullable();
+            $table->string('nit', 20)->index()->nullable();
             $table->string('razon_social', 100)->nullable();
-            $table->string('rol', 50)->nullable();
-            $table->decimal('participacion', $precision = 3, $scale = 2)->nullable();
-            $table->string('telefono', 20)->index()->nullable();
+            $table->decimal('participacion', $precision = 5, $scale = 2)->nullable();
+            $table->string('soporte', 255)->nullable();
         });
     }
 

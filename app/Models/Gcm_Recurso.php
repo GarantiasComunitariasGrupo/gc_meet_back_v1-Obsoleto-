@@ -15,13 +15,10 @@ class Gcm_Recurso extends Model
 
     protected $fillable = [
         'id_recurso',
-        'id_usuario',
-        'tipo_persona',
         'identificacion',
-        'razon_social',
+        'nombre',
         'telefono',
         'correo',
-        'representante',
         'estado'
     ];
 }

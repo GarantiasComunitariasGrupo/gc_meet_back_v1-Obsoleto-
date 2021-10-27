@@ -5,19 +5,19 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Gcm_Archivo_Pregunta extends Model
+class Gcm_Archivo_Programacion extends Model
 {
     use HasFactory;
 
-    protected $table = 'gcm_archivos_preguntas';
-    protected $primaryKey = 'id_archivo_pregunta';
+    protected $table = 'gcm_archivos_programacion';
+    protected $primaryKey = 'id_archivo_programacion';
     public $timestamps = false;
 
     protected $fillable = [
-        'id_archivo_pregunta',
-        'id_pregunta',
-        'tipo',
+        'id_archivo_programacion',
+        'id_programa',
         'descripcion',
+        'peso',
         'url',
     ];
 }

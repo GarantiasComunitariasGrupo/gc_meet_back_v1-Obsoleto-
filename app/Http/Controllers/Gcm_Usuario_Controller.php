@@ -27,29 +27,20 @@ class Gcm_Usuario_Controller extends Controller
     public function agregarUsuario(Request $request) {
 
         $validator = Validator::make($request->all(), [
-            'identificacion'=>'required|unique:gcm_usuarios|max:20',
-            'nombres'=>'required|regex:/^[\pL\s\-]+$/u|max:50',
-            'apellidos'=>'required|regex:/^[\pL\s\-]+$/u|max:50',
+            'nombre'=>'required|regex:/^[\pL\s\-]+$/u|max:50',
             'correo'=>'required|email|max:255',
-            'telefono'=>'max:20',
-            'tipo'=>'required|max:2',
             'estado'=>'required|max:2',
+            'tipo'=>'required|max:2',
         ],
 
         [
-            'identificacion.required' => '*Rellena este campo',
-            'identificacion.unique' => '*Documento ya registrado',
-            'nombres.required' => '*Rellena este campo',
-            'nombres.max' => '*Máximo 50 caracteres',
-            'nombres.regex' => '*Ingresa sólo letras',
-            'apellidos.required' => '*Rellena este campo',
-            'apellidos.max' => '*Máximo 50 caracteres',
-            'apellidos.regex' => '*Ingresa sólo letras',
+            'nombre.required' => '*Rellena este campo',
+            'nombre.max' => '*Máximo 50 caracteres',
+            'nombre.regex' => '*Ingresa sólo letras',
             'correo.required' => '*Rellena este campo',
             'correo.email' => '*Ingresa un e-mail válido',
-            'telefono.required' => '*Rellena este campo',
-            'tipo.required' => '*Rellena este campo',
             'estado.required' => '*Rellena este campo',
+            'tipo.required' => '*Rellena este campo',
         ]
 
         );
@@ -62,15 +53,12 @@ class Gcm_Usuario_Controller extends Controller
 
         try {
             $usuarioNuevo = new Gcm_Usuario;
-            $usuarioNuevo->identificacion = $request->identificacion;
-            $usuarioNuevo->nombres = $request->nombres;
-            $usuarioNuevo->apellidos = $request->apellidos;
+            $usuarioNuevo->nombre = $request->nombre;
             $usuarioNuevo->correo = $request->correo;
-            $usuarioNuevo->telefono = $request->telefono;
             $aquita = 'GCM' . Str::random(8);
             $usuarioNuevo->contrasena = Hash::make($aquita);
-            $usuarioNuevo->tipo = $request->tipo;
             $usuarioNuevo->estado = $request->estado;
+            $usuarioNuevo->tipo = $request->tipo;
 
             $response = $usuarioNuevo->save();
 
@@ -128,26 +116,20 @@ class Gcm_Usuario_Controller extends Controller
 
         $validator = Validator::make($request->all(), [
             
-            'nombres'=>'required|regex:/^[\pL\s\-]+$/u|max:50',
-            'apellidos'=>'required|regex:/^[\pL\s\-]+$/u|max:50',
+            'nombre'=>'required|regex:/^[\pL\s\-]+$/u|max:50',
             'correo'=>'required|email|max:255',
-            'telefono'=>'max:20',
-            'tipo'=>'required|max:2',
             'estado'=>'required|max:2',
+            'tipo'=>'required|max:2',
         ],
 
         [
-            'nombres.required' => '*Rellena este campo',
-            'nombres.max' => '*Máximo 50 caracteres',
-            'nombres.regex' => '*Ingresa sólo letras',
-            'apellidos.required' => '*Rellena este campo',
-            'apellidos.max' => '*Máximo 50 caracteres',
-            'apellidos.regex' => '*Ingresa sólo letras',
+            'nombre.required' => '*Rellena este campo',
+            'nombre.max' => '*Máximo 50 caracteres',
+            'nombre.regex' => '*Ingresa sólo letras',
             'correo.required' => '*Rellena este campo',
             'correo.email' => '*Ingresa un e-mail válido',
-            'telefono.required' => '*Rellena este campo',
-            'tipo.required' => '*Rellena este campo',
             'estado.required' => '*Rellena este campo',
+            'tipo.required' => '*Rellena este campo',
         ]
 
         );
@@ -158,12 +140,10 @@ class Gcm_Usuario_Controller extends Controller
 
         try {
             $usuario = Gcm_Usuario::findOrFail($id_usuario);
-            $usuario->nombres = $request->nombres;
-            $usuario->apellidos = $request->apellidos;
+            $usuario->nombre = $request->nombre;
             $usuario->correo = $request->correo;
-            $usuario->telefono = $request->telefono;
-            $usuario->tipo = $request->tipo;
             $usuario->estado = $request->estado;
+            $usuario->tipo = $request->tipo;
     
             $response = $usuario->save();
             
