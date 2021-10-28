@@ -6,6 +6,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\Gcm_Asistencia_Reunion;
 use App\Models\Gcm_Registro_Representante;
+use App\Models\Gcm_Convocado_Reunion;
+use App\Models\Gcm_Recurso;
+use App\Models\Gcm_Relacion;
 
 class Gcm_Acceso_Reunion_Controller extends Controller
 {
@@ -63,29 +66,53 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                     DB::beginTransaction();
 
                     try {
-                    
-                        /**
-                         * Consultar participacion de quien hace la invitación
-                         */
 
-                         /**
-                          * Consultar recurso
-                          */
+                        $anfitrion = Gcm_Convocado_Reunion::where('id_convocado_reunion', $request->id_convocado_reunion)->first();
+                        $participacionRepresentante = $anfitrion->participacion;
 
-                        /**
-                         * Consultar relacion
-                         */
-                        
-                        $recurso;
-                        $relacion;
-                        $convocado;
+                        $recurso = Gcm_Recurso::where('identificacion', $request->identificacion)->first();
+
+                        if (!$recurso) {
+                            $recurso = Gcm_Recurso::create([
+                                'identificacion' => $request->identificacion,
+                                'nombre' => $request->nombre,
+                                'correo' => $request->correo,
+                                'estado' => 1
+                            ]);
+                        }
+
+                        $relacion = Gcm_Relacion::where('id_grupo', $request->id_grupo)
+                        ->where('id_rol', $request->id_rol)
+                        ->where('id_recurso', $recurso->id_recurso)
+                        ->first();
+
+                        if (!$relacion) {
+                            $relacion = Gcm_Relacion::create([
+                                'id_grupo' => $request->id_grupo,
+                                'id_rol' => $request->id_rol,
+                                'id_recurso' => $recurso->id_recurso,
+                                'estado' => 1
+                            ]);
+                        }
+
+                        $convocado = Gcm_Convocado_Reunion::create([
+                            'id_reunion' => $request->id_reunion,
+                            'representacion' => $request->id_convocado_reunion,
+                            'id_relacion' => $relacion->id_relacion,
+                            'fecha' => date('Y-m-d H:i:s'),
+                            'tipo' => 0,
+                            'participacion' => $participacionRepresentante,
+                            'soporte' => 'firmas/' . $filename
+                        ]);
 
                         DB::commit();
+                        $response = array('ok' => true, 'response' => ['recurso' => $recurso, 'convocado' => $convocado]);
+
                     } catch (\Throwable $th) {
+                        unlink(public_path('storage\firmas'), $filename);
+                        $response = array('ok' => false, 'response' => $th->getMessage());
                         DB::rollback();
                     }
-
-                    // $response = array('ok' => ($guardarRepresentante) ? true : false, 'response' => $guardarRepresentante);
 
                 } else {
                     $response = array('ok' => false, 'response' => 'No se pudo mover el archivo');
