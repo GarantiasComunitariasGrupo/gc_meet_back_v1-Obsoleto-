@@ -59,91 +59,93 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         $allowExt = array('PNG', 'JPG', 'JPEG', 'PDF');
 
         $restricciones = $this->validacionRestricciones($request);
-        return response()->json($restricciones);
-        // return;
 
-        // if ($request->hasFile('firma_png')) {
+        if (count($restricciones) === 0) {
 
-        //     $file = $request->file('firma_png');
-        //     $ext = $file->getClientOriginalExtension();
-        //     $filename = $request->id_reunion . '-' . $request->id_recurso . '-' . $request->identificacion . '.' . $ext;
+            if ($request->hasFile('firma_png')) {
 
-        //     if (in_array(strtoupper($ext), $allowExt)) {
+                $file = $request->file('firma_png');
+                $ext = $file->getClientOriginalExtension();
+                $filename = $request->id_reunion . '-' . $request->id_recurso . '-' . $request->identificacion . '.' . $ext;
 
-        //         $move = $file->move(public_path('storage\firmas'), $filename);
-        //         chmod(public_path("storage/firmas/{$filename}"), 0555);
+                if (in_array(strtoupper($ext), $allowExt)) {
 
-        //         if ($move) {
-                    
-        //             DB::beginTransaction();
+                    $move = $file->move(public_path('storage\firmas'), $filename);
+                    chmod(public_path("storage/firmas/{$filename}"), 0555);
 
-        //             try {
+                    if ($move) {
+                        
+                        DB::beginTransaction();
 
-        //                 $anfitrion = Gcm_Convocado_Reunion::where('id_convocado_reunion', $request->id_convocado_reunion)->first();
-        //                 $participacionRepresentante = $anfitrion->participacion;
+                        try {
 
-        //                 $recurso = Gcm_Recurso::where('identificacion', $request->identificacion)->first();
+                            $anfitrion = Gcm_Convocado_Reunion::where('id_convocado_reunion', $request->id_convocado_reunion)->first();
+                            $participacionRepresentante = $anfitrion->participacion;
 
-        //                 if (!$recurso) {
-        //                     $recurso = Gcm_Recurso::create([
-        //                         'identificacion' => $request->identificacion,
-        //                         'nombre' => $request->nombre,
-        //                         'correo' => $request->correo,
-        //                         'estado' => 1
-        //                     ]);
-        //                 }
+                            $recurso = Gcm_Recurso::where('identificacion', $request->identificacion)->first();
 
-        //                 $relacion = Gcm_Relacion::where('id_grupo', $request->id_grupo)
-        //                 ->where('id_rol', $request->id_rol)
-        //                 ->where('id_recurso', $recurso->id_recurso)
-        //                 ->first();
+                            if (!$recurso) {
+                                $recurso = Gcm_Recurso::create([
+                                    'identificacion' => $request->identificacion,
+                                    'nombre' => $request->nombre,
+                                    'correo' => $request->correo,
+                                    'estado' => 1
+                                ]);
+                            }
 
-        //                 if (!$relacion) {
-        //                     $relacion = Gcm_Relacion::create([
-        //                         'id_grupo' => $request->id_grupo,
-        //                         'id_rol' => $request->id_rol,
-        //                         'id_recurso' => $recurso->id_recurso,
-        //                         'estado' => 1
-        //                     ]);
-        //                 }
+                            $relacion = Gcm_Relacion::where('id_grupo', $request->id_grupo)
+                            ->where('id_rol', $request->id_rol)
+                            ->where('id_recurso', $recurso->id_recurso)
+                            ->first();
 
-        //                 $convocado = Gcm_Convocado_Reunion::create([
-        //                     'id_reunion' => $request->id_reunion,
-        //                     'representacion' => $request->id_convocado_reunion,
-        //                     'id_relacion' => $relacion->id_relacion,
-        //                     'fecha' => date('Y-m-d H:i:s'),
-        //                     'tipo' => 0,
-        //                     'participacion' => $participacionRepresentante,
-        //                     'soporte' => 'firmas/' . $filename
-        //                 ]);
+                            if (!$relacion) {
+                                $relacion = Gcm_Relacion::create([
+                                    'id_grupo' => $request->id_grupo,
+                                    'id_rol' => $request->id_rol,
+                                    'id_recurso' => $recurso->id_recurso,
+                                    'estado' => 1
+                                ]);
+                            }
 
-        //                 DB::commit();
-        //                 $response = array('ok' => true, 'response' => ['recurso' => $recurso, 'convocado' => $convocado]);
+                            $convocado = Gcm_Convocado_Reunion::create([
+                                'id_reunion' => $request->id_reunion,
+                                'representacion' => $request->id_convocado_reunion,
+                                'id_relacion' => $relacion->id_relacion,
+                                'fecha' => date('Y-m-d H:i:s'),
+                                'tipo' => 0,
+                                'participacion' => $participacionRepresentante,
+                                'soporte' => 'firmas/' . $filename
+                            ]);
 
-        //             } catch (\Throwable $th) {
-        //                 unlink(public_path('storage\firmas'), $filename);
-        //                 $response = array('ok' => false, 'response' => $th->getMessage());
-        //                 DB::rollback();
-        //             }
+                            DB::commit();
+                            $response = array('ok' => true, 'response' => ['recurso' => $recurso, 'convocado' => $convocado]);
 
-        //         } else {
-        //             $response = array('ok' => false, 'response' => 'No se pudo mover el archivo');
-        //         }
+                        } catch (\Throwable $th) {
+                            unlink(public_path('storage\firmas'), $filename);
+                            $response = array('ok' => false, 'response' => $th->getMessage());
+                            DB::rollback();
+                        }
 
-        //     } else {
-        //         $response = array('ok' => false, 'response' => 'Extensión no permitida');
-        //     }
+                    } else {
+                        $response = array('ok' => false, 'response' => 'No se pudo mover el archivo');
+                    }
 
-        // } else {
-        //     $response = array('ok' => false, 'response' => 'No se recibió archivo');
-        // }
+                } else {
+                    $response = array('ok' => false, 'response' => 'Extensión no permitida');
+                }
 
-        // return response()->json($response);
+            } else {
+                $response = array('ok' => false, 'response' => 'No se recibió archivo');
+            }
+        } else {
+            $response = array('ok' => false, 'response' => $restricciones, 'array' => true);
+        }
+
+        return response()->json($response);
     }
 
     public function validacionRestricciones($data)
     {
-
         $tipoReunion = DB::table(DB::raw('gcm_convocados_reunion AS gcr'))
         ->join(DB::raw('gcm_reuniones AS grns'), 'gcr.id_reunion', '=', 'grns.id_reunion')
         ->where('gcr.id_convocado_reunion', $data->id_convocado_reunion)
@@ -157,11 +159,12 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         ->select(['id_rol'])
         ->get();
 
-        $restricciones = Gcm_Restriccion_Rol_Representante::where('estado', 1)->get();
-        $tiposReunionRestricciones = array_column($restricciones->toArray(), 'id_tipo_reunion');
-        $rolesRestricciones = array_column($restricciones->toArray(), 'id_rol');
+        $restricciones = Gcm_Restriccion_Rol_Representante::where('estado', 1)
+        ->where('id_tipo_reunion', $tipoReunion->id_tipo_reunion)
+        ->whereIn('id_rol', array_column($roles->toArray(), 'id_rol'))
+        ->get();
 
-        return [$restricciones, $tiposReunionRestricciones, $rolesRestricciones];
+        return $restricciones;
     }
 
     public function guardarLogConvocado($arrayParams)
@@ -188,7 +191,10 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         ->select(['*'])
         ->first();
 
-        return response()->json($base);
+        return response()->json([
+            'ok' => ($base) ? true : false,
+            'response' => ($base) ? $base : 'No hay resultados'
+        ]);
     }
 
     public function cancelarInvitacion(Request $request)
