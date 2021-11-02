@@ -7,7 +7,7 @@ use App;
 use App\Models\Gcm_Reunion;
 use App\Models\Gcm_Relacion;
 use App\Models\Gcm_Convocado_Reunion;
-use App\Models\Gcm_Programa;
+use App\Models\Gcm_Programacion;
 use App\Models\Gcm_Grupo;
 use App\Models\Gcm_Rol;
 use App\Models\Gcm_Usuario;
@@ -54,7 +54,7 @@ class Gcm_Reunion_Controller extends Controller
         * Trae todas los programas registradas en una reunion
         */ 
         public function getProgramas($id_reunion) {
-            $base = Gcm_Programa::where('id_reunion', $id_reunion)->get()->toArray();
+            $base = Gcm_Programacion::where('id_reunion', $id_reunion)->get()->toArray();
 
             $programas = array_filter($base, function($item){
                 return $item['relacion'] === null || $item['relacion'] === '';
@@ -79,28 +79,27 @@ class Gcm_Reunion_Controller extends Controller
          * Trae todos los convocados registrados en una reunion y lo utilizo para mostrar la cantidad de convocados en la vista principal de meets
          */
         public function getConvocados($id_reunion) {
-            $queryInvitados = DB::table('gcm_convocados_reunion')
-            ->where('tipo', 1)
-            ->where('id_reunion', $id_reunion);
 
-            $convocados = DB::query()->fromSub(function ($query) use ($queryInvitados, $id_reunion) {
-                $query->from('gcm_convocados_reunion AS cr')
-                ->leftJoin(DB::raw('gcm_relaciones AS rl'), 'cr.id_relacion', '=', 'rl.id_relacion')
-                ->leftJoin(DB::raw('gcm_recursos AS rs'), 'rl.id_recurso', '=', 'rs.id_recurso')
-                ->leftJoin(DB::raw('gcm_roles AS rls'), 'rl.id_rol', '=', 'rls.id_rol')
-                ->where('tipo', 0)
-                ->where('id_reunion', $id_reunion)
-                ->unionAll($queryInvitados)->select([
-                    'cr.id_convocado_reunion', 'cr.id_reunion',
-                    'cr.id_usuario', 'cr.id_relacion', 'cr.fecha',
-                    'cr.tipo', 'rs.identificacion', 'rs.correo',
-                    'rs.razon_social', DB::raw('rls.descripcion AS rol'),
-                    'rl.participacion', 'rs.telefono'
-                ]);
-            }, 'convocados')
-            ->leftJoin(DB::raw('gcm_recursos AS rs'), 'convocados.identificacion', '=', 'rs.representante')
-            ->get([DB::raw('convocados.*, rs.identificacion AS nit, rs.razon_social AS entity')]);
-
+            $convocados = DB::table(DB::raw('gcm_convocados_reunion AS gcr'))
+                ->join(DB::raw('gcm_relaciones AS grc'), 'gcr.id_relacion', '=', 'grc.id_relacion')
+                ->join(DB::raw('gcm_recursos AS grs'), 'grc.id_recurso', '=', 'grs.id_recurso')
+                ->join(DB::raw('gcm_roles AS grl'), 'grc.id_rol', '=', 'grl.id_rol')
+                ->where(DB::raw('gcr.id_reunion'), $id_reunion)
+                ->select([
+                    DB::raw('grs.*'),
+                    DB::raw('grl.id_rol'),
+                    DB::raw('grl.descripcion AS rol'),
+                    'gcr.id_convocado_reunion',
+                    'gcr.nit',
+                    'gcr.razon_social',
+                    'gcr.participacion',
+                    'gcr.representacion',
+                    'gcr.tipo',
+                    'gcr.id_reunion',
+                    'gcr.id_relacion',
+                    'gcr.fecha',
+                    'gcr.soporte',
+                ])->get();
             return $convocados;
         }
 
@@ -110,41 +109,137 @@ class Gcm_Reunion_Controller extends Controller
         /**
          * Consulta todos los recursos registrados
          */
-        public function getRecursos() {
+        public function _getRecursos() {
 
             $recursos = DB::table('gcm_recursos as personas')
             ->leftJoinSub(function($query) {
-                $query->from('gcm_recursos as sub')
-                ->select('sub.identificacion', 'sub.razon_social', 'sub.representante')
-                ->where('sub.tipo_persona', '=', 1);
-            }, 'entidades', function ($join) {
-                $join->on('personas.id_recurso', '=', 'entidades.representante');
-            })->leftJoinSub(function($query) {
                 $query->from('gcm_convocados_reunion as cr1')
                 ->join('gcm_relaciones as rls1', 'rls1.id_relacion', '=', 'cr1.id_relacion')
                 ->join('gcm_recursos as rcs1', 'rcs1.id_recurso', '=', 'rls1.id_recurso')
                 ->select('rcs1.identificacion', DB::raw('MAX(id_convocado_reunion) as ultima_invitacion'))
-                ->where('cr1.tipo', '=', '0')
                 ->groupBy('rcs1.identificacion');
             }, 'invitacion', function ($join) {
                 $join->on('personas.identificacion', '=', 'invitacion.identificacion');
             })->leftJoin('gcm_convocados_reunion as cr', 'cr.id_convocado_reunion', '=', 'invitacion.ultima_invitacion')
             ->leftJoin('gcm_relaciones as rcs', 'rcs.id_relacion', '=', 'cr.id_relacion')
             ->leftJoin('gcm_roles as rls', 'rls.id_rol', '=', 'rcs.id_rol')
-            ->where([['personas.tipo_persona', '=', '0'], ['personas.estado', '=', '1']])
-            ->select('personas.id_recurso', 
-            'personas.id_usuario', 
-            'personas.identificacion',
-            'personas.razon_social',
-            'personas.telefono',
-            'personas.correo',
-            DB::raw('IF (entidades.identificacion IS NULL, "0", "2") as tipo'), 
-            'entidades.identificacion as nit', 
-            'entidades.razon_social as entity',
-            'rcs.participacion',
-            'rls.descripcion as rol')->get();
+            ->select('personas.id_recurso',
+                'personas.identificacion',
+                'personas.nombre',
+                'personas.telefono',
+                'personas.correo', 
+                'rls.descripcion as rol',
+                'cr.tipo')
+            ->where([['personas.estado', '=', '1']])->get();
             
             return $recursos;
+
+            // $recursos = DB::table('gcm_recursos as personas')
+            // ->leftJoinSub(function($query) {
+            //     $query->from('gcm_recursos as sub')
+            //     ->select('sub.identificacion', 'sub.razon_social', 'sub.representante')
+            //     ->where('sub.tipo_persona', '=', 1);
+            // }, 'entidades', function ($join) {
+            //     $join->on('personas.id_recurso', '=', 'entidades.representante');
+            // })->leftJoinSub(function($query) {
+            //     $query->from('gcm_convocados_reunion as cr1')
+            //     ->join('gcm_relaciones as rls1', 'rls1.id_relacion', '=', 'cr1.id_relacion')
+            //     ->join('gcm_recursos as rcs1', 'rcs1.id_recurso', '=', 'rls1.id_recurso')
+            //     ->select('rcs1.identificacion', DB::raw('MAX(id_convocado_reunion) as ultima_invitacion'))
+            //     ->where('cr1.tipo', '=', '0')
+            //     ->groupBy('rcs1.identificacion');
+            // }, 'invitacion', function ($join) {
+            //     $join->on('personas.identificacion', '=', 'invitacion.identificacion');
+            // })->leftJoin('gcm_convocados_reunion as cr', 'cr.id_convocado_reunion', '=', 'invitacion.ultima_invitacion')
+            // ->leftJoin('gcm_relaciones as rcs', 'rcs.id_relacion', '=', 'cr.id_relacion')
+            // ->leftJoin('gcm_roles as rls', 'rls.id_rol', '=', 'rcs.id_rol')
+            // ->where([['personas.tipo_persona', '=', '0'], ['personas.estado', '=', '1']])
+            // ->select('personas.id_recurso', 
+            // 'personas.id_usuario', 
+            // 'personas.identificacion',
+            // 'personas.razon_social',
+            // 'personas.telefono',
+            // 'personas.correo',
+            // DB::raw('IF (entidades.identificacion IS NULL, "0", "2") as tipo'), 
+            // 'entidades.identificacion as nit', 
+            // 'entidades.razon_social as entity',
+            // 'rcs.participacion',
+            // 'rls.descripcion as rol')->get();
+            
+            // return $recursos;
+        }
+
+        public function getRecursos() {
+            $grupo = 1;
+            $getMaxFecha = function ($exceptions = [], $nullExceptions = []) use ($grupo) {
+                // Consulta la máxima fecha de convocatoria de un recurso de acuerdo a las condiciones
+                $statement = DB::table('gcm_convocados_reunion AS s1_crn')
+                ->join('gcm_reuniones AS s1_rns', 's1_rns.id_reunion', 's1_crn.id_reunion')
+                ->join('gcm_tipo_reuniones AS s1_trs', 's1_trs.id_tipo_reunion', 's1_rns.id_tipo_reunion')
+                ->join('gcm_relaciones AS s1_rln', 's1_rln.id_relacion', 's1_crn.id_relacion')
+                ->join('gcm_roles AS s1_rls', 's1_rls.id_rol', 's1_rln.id_rol')
+                ->join('gcm_recursos AS s1_rcs', 's1_rcs.id_recurso', 's1_rln.id_recurso')
+                ->whereNull('s1_crn.representacion')->where([
+                    ['s1_trs.id_grupo', $grupo], ['s1_rcs.estado', 1],
+                    ['s1_rls.estado', 1], ['s1_rln.estado', 1],
+                ])->groupBy('s1_rcs.id_recurso')
+                ->select('s1_rln.id_recurso', DB::raw('MAX(s1_crn.fecha) AS fecha'));
+                // Excepciones para consultas where normales
+                foreach ($exceptions as $key => $value) {
+                    $statement->where($key, $value);
+                }
+                // Excepciones para consultas where not null
+                foreach ($nullExceptions as $value) {
+                    $statement->whereNotNull($value);
+                }
+                return $statement;
+            };
+
+            $getInfoRecurso = function ($maxFechaQuery, $alias, $joins = []) {
+                $statement = DB::table('gcm_convocados_reunion AS crn')
+                ->join('gcm_relaciones AS rln', 'rln.id_relacion', 'crn.id_relacion')
+                ->joinSub($maxFechaQuery, $alias, function ($join) use ($alias) {
+                    $join->on("{$alias}.id_recurso", 'rln.id_recurso');
+                    $join->on("{$alias}.fecha", 'crn.fecha');
+                });
+                // Información de tablas
+                foreach ($joins as $value) {
+                    $statement->join($value[0], $value[1], $value[2]);
+                }
+                return $statement;
+            };
+
+            $roles = $getMaxFecha();
+            $rol_recursos = $getInfoRecurso($roles, 'rol', [
+                ['gcm_roles AS rls', 'rls.id_rol', 'rln.id_rol']
+            ])->select('rln.id_recurso', 'rls.descripcion AS rol');
+
+            $participacion = $getMaxFecha(['s1_rns.quorum' => 1]);
+            $participacion_recursos = $getInfoRecurso($participacion, 'participacion')
+            ->select('rln.id_recurso', 'crn.participacion');
+
+            $entidad = $getMaxFecha([], ['s1_crn.nit']);
+            $entidad_recursos = $getInfoRecurso($entidad, 'entidad')
+            ->select('rln.id_recurso', 'crn.nit', 'crn.razon_social', 'crn.soporte');
+
+            $respuesta = DB::table('gcm_recursos AS rcs')
+            ->leftJoinSub($rol_recursos, 'rol_recurso', function($join) {
+                $join->on('rol_recurso.id_recurso', 'rcs.id_recurso');
+            })->leftJoinSub($participacion_recursos, 'participacion_recurso', function($join) {
+                $join->on('participacion_recurso.id_recurso', 'rcs.id_recurso');
+            })->leftJoinSub($entidad_recursos, 'entidad_recurso', function($join) {
+                $join->on('entidad_recurso.id_recurso', 'rcs.id_recurso');
+            })->select(
+                'rcs.*', 
+                'rol_recurso.rol', 
+                'participacion_recurso.participacion', 
+                DB::raw('IF(entidad_recurso.nit IS NULL, 0, 2) AS tipo'),
+                'entidad_recurso.nit', 
+                'entidad_recurso.razon_social', 
+                'entidad_recurso.soporte'
+            )->where('rcs.estado', 1)->get();
+
+            return $respuesta;
         }
 
         /**
@@ -494,6 +589,7 @@ class Gcm_Reunion_Controller extends Controller
                 $tipo_reunion_nueva->honorifico_participante = 'Participantes';
                 $tipo_reunion_nueva->honorifico_invitado = 'Invitados';
                 $tipo_reunion_nueva->honorifico_representante = 'Representantes';
+                $tipo_reunion_nueva->imagen = null;
                 $tipo_reunion_nueva->estado = 1;
 
                 $response = $tipo_reunion_nueva->save();
@@ -506,83 +602,55 @@ class Gcm_Reunion_Controller extends Controller
             $reunion->descripcion = $data['descripcion'];
             $reunion->fecha_reunion = $data['fecha_reunion'];
             $reunion->hora = $data['hora'];
-            $reunion->lugar = $data['lugar'];
-            $reunion->estado = 0;
+            $reunion->quorum = $data['quorum'];
+            $reunion->estado = $data['estado'];
 
             $response = $reunion->save();
             
-            // Vacea la tabla de convocados con un id_reunion en comun
+            // // Vacea la tabla de convocados con un id_reunion en comun
             DB::table('gcm_convocados_reunion')->where('id_reunion', '=', $data['id_reunion'])->delete();
             
-            // Registra los convocados en el tipo Invitado
-            $convocadosI = json_decode($request->convocadosI, true);
-            for ($i=0; $i < count($convocadosI); $i++) {
-                
-                $convocado = new Gcm_Convocado_Reunion;
-                $convocado->id_reunion = $convocadosI[$i]['id_reunion'];
-                $convocado->id_usuario = $convocadosI[$i]['id_usuario'];
-                $convocado->id_relacion = null;
-                $convocado->tipo = 1;
-                $convocado->identificacion = $convocadosI[$i]['identificacion'];
-                $convocado->razon_social = $convocadosI[$i]['razon_social'];
-                $convocado->correo = $convocadosI[$i]['correo'];
-                $convocado->rol = $convocadosI[$i]['rol'];
-                $convocado->telefono = $convocadosI[$i]['telefono'];
-                $convocado->participacion = 0;
+            // // Registra los convocados en el tipo Invitado
+            // $convocadosI = json_decode($request->convocadosI, true);
+            // for ($i=0; $i < count($convocadosI); $i++) {
 
-                $response = $convocado->save();
-            }
+            //     $convocado = new Gcm_Convocado_Reunion;
+            //     $convocado->id_reunion = $convocadosI[$i]['id_reunion'];
+            //     $convocado->representacion = null;
+            //     $convocado->tipo = $convocadosI[$i]['tipo'];
+            //     $convocado->id_relacion = 1;
+            //     $convocado->nit = $convocadosI[$i]['nit'];
+            //     $convocado->razon_social = null;
+            //     $convocado->participacion = null;
+            //     $convocado->soporte = null;
+
+            //     $response = $convocado->save();
+            // }
 
             // Registra los convocados en el tipo Participante o Representante Legal
-            $convocadosA = json_decode($request->convocadosA, true);
-            for ($i=0; $i < count($convocadosA); $i++) {
+            $convocados = json_decode($request->convocados, true);
+            for ($i=0; $i < count($convocados); $i++) {
                 $relacion_nueva = new Gcm_Relacion;
-                $recurso_existe = DB::table('gcm_recursos')->where('identificacion', '=', $convocadosA[$i]['identificacion'])->first();
-
+                $recurso_existe = DB::table('gcm_recursos')->where('identificacion', '=', $convocados[$i]['identificacion'])->first();
+                
                     // En caso de no existir el recurso, lo registra
                     if(!$recurso_existe) {
 
                         $recurso_nuevo = new Gcm_Recurso;
-                        $recurso_nuevo->id_usuario = $convocadosA[$i]['id_usuario'];
-                        $recurso_nuevo->tipo_persona = 0;
-                        $recurso_nuevo->identificacion = $convocadosA[$i]['identificacion'];
-                        $recurso_nuevo->razon_social = $convocadosA[$i]['razon_social'];
-                        $recurso_nuevo->telefono = $convocadosA[$i]['telefono'];
-                        $recurso_nuevo->correo = $convocadosA[$i]['correo'];
-                        $recurso_nuevo->representante = null;
+                        $recurso_nuevo->identificacion = $convocados[$i]['identificacion'];
+                        $recurso_nuevo->nombre = $convocados[$i]['nombre'];
+                        $recurso_nuevo->telefono = $convocados[$i]['telefono'];
+                        $recurso_nuevo->correo = $convocados[$i]['correo'];
                         $recurso_nuevo->estado = 1;
 
                         $response = $recurso_nuevo->save();
 
-                        if ($convocadosA[$i]['tipo'] == '2') {
-
-                            $entidad_existe = DB::table('gcm_recursos')->where('identificacion', '=', $convocadosA[$i]['nit'])->first();
-
-                            if (!$entidad_existe) {
-                                $entidad_nueva = new Gcm_Recurso;
-                                $entidad_nueva->id_usuario = $convocadosA[$i]['id_usuario'];
-                                $entidad_nueva->tipo_persona = 1;
-                                $entidad_nueva->identificacion = $convocadosA[$i]['nit'];
-                                $entidad_nueva->razon_social = $convocadosA[$i]['entity'];
-                                $entidad_nueva->telefono = null;
-                                $entidad_nueva->correo = null;
-                                $entidad_nueva->representante = $recurso_nuevo->id_recurso;
-                                $entidad_nueva->estado = 1;
-
-                                $response = $entidad_nueva->save();
-                            } else {
-                                DB::rollback();
-                                return response()->json(["error" => 'La entidad ingresada ya tiene un representante'], 500);
-                            }
-                        }
-
-                        $rol_existe = DB::table('gcm_roles')->where('descripcion', '=', $convocadosA[$i]['rol'])->first();
+                        $rol_existe = DB::table('gcm_roles')->where('descripcion', '=', $convocados[$i]['rol'])->first();
 
                         // En caso de no existir el rol, lo registra
                         if(!$rol_existe) {
                             $rol_nuevo = new Gcm_Rol;
-                            $rol_nuevo->id_usuario = $convocadosA[$i]['id_usuario'];
-                            $rol_nuevo->descripcion = $convocadosA[$i]['rol'];
+                            $rol_nuevo->descripcion = $convocados[$i]['rol'];
                             $rol_nuevo->relacion = null;
                             $rol_nuevo->estado = 1;
 
@@ -592,20 +660,27 @@ class Gcm_Reunion_Controller extends Controller
                             $relacion_nueva->id_grupo = $data['id_grupo'];
                             $relacion_nueva->id_rol = $rol_nuevo->id_rol;
                             $relacion_nueva->id_recurso = $recurso_nuevo->id_recurso;
-                            $relacion_nueva->participacion = 0;
                             $relacion_nueva->estado = 1;
                             
                             $response = $relacion_nueva->save();
 
                         } else { // En caso de si exista el rol
 
-                            $rol = DB::table('gcm_roles')->select('id_rol')->where('descripcion', '=', $convocadosA[$i]['rol'])->first();
+                            if ($rol_existe->estado === '0') {
+                                $rol = Gcm_Rol::findOrFail($rol_existe->id_rol);
+                                $rol->descripcion = $convocados[$i]['rol'];
+                                $rol->relacion = null;
+                                $rol->estado = 1;
+
+                                $response = $rol->save();
+                            }
+
+                            $rol = DB::table('gcm_roles')->select('id_rol')->where('descripcion', '=', $convocados[$i]['rol'])->first();
 
                             // Registra la relación nueva
                             $relacion_nueva->id_grupo =  $data['id_grupo'];
                             $relacion_nueva->id_rol = $rol->id_rol;
                             $relacion_nueva->id_recurso = $recurso_nuevo->id_recurso;
-                            $relacion_nueva->participacion = 0;
                             $relacion_nueva->estado = 1;
                             
                             $response = $relacion_nueva->save();
@@ -613,125 +688,37 @@ class Gcm_Reunion_Controller extends Controller
 
                         // Registra el convocado
                         $convocado = new Gcm_Convocado_Reunion;
-                        $convocado->id_reunion = $convocadosA[$i]['id_reunion'];
-                        $convocado->id_usuario = $convocadosA[$i]['id_usuario'];
+                        $convocado->id_reunion = $convocados[$i]['id_reunion'];
+                        $convocado->representacion = null;
                         $convocado->id_relacion = $relacion_nueva->id_relacion;
-                        $convocado->tipo = 0;
-                        $convocado->identificacion = null;
+                        $convocado->tipo = $convocados[$i]['tipo'];
+                        $convocado->nit = null;
                         $convocado->razon_social = null;
-                        $convocado->correo = null;
-                        $convocado->rol = null;
-                        $convocado->telefono = null;
-                        $convocado->participacion = 0;
+                        $convocado->participacion = null;
+                        $convocado->soporte = null;
         
                         $response = $convocado->save();
 
                     } else { // En caso de que si exista el recurso
 
-                        if ($convocadosA[$i]['tipo'] == 2) {
-                        
-                            $representante_existe = DB::table('gcm_recursos as personas')
-                                ->leftJoinSub(function($query) {
-                                    $query->from('gcm_recursos as sub')
-                                    ->select('sub.identificacion', 'sub.razon_social', 'sub.representante')
-                                    ->where('sub.tipo_persona', '=', 1);
-                                }, 'entidades', function ($join) {
-                                    $join->on('personas.id_recurso', '=', 'entidades.representante');
-                                })->leftJoinSub(function($query) {
-                                    $query->from('gcm_convocados_reunion as cr1')
-                                    ->join('gcm_relaciones as rls1', 'rls1.id_relacion', '=', 'cr1.id_relacion')
-                                    ->join('gcm_recursos as rcs1', 'rcs1.id_recurso', '=', 'rls1.id_recurso')
-                                    ->select('rcs1.identificacion', DB::raw('MAX(id_convocado_reunion) as ultima_invitacion'))
-                                    ->where('cr1.tipo', '=', '0')
-                                    ->groupBy('rcs1.identificacion');
-                                }, 'invitacion', function ($join) {
-                                    $join->on('personas.identificacion', '=', 'invitacion.identificacion');
-                                })->leftJoin('gcm_convocados_reunion as cr', 'cr.id_convocado_reunion', '=', 'invitacion.ultima_invitacion')
-                                ->leftJoin('gcm_relaciones as rcs', 'rcs.id_relacion', '=', 'cr.id_relacion')
-                                ->leftJoin('gcm_roles as rls', 'rls.id_rol', '=', 'rcs.id_rol')
-                                ->where([['personas.tipo_persona', '=', '0'], ['personas.estado', '=', '1'], ['personas.identificacion', '=', $convocadosA[$i]['identificacion']]])
-                                ->select('personas.id_recurso', 
-                                'personas.id_usuario', 
-                                'personas.identificacion',
-                                'personas.razon_social',
-                                'personas.telefono',
-                                'personas.correo',
-                                DB::raw('IF (entidades.identificacion IS NULL, "0", "2") as tipo'), 
-                                'entidades.identificacion as nit', 
-                                'entidades.razon_social as entity',
-                                'rcs.participacion',
-                                'rls.descripcion as rol')->first();
-                            
-                            if (isset($representante_existe) && isset($representante_existe->nit) && $representante_existe->nit !== $convocadosA[$i]['nit']) {
+                        if ($recurso_existe->estado === '0') {
 
-                                DB::rollback();
-                                return response()->json(["error" => 'La persona seleccionada ya es representante legal de la entidad: '.$representante_existe->nit.' - '.$representante_existe->entity ], 500);
-                                
-                            }
+                            $recurso = Gcm_Recurso::findOrFail($recurso_existe->id_recurso);
+                            $recurso->nombre = $convocados[$i]['nombre'];
+                            $recurso->telefono = $convocados[$i]['telefono'];
+                            $recurso->correo = $convocados[$i]['correo'];
+                            $recurso->estado = 1;
 
-                            $entidad_existe = DB::table('gcm_recursos as personas')
-                                ->leftJoinSub(function($query) {
-                                    $query->from('gcm_recursos as sub')
-                                    ->select('sub.identificacion', 'sub.razon_social', 'sub.representante')
-                                    ->where('sub.tipo_persona', '=', 1);
-                                }, 'entidades', function ($join) {
-                                    $join->on('personas.id_recurso', '=', 'entidades.representante');
-                                })->leftJoinSub(function($query) {
-                                    $query->from('gcm_convocados_reunion as cr1')
-                                    ->join('gcm_relaciones as rls1', 'rls1.id_relacion', '=', 'cr1.id_relacion')
-                                    ->join('gcm_recursos as rcs1', 'rcs1.id_recurso', '=', 'rls1.id_recurso')
-                                    ->select('rcs1.identificacion', DB::raw('MAX(id_convocado_reunion) as ultima_invitacion'))
-                                    ->where('cr1.tipo', '=', '0')
-                                    ->groupBy('rcs1.identificacion');
-                                }, 'invitacion', function ($join) {
-                                    $join->on('personas.identificacion', '=', 'invitacion.identificacion');
-                                })->leftJoin('gcm_convocados_reunion as cr', 'cr.id_convocado_reunion', '=', 'invitacion.ultima_invitacion')
-                                ->leftJoin('gcm_relaciones as rcs', 'rcs.id_relacion', '=', 'cr.id_relacion')
-                                ->leftJoin('gcm_roles as rls', 'rls.id_rol', '=', 'rcs.id_rol')
-                                ->where([['personas.tipo_persona', '=', '0'], ['personas.estado', '=', '1'], ['entidades.identificacion', '=', $convocadosA[$i]['nit']]])
-                                ->select('personas.id_recurso',
-                                'personas.id_usuario',
-                                'personas.identificacion',
-                                'personas.razon_social',
-                                'personas.telefono',
-                                'personas.correo',
-                                DB::raw('IF (entidades.identificacion IS NULL, "0", "2") as tipo'), 
-                                'entidades.identificacion as nit', 
-                                'entidades.razon_social as entity',
-                                'rcs.participacion',
-                                'rls.descripcion as rol')->first();
-                                
-                            if (isset($entidad_existe) && $entidad_existe->identificacion !== $convocadosA[$i]['identificacion']) {
-
-                                DB::rollback();
-                                return response()->json(["error" => 'La entidad seleccionada ya tiene un representante legal: '.$entidad_existe->identificacion.' - '.$entidad_existe->razon_social ], 500);
-
-                            }
-
-                            if(!isset($entidad_existe)) {
-                                $entidad_nueva = new Gcm_Recurso;
-                                $entidad_nueva->id_usuario = $convocadosA[$i]['id_usuario'];
-                                $entidad_nueva->tipo_persona = 1;
-                                $entidad_nueva->identificacion = $convocadosA[$i]['nit'];
-                                $entidad_nueva->razon_social = $convocadosA[$i]['entity'];
-                                $entidad_nueva->telefono = null;
-                                $entidad_nueva->correo = null;
-                                $entidad_nueva->representante = $recurso_existe->id_recurso;
-                                $entidad_nueva->estado = 1;
-    
-                                $response = $entidad_nueva->save();
-                            }
-                                
+                            $response = $recurso->save();
                         }
 
-                        $rol_existe = DB::table('gcm_roles')->where('descripcion', '=', $convocadosA[$i]['rol'])->first();
+                        $rol_existe = DB::table('gcm_roles')->where('descripcion', '=', $convocados[$i]['rol'])->first();
 
                         // En caso de que no exista el rol, lo registra
                         if(!$rol_existe) {
 
                             $rol_nuevo = new Gcm_Rol;
-                            $rol_nuevo->id_usuario = $convocadosA[$i]['id_usuario'];
-                            $rol_nuevo->descripcion = $convocadosA[$i]['rol'];
+                            $rol_nuevo->descripcion = $convocados[$i]['rol'];
                             $rol_nuevo->relacion = null;
                             $rol_nuevo->estado = 1;
 
@@ -741,12 +728,20 @@ class Gcm_Reunion_Controller extends Controller
                             $relacion_nueva->id_grupo =  $data['id_grupo'];
                             $relacion_nueva->id_rol = $rol_nuevo->id_rol;
                             $relacion_nueva->id_recurso = $recurso_existe->id_recurso;
-                            $relacion_nueva->participacion = 0;
                             $relacion_nueva->estado = 1;
                             
                             $response = $relacion_nueva->save();
 
                         } else {// En caso de que si exista el rol
+
+                            if ($rol_existe->estado === '0') {
+                                $rol = Gcm_Rol::findOrFail($rol_existe->id_rol);
+                                $rol->descripcion = $convocados[$i]['rol'];
+                                $rol->relacion = null;
+                                $rol->estado = 1;
+
+                                $response = $rol->save();
+                            }
 
                             $relacion_existe = DB::table('gcm_relaciones')->where([['id_grupo', '=',  $data['id_grupo']], ['id_rol', '=', $rol_existe->id_rol], ['id_recurso', '=', $recurso_existe->id_recurso]])->first();
                             
@@ -756,11 +751,21 @@ class Gcm_Reunion_Controller extends Controller
                                 $relacion_nueva->id_grupo = $data['id_grupo'];
                                 $relacion_nueva->id_rol = $rol_existe->id_rol;
                                 $relacion_nueva->id_recurso = $recurso_existe->id_recurso;
-                                $relacion_nueva->participacion = 0;
                                 $relacion_nueva->estado = 1;
                                 
                                 $response = $relacion_nueva->save();
                             } else { // En caso de que si exista la relación actualiza el valor de id_relacion por el que trae el convocado
+
+                                if ($relacion_existe->estado === '0') {
+                                    $relacion = Gcm_Relacion::findOrFail($relacion_existe->id_relacion);
+                                    $relacion->id_grupo = $data['id_grupo'];
+                                    $relacion->id_rol = $rol_existe->id_rol;
+                                    $relacion->id_recurso = $recurso_existe->id_recurso;
+                                    $relacion->estado = 1;
+                                    
+                                    $response = $relacion->save();
+                                }
+
                                 $relacion_nueva->id_relacion = $relacion_existe->id_relacion;
                             }
 
@@ -768,28 +773,26 @@ class Gcm_Reunion_Controller extends Controller
 
                         // Registra el convocado
                         $convocado = new Gcm_Convocado_Reunion;
-                        $convocado->id_reunion = $convocadosA[$i]['id_reunion'];
-                        $convocado->id_usuario = $convocadosA[$i]['id_usuario'];
+                        $convocado->id_reunion = $convocados[$i]['id_reunion'];
+                        $convocado->representacion = null;
                         $convocado->id_relacion = $relacion_nueva->id_relacion;
-                        $convocado->tipo = 0;
-                        $convocado->identificacion = null;
-                        $convocado->razon_social = null;
-                        $convocado->correo = null;
-                        $convocado->rol = null;
-                        $convocado->telefono = null;
-                        $convocado->participacion = 0;
-        
+                        $convocado->tipo = $convocados[$i]['tipo'];
+                        $convocado->nit = $convocados[$i]['nit'];
+                        $convocado->razon_social = $convocados[$i]['razon_social'];
+                        $convocado->participacion = null;
+                        $convocado->soporte = null;
+
                         $response = $convocado->save();
                     }
 
             }
 
             // Vacea la tabla de preogramas con un id_reunion en comun
-            DB::table('gcm_programas')->where('id_reunion', '=', $data['id_reunion'])->delete();
+            // DB::table('gcm_programas')->where('id_reunion', '=', $data['id_reunion'])->delete();
 
             // Registra los programas de una reunion
-            $descripcion = json_decode($request->descripcion, true);
-            print_r($descripcion[0]['descripcion']);
+            // // $descripcion = json_decode($request->descripcion, true);
+            // print_r($descripcion[0]['descripcion']);
             // for ($i=0; $i < count($request->descripcion); $i++) {
             //     $programaNuevo = new Gcm_Programa;
             //     $programaNuevo->id_reunion = $request->id_reunion;
