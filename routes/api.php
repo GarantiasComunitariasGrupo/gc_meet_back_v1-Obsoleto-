@@ -188,13 +188,12 @@ Route::group([
     Route::get('/autocompletar/{identificacion}', [Gcm_Reunion_Controller::class, 'autocompletar']);
 });
 
+/**
+ * Rutas para acceso a una reunión
+ */
 Route::group([
     'prefix' => 'acceso-reunion'
 ], function ($router) {
-    Route::get('lista-convocados-reunion/{id_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'getListaConvocados']);
-    Route::post('/guardar-acceso-reunion', [Gcm_Acceso_Reunion_Controller::class, 'guardarAccesoReunion']);
-    Route::post('/actualizar-acceso-reunion', [Gcm_Acceso_Reunion_Controller::class, 'actualizarAccesoReunion']);
-    Route::post('/guardar-representante-reunion', [Gcm_Acceso_Reunion_Controller::class, 'guardarRepresentante']);
-    Route::get('/consultar-representante/{id_reunion}/{id_convocado_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'consultarRepresentante']);
-    Route::post('/cancelarInvitacion', [Gcm_Acceso_Reunion_Controller::class, 'cancelarInvitacion']);
+    Route::get('/validacion-convocado/{identificacion}/{id_convocado_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'validacionConvocado']);
+    Route::get('/buscar-invitacion/{identificacion}', [Gcm_Acceso_Reunion_Controller::class, 'buscarInvitacion']);
 });
