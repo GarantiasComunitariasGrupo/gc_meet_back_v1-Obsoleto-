@@ -196,4 +196,8 @@ Route::group([
 ], function ($router) {
     Route::get('/validacion-convocado/{identificacion}/{id_convocado_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'validacionConvocado']);
     Route::get('/buscar-invitacion/{identificacion}', [Gcm_Acceso_Reunion_Controller::class, 'buscarInvitacion']);
+    Route::get('/get-id-convocado/{identificacion}/{id_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'getIdConvocado']);
+    // Route::post('/actualizar-celular-recurso', [Gcm_Acceso_Reunion_Controller::class, 'actualizarCelularRecurso']);
+    Route::get('/get-restricciones/{id_convocado_reunion}/{identificacion}', [Gcm_Acceso_Reunion_Controller::class, 'getRestricciones']);
+    Route::post('/enviar-sms', [Gcm_Acceso_Reunion_Controller::class, 'enviarSMS']);
 });

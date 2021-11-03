@@ -8,6 +8,9 @@ use App\Models\Gcm_Convocado_Reunion;
 use App\Http\Classes\Encrypt;
 use App\Http\Controllers\Gcm_Mail_Controller;
 use App\Models\Gcm_Log_Accion_Sistema;
+use App\Models\Gcm_Recurso;
+use App\Models\Gcm_Restriccion_Rol_Representante;
+use Illuminate\Support\Facades\Http;
 
 class Gcm_Acceso_Reunion_Controller extends Controller
 {
@@ -74,6 +77,9 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                     /**
                      * Se guarda log del sistema: Envío de correo electrónico
                      */
+                    $send['correos'] = $correo;
+                    $send['identificador'] = 'Consulta invitaciones';
+
                     Gcm_Log_Accion_Sistema::create([
                         'accion' => 5, 'tabla' => null,
                         'fecha' => date('Y-m-d H:i:s'), 'lugar' => 'Invitar reunión',
@@ -144,6 +150,87 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         );
 
         return response()->json($response);
+    }
+
+    public function getIdConvocado($identificacion, $idReunion)
+    {
+        $response = array();
+
+        $base = DB::table('gcm_convocados_reunion AS gcr')
+        ->join('gcm_relaciones AS grc', 'gcr.id_relacion', '=', 'grc.id_relacion')
+        ->join('gcm_recursos AS grcs', 'grc.id_recurso', '=', 'grcs.id_recurso')
+        ->where('gcr.id_reunion', $idReunion)
+        ->where('grcs.identificacion', $identificacion)
+        ->select(['*'])
+        ->get();
+
+        $response = array(
+            'ok' => (count($base) > 0) ? true : false,
+            'response' => (count($base) > 0) ? $base : 'El usuario no fue convocado a la reunión o la invitación fue cancelada.'
+        );
+
+        return response()->json($response);
+    }
+
+    public function actualizarCelularRecurso(Request $request)
+    {
+        $response = array();
+
+        $update = Gcm_Recurso::where('identificacion', $request->documentoIdentidad)
+        ->update(['telefono' => $request->telefono]);
+
+        $response = array(
+            'ok' => ($update) ? true : false,
+            'response' => ($update) ? 'Número de teléfono actualizado' : 'Error'
+        );
+
+        return response()->json($response);
+    }
+
+    public function getRestricciones($idConvocadoReunion, $identificacion)
+    {
+        $response = array();
+
+        $tipoReunion = DB::table(DB::raw('gcm_convocados_reunion AS gcr'))
+        ->join(DB::raw('gcm_reuniones AS grns'), 'gcr.id_reunion', '=', 'grns.id_reunion')
+        ->where('gcr.id_convocado_reunion', $idConvocadoReunion)
+        ->select(['id_tipo_reunion'])
+        ->first();
+
+        $roles = DB::table(DB::raw('gcm_recursos AS grs'))
+        ->join(DB::raw('gcm_relaciones AS grc'), 'grs.id_recurso', '=', 'grc.id_recurso')
+        ->where('identificacion', $identificacion)
+        ->where('grc.estado', 1)
+        ->select(['id_rol'])
+        ->get();
+
+        $restricciones = Gcm_Restriccion_Rol_Representante::where('estado', 1)
+        ->where('id_tipo_reunion', $tipoReunion->id_tipo_reunion)
+        ->whereIn('id_rol', array_column($roles->toArray(), 'id_rol'))
+        ->get();
+
+        $response = array(
+            'ok' => (count($restricciones) > 0) ? true : false,
+            'response' => (count($restricciones) > 0) ? $restricciones : 'No hay resultados'
+        );
+
+        return response()->json($response);
+    }
+
+    public function enviarSMS(Request $request)
+    {
+        $encrypt = new Encrypt();
+
+        $id = $encrypt->encriptar($request->idConvocadoReunion);
+        $txtSMS = "Para acceder a la reunión, debe acceder al siguiente link: " . "http://192.168.2.85/public/acceso-reunion/reunion/{$id}";
+
+        $response = Http::post("http://192.168.2.120:8801/api/messenger/enviar-sms/{$request->numeroCelular}", [
+            'password' => 'tJXc1Mo/dBQUbqD5kg==',
+            'sms' => $txtSMS
+        ]);
+
+        dd($response);
+
     }
 
 }
