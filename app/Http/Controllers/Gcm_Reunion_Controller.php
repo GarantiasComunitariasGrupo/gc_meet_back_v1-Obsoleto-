@@ -573,6 +573,11 @@ class Gcm_Reunion_Controller extends Controller
     public function editarReunionCompleta(Request $request) {
         // return response()->json($_FILES);
 
+        // print_r('titulo'.' '.count($request->titulo));
+        // print_r('opciones'.' '.count($request->opciones));
+        // print_r([578, $request->opciones['listadoOpciones'][0]['titulo']]);
+        // return;
+
         DB::beginTransaction();
         try {
 
@@ -609,23 +614,6 @@ class Gcm_Reunion_Controller extends Controller
             
             // // Vacea la tabla de convocados con un id_reunion en comun
             DB::table('gcm_convocados_reunion')->where('id_reunion', '=', $data['id_reunion'])->delete();
-            
-            // // Registra los convocados en el tipo Invitado
-            // $convocadosI = json_decode($request->convocadosI, true);
-            // for ($i=0; $i < count($convocadosI); $i++) {
-
-            //     $convocado = new Gcm_Convocado_Reunion;
-            //     $convocado->id_reunion = $convocadosI[$i]['id_reunion'];
-            //     $convocado->representacion = null;
-            //     $convocado->tipo = $convocadosI[$i]['tipo'];
-            //     $convocado->id_relacion = 1;
-            //     $convocado->nit = $convocadosI[$i]['nit'];
-            //     $convocado->razon_social = null;
-            //     $convocado->participacion = null;
-            //     $convocado->soporte = null;
-
-            //     $response = $convocado->save();
-            // }
 
             // Registra los convocados en el tipo Participante o Representante Legal
             $convocados = json_decode($request->convocados, true);
@@ -710,6 +698,15 @@ class Gcm_Reunion_Controller extends Controller
                             $recurso->estado = 1;
 
                             $response = $recurso->save();
+                        } else {
+
+                            $recurso = Gcm_Recurso::findOrFail($recurso_existe->id_recurso);
+                            $recurso->nombre = $convocados[$i]['nombre'];
+                            $recurso->telefono = $convocados[$i]['telefono'];
+                            $recurso->correo = $convocados[$i]['correo'];
+                            $recurso->estado = 1;
+
+                            $response = $recurso->save();
                         }
 
                         $rol_existe = DB::table('gcm_roles')->where('descripcion', '=', $convocados[$i]['rol'])->first();
@@ -771,62 +768,64 @@ class Gcm_Reunion_Controller extends Controller
 
                         }
 
-                        // Registra el convocado
-                        $convocado = new Gcm_Convocado_Reunion;
-                        $convocado->id_reunion = $convocados[$i]['id_reunion'];
-                        $convocado->representacion = null;
-                        $convocado->id_relacion = $relacion_nueva->id_relacion;
-                        $convocado->tipo = $convocados[$i]['tipo'];
-                        $convocado->nit = $convocados[$i]['nit'];
-                        $convocado->razon_social = $convocados[$i]['razon_social'];
-                        $convocado->participacion = null;
-                        $convocado->soporte = null;
+                        // Registra el convocado con nit y razon social
+                        if ($convocados[$i]['tipo'] === '2') {
+                            
+                            $convocado = new Gcm_Convocado_Reunion;
+                            $convocado->id_reunion = $convocados[$i]['id_reunion'];
+                            $convocado->representacion = null;
+                            $convocado->id_relacion = $relacion_nueva->id_relacion;
+                            $convocado->tipo = $convocados[$i]['tipo'];
+                            $convocado->nit = $convocados[$i]['nit'];
+                            $convocado->razon_social = $convocados[$i]['razon_social'];
+                            $convocado->participacion = null;
+                            $convocado->soporte = null;
 
-                        $response = $convocado->save();
+                            $response = $convocado->save();
+                        } else {
+
+                            // Registra el convocado sin nit ni razon social
+                            $convocado = new Gcm_Convocado_Reunion;
+                            $convocado->id_reunion = $convocados[$i]['id_reunion'];
+                            $convocado->representacion = null;
+                            $convocado->id_relacion = $relacion_nueva->id_relacion;
+                            $convocado->tipo = $convocados[$i]['tipo'];
+                            $convocado->nit = null;
+                            $convocado->razon_social = null;
+                            $convocado->participacion = null;
+                            $convocado->soporte = null;
+    
+                            $response = $convocado->save();
+                        }
+
                     }
 
             }
 
-            // Vacea la tabla de preogramas con un id_reunion en comun
-            // DB::table('gcm_programas')->where('id_reunion', '=', $data['id_reunion'])->delete();
+            // Vacea la tabla de programacion con un id_reunion en comun
+            DB::table('gcm_programacion')->where('id_reunion', '=', $data['id_reunion'])->delete();
 
-            // Registra los programas de una reunion
-            // // $descripcion = json_decode($request->descripcion, true);
-            // print_r($descripcion[0]['descripcion']);
-            // for ($i=0; $i < count($request->descripcion); $i++) {
-            //     $programaNuevo = new Gcm_Programa;
-            //     $programaNuevo->id_reunion = $request->id_reunion;
-            //     $programaNuevo->descripcion = $request->descripcion;
-            //     $programaNuevo->titulo = $request->titulo;
-            //     $programaNuevo->orden = 0;
-            //     $programaNuevo->tipo = $request->tipo;
-            //     $programaNuevo->relacion = null;
-            //     $programaNuevo->extra = null;
+            // print_r('entro'.' '.$request->titulo[0]);
+            // return;
+            
+            // Registra la programación de una reunion
+            for ($i=0; $i < count($request->titulo); $i++) {
+                $programaNuevo = new Gcm_Programacion;
+                $programaNuevo->id_reunion = $request->id_reunion[$i];
+                $programaNuevo->titulo = $request->titulo[$i];
+                $programaNuevo->descripcion = $request->descripcion[$i];
+                $programaNuevo->orden = $request->orden[$i];
+                $programaNuevo->numeracion = $request->numeracion[$i];
+                $programaNuevo->tipo = $request->tipo[$i];
+                $programaNuevo->relacion = null;
+                $programaNuevo->estado = 0;
 
-            //     $response = $programaNuevo->save();
-            // }
+                $response = $programaNuevo->save();
 
-            // Registra los programas de una reunion
-            // $programas = json_decode($request->programas, true);
-            // print_r($programas);
-            // for ($i=0; $i < count($programas); $i++) {
-            //     $programaNuevo = new Gcm_Programa;
-            //     $programaNuevo->id_reunion = $programas[$i]['id_reunion'];
-            //     $programaNuevo->descripcion = $programas[$i]['descripcion'];
-            //     $programaNuevo->titulo = $programas[$i]['titulo'];
-            //     $programaNuevo->orden = 0;
-            //     $programaNuevo->tipo = $programas[$i]['tipo'];
-            //     $programaNuevo->relacion = null;
-            //     $programaNuevo->extra = null;
+                if (count($request->opciones[$i]) > 0) {
 
-            //     $response = $programaNuevo->save();
-
-                
-
-            //     // if (count($programas[$i]['opciones']['listadoOpciones']) > 0) {
-                    
-            //     // }
-            // }
+                }
+            }
             
             DB::commit();
             return response()->json(["response" => $response], 200);
