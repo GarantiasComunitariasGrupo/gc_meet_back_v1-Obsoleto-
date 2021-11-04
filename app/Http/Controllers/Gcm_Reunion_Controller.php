@@ -8,6 +8,7 @@ use App\Models\Gcm_Reunion;
 use App\Models\Gcm_Relacion;
 use App\Models\Gcm_Convocado_Reunion;
 use App\Models\Gcm_Programacion;
+use App\Models\Gcm_Archivo_Programacion;
 use App\Models\Gcm_Grupo;
 use App\Models\Gcm_Rol;
 use App\Models\Gcm_Usuario;
@@ -572,11 +573,19 @@ class Gcm_Reunion_Controller extends Controller
 
     public function editarReunionCompleta(Request $request) {
         // return response()->json($_FILES);
-
+        $file = $request['file2'][0];
+        $descripcion = $file->getClientOriginalName();
+        $peso = filesize($file);
+        $ruta = 
+        print_r($peso);
+        // print_r(count($request->opcion_titulo1));
+        // return response()->json($request);
         // print_r('titulo'.' '.count($request->titulo));
-        // print_r('opciones'.' '.count($request->opciones));
-        // print_r([578, $request->opciones['listadoOpciones'][0]['titulo']]);
-        // return;
+        // print_r('titulo'.' '.$request->titulo[0]);
+        // print_r($request->opciones['listadoOpciones'][0]['opcion_titulo']);
+        // print_r([578, $request->opciones['listadoOpciones'][1]['titulo']]);
+        // print_r(count($request->opciones['listadoOpciones']));
+        return;
 
         DB::beginTransaction();
         try {
@@ -689,25 +698,14 @@ class Gcm_Reunion_Controller extends Controller
 
                     } else { // En caso de que si exista el recurso
 
+                        $recurso = Gcm_Recurso::findOrFail($recurso_existe->id_recurso);
+                        $recurso->nombre = $convocados[$i]['nombre'];
+                        if(!empty($convocados[$i]['telefono'])) { $recurso->telefono = $convocados[$i]['telefono']; }
+                        $recurso->correo = $convocados[$i]['correo'];
                         if ($recurso_existe->estado === '0') {
-
-                            $recurso = Gcm_Recurso::findOrFail($recurso_existe->id_recurso);
-                            $recurso->nombre = $convocados[$i]['nombre'];
-                            $recurso->telefono = $convocados[$i]['telefono'];
-                            $recurso->correo = $convocados[$i]['correo'];
                             $recurso->estado = 1;
-
-                            $response = $recurso->save();
-                        } else {
-
-                            $recurso = Gcm_Recurso::findOrFail($recurso_existe->id_recurso);
-                            $recurso->nombre = $convocados[$i]['nombre'];
-                            $recurso->telefono = $convocados[$i]['telefono'];
-                            $recurso->correo = $convocados[$i]['correo'];
-                            $recurso->estado = 1;
-
-                            $response = $recurso->save();
                         }
+                        $response = $recurso->save();
 
                         $rol_existe = DB::table('gcm_roles')->where('descripcion', '=', $convocados[$i]['rol'])->first();
 
@@ -802,28 +800,65 @@ class Gcm_Reunion_Controller extends Controller
 
             }
 
-            // Vacea la tabla de programacion con un id_reunion en comun
-            DB::table('gcm_programacion')->where('id_reunion', '=', $data['id_reunion'])->delete();
+            // Elimina de la tabla de programacion las opciones
+            DB::table('gcm_programacion')->where('id_reunion', '=', $data['id_reunion'])
+            ->whereNotNull('relacion')
+            ->delete();
 
-            // print_r('entro'.' '.$request->titulo[0]);
-            // return;
+            // Vacea la tabla de programacion los programas
+            DB::table('gcm_programacion')->where('id_reunion', '=', $data['id_reunion'])->delete();
             
             // Registra la programación de una reunion
             for ($i=0; $i < count($request->titulo); $i++) {
                 $programaNuevo = new Gcm_Programacion;
-                $programaNuevo->id_reunion = $request->id_reunion[$i];
-                $programaNuevo->titulo = $request->titulo[$i];
-                $programaNuevo->descripcion = $request->descripcion[$i];
-                $programaNuevo->orden = $request->orden[$i];
-                $programaNuevo->numeracion = $request->numeracion[$i];
-                $programaNuevo->tipo = $request->tipo[$i];
+                $programaNuevo->id_reunion = $this->stringNullToNull($request->id_reunion[$i]);
+                $programaNuevo->titulo = $this->stringNullToNull($request->titulo[$i]);
+                $programaNuevo->descripcion = $this->stringNullToNull($request->descripcion[$i]);
+                $programaNuevo->orden = $this->stringNullToNull($request->orden[$i]);
+                $programaNuevo->numeracion = $this->stringNullToNull($request->numeracion[$i]);
+                $programaNuevo->tipo = $this->stringNullToNull($request->tipo[$i]);
                 $programaNuevo->relacion = null;
                 $programaNuevo->estado = 0;
 
                 $response = $programaNuevo->save();
 
-                if (count($request->opciones[$i]) > 0) {
+                // if ($request->hasFile('file'.$i)) {
+                    
+                //     for ($j=0; $j < count($request['file'.$i]) ; $j++) {
 
+                //     $archivoNuevo = new Gcm_Archivo_Programacion;
+                //     $archivoNuevo->id_programa = $programaNuevo->id_programa;
+                //     $archivoNuevo->descripcion = $request['file'.$i][$j]['name'];
+                //     $archivoNuevo->peso = $request['file'.$i][$j]['size'];
+                //     $archivoNuevo->url = $request['url'.$i][$j];
+                //     // $filename  = $file->getClientOriginalName();
+                //     // $extension = $file->getClientOriginalExtension();
+                //     // $picture   = date('His').'-'.$filename;
+                //     // $file->move(storage_path('app/public'), $picture);
+
+                //     $response = $archivoNuevo->save();
+
+                //     }
+
+                // }
+
+                if (isset($request['opcion_titulo'.$i])) {
+
+                    for ($j=0; $j < count($request['opcion_titulo'.$i]) ; $j++) {
+
+                        $opcionNueva = new Gcm_Programacion;
+                        $opcionNueva->id_reunion = $this->stringNullToNull($request->id_reunion[$i]);
+                        $opcionNueva->titulo = $this->stringNullToNull($request['opcion_titulo'.$i][$j]);
+                        $opcionNueva->descripcion = $this->stringNullToNull($request['opcion_descripcion'.$i][$j]);
+                        $opcionNueva->orden = 0;
+                        $opcionNueva->numeracion = 0;
+                        $opcionNueva->tipo = 0;
+                        $opcionNueva->relacion = $this->stringNullToNull($programaNuevo->id_programa);
+                        $opcionNueva->estado = 0;
+
+                        $response = $opcionNueva->save();
+
+                    }
                 }
             }
             
@@ -833,5 +868,15 @@ class Gcm_Reunion_Controller extends Controller
             DB::rollback();
             return response()->json(["error" => $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Valida si un valor es 'null' o 'undefined' y lo convierte a null, de lo contrario devuelve el valor original
+     *
+     * @param [type] $val Valor a revisar
+     * @return void Valor null o el original
+     */
+    public function stringNullToNull($val){
+        return in_array($val, ['null', 'undefined']) ? null : $val;
     }
 }
