@@ -573,19 +573,9 @@ class Gcm_Reunion_Controller extends Controller
 
     public function editarReunionCompleta(Request $request) {
         // return response()->json($_FILES);
-        $file = $request['file2'][0];
-        $descripcion = $file->getClientOriginalName();
-        $peso = filesize($file);
-        $ruta = 
-        print_r($peso);
-        // print_r(count($request->opcion_titulo1));
         // return response()->json($request);
-        // print_r('titulo'.' '.count($request->titulo));
-        // print_r('titulo'.' '.$request->titulo[0]);
-        // print_r($request->opciones['listadoOpciones'][0]['opcion_titulo']);
-        // print_r([578, $request->opciones['listadoOpciones'][1]['titulo']]);
-        // print_r(count($request->opciones['listadoOpciones']));
-        return;
+        // print_r($request->hasFile('opcion_file0_0'));
+        // return;
 
         DB::beginTransaction();
         try {
@@ -800,6 +790,14 @@ class Gcm_Reunion_Controller extends Controller
 
             }
 
+            $extensiones = array('PNG', 'JPG', 'JPEG', 'GIF', 'XLSX', 'CSV', 'PDF', 'DOCX', 'TXT', 'PPTX', 'SVG', 'PDF');
+
+            // Elimina de la tabla de programacion las opciones
+            DB::table('gcm_archivos_programacion as ap')
+            ->join('gcm_programacion as p', 'p.id_programa', '=', 'ap.id_programa')
+            ->where('p.id_reunion', '=', $data['id_reunion'])
+            ->delete();
+
             // Elimina de la tabla de programacion las opciones
             DB::table('gcm_programacion')->where('id_reunion', '=', $data['id_reunion'])
             ->whereNotNull('relacion')
@@ -810,54 +808,96 @@ class Gcm_Reunion_Controller extends Controller
             
             // Registra la programación de una reunion
             for ($i=0; $i < count($request->titulo); $i++) {
-                $programaNuevo = new Gcm_Programacion;
-                $programaNuevo->id_reunion = $this->stringNullToNull($request->id_reunion[$i]);
-                $programaNuevo->titulo = $this->stringNullToNull($request->titulo[$i]);
-                $programaNuevo->descripcion = $this->stringNullToNull($request->descripcion[$i]);
-                $programaNuevo->orden = $this->stringNullToNull($request->orden[$i]);
-                $programaNuevo->numeracion = $this->stringNullToNull($request->numeracion[$i]);
-                $programaNuevo->tipo = $this->stringNullToNull($request->tipo[$i]);
-                $programaNuevo->relacion = null;
-                $programaNuevo->estado = 0;
 
-                $response = $programaNuevo->save();
+                $programa_nuevo = new Gcm_Programacion;
+                $programa_nuevo->id_reunion = $this->stringNullToNull($request->id_reunion[$i]);
+                $programa_nuevo->titulo = $this->stringNullToNull($request->titulo[$i]);
+                $programa_nuevo->descripcion = $this->stringNullToNull($request->descripcion[$i]);
+                $programa_nuevo->orden = $i+1;
+                $programa_nuevo->numeracion = $this->stringNullToNull($request->numeracion[$i]);
+                $programa_nuevo->tipo = ($request->tipo[$i] === '1' || $request->tipo[$i] === '4' && isset($request['opcion_titulo'.$i]) && count($request['opcion_titulo'.$i]) > 0 ? 0 : $request->tipo[$i]);
+                $programa_nuevo->tipo = $this->stringNullToNull($request->tipo[$i]);
 
-                // if ($request->hasFile('file'.$i)) {
-                    
-                //     for ($j=0; $j < count($request['file'.$i]) ; $j++) {
+                $programa_nuevo->relacion = null;
+                $programa_nuevo->estado = 0;
 
-                //     $archivoNuevo = new Gcm_Archivo_Programacion;
-                //     $archivoNuevo->id_programa = $programaNuevo->id_programa;
-                //     $archivoNuevo->descripcion = $request['file'.$i][$j]['name'];
-                //     $archivoNuevo->peso = $request['file'.$i][$j]['size'];
-                //     $archivoNuevo->url = $request['url'.$i][$j];
-                //     // $filename  = $file->getClientOriginalName();
-                //     // $extension = $file->getClientOriginalExtension();
-                //     // $picture   = date('His').'-'.$filename;
-                //     // $file->move(storage_path('app/public'), $picture);
+                $response = $programa_nuevo->save();
 
-                //     $response = $archivoNuevo->save();
+                $picture = 0;
 
-                //     }
+                if ($request->hasFile('file'.$i)) {
 
-                // }
+                    $carpeta = 'storage/app/public/archivos_reunion/'.$data['id_reunion'];
+                    if (!file_exists($carpeta)) {
+                        mkdir($carpeta, 0777, true);
+                    }
+
+                    for ($j=0; $j < count($request['file'.$i]) ; $j++) {
+                        
+                        $archivo_nuevo = new Gcm_Archivo_Programacion;
+                        $file = $request['file'.$i][$j];
+                        $extension = $file->getClientOriginalExtension();
+
+                        if(in_array(strtoupper($extension), $extensiones))
+                        {
+                            $archivo_nuevo->id_programa = $programa_nuevo->id_programa;
+                            $archivo_nuevo->descripcion = $file->getClientOriginalName();
+                            $archivo_nuevo->peso = filesize($file);
+                            $picture   = substr(md5(microtime()), rand(0, 31 - 8), 8).'.'.$extension;
+                            $archivo_nuevo->url = $carpeta.'/'.$picture;
+                            $file->move(storage_path('app/public/archivos_reunion/'.$data['id_reunion']), $picture);
+                            chmod(storage_path('app/public/archivos_reunion/'.$data['id_reunion'].'/'.$picture), 0555);
+    
+                            $response = $archivo_nuevo->save();
+                        } else {
+                            DB::rollback();
+                            return response()->json(['error' => 'La extensión del archivo no es permitida'], 500);
+                        }
+                    }
+                }
 
                 if (isset($request['opcion_titulo'.$i])) {
 
                     for ($j=0; $j < count($request['opcion_titulo'.$i]) ; $j++) {
 
-                        $opcionNueva = new Gcm_Programacion;
-                        $opcionNueva->id_reunion = $this->stringNullToNull($request->id_reunion[$i]);
-                        $opcionNueva->titulo = $this->stringNullToNull($request['opcion_titulo'.$i][$j]);
-                        $opcionNueva->descripcion = $this->stringNullToNull($request['opcion_descripcion'.$i][$j]);
-                        $opcionNueva->orden = 0;
-                        $opcionNueva->numeracion = 0;
-                        $opcionNueva->tipo = 0;
-                        $opcionNueva->relacion = $this->stringNullToNull($programaNuevo->id_programa);
-                        $opcionNueva->estado = 0;
+                        $opcion_nueva = new Gcm_Programacion;
+                        $opcion_nueva->id_reunion = $this->stringNullToNull($request->id_reunion[$i]);
+                        $opcion_nueva->titulo = $this->stringNullToNull($request['opcion_titulo'.$i][$j]);
+                        $opcion_nueva->descripcion = $this->stringNullToNull($request['opcion_descripcion'.$i][$j]);
+                        $opcion_nueva->orden = $j+1;
+                        $opcion_nueva->numeracion = 1;
+                        $opcion_nueva->tipo = 0;
+                        $opcion_nueva->relacion = $this->stringNullToNull($programa_nuevo->id_programa);
+                        $opcion_nueva->estado = 0;
 
-                        $response = $opcionNueva->save();
+                        $response = $opcion_nueva->save();
 
+                        $picture = 0;
+
+                        if ($request->hasFile('opcion_file'.$i.'_'.$j)) {
+
+                            $carpeta = 'storage/app/public/archivos_reunion/'.$data['id_reunion'];
+                            if (!file_exists($carpeta)) {
+                                mkdir($carpeta, 0777, true);
+                            }
+                            
+                            for ($k=0; $k < count($request['opcion_file'.$i.'_'.$j]) ; $k++) {
+        
+                                $archivo_opcion_nuevo = new Gcm_Archivo_Programacion;
+                                $opcion_file = $request['opcion_file'.$i.'_'.$j][$k];
+                                $opcion_extension = $opcion_file->getClientOriginalExtension();
+                                $archivo_opcion_nuevo->id_programa = $opcion_nueva->id_programa;
+                                $archivo_opcion_nuevo->descripcion = $opcion_file->getClientOriginalName();
+                                $archivo_opcion_nuevo->peso = filesize($opcion_file);
+                                $picture   = substr(md5(microtime()), rand(0, 31 - 8), 8).'.'.$opcion_extension;
+                                $archivo_opcion_nuevo->url = $carpeta.'/'.$picture;
+                                $opcion_file->move(storage_path('app/public/archivos_reunion/'.$data['id_reunion']), $picture);
+                                chmod(storage_path('app/public/archivos_reunion/'.$data['id_reunion'].'/'.$picture), 0555);
+
+                                $response = $archivo_opcion_nuevo->save();
+        
+                            }
+                        }
                     }
                 }
             }
