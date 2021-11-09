@@ -200,4 +200,5 @@ Route::group([
     // Route::post('/actualizar-celular-recurso', [Gcm_Acceso_Reunion_Controller::class, 'actualizarCelularRecurso']);
     Route::get('/get-restricciones/{id_convocado_reunion}/{identificacion}', [Gcm_Acceso_Reunion_Controller::class, 'getRestricciones']);
     Route::post('/enviar-sms', [Gcm_Acceso_Reunion_Controller::class, 'enviarSMS']);
+    Route::post('/enviar-firma', [Gcm_Acceso_Reunion_Controller::class, 'enviarFirma']);
 });

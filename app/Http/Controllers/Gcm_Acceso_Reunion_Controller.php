@@ -219,18 +219,78 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
     public function enviarSMS(Request $request)
     {
+        try {
+            
+            $encrypt = new Encrypt();
+            $response = array();
+
+            $id = $encrypt->encriptar($request->idConvocadoReunion);
+            $txtSMS = "Para acceder a la reunión, debe acceder al siguiente link: " . "http://192.168.2.85:4200/public/acceso-reunion/firma/{$id}";
+
+            $request = Http::post("http://192.168.2.120:8801/api/messenger/enviar-sms/{$request->numeroCelular}", [
+                'password' => 'tJXc1Mo/dBQUbqD5kg==',
+                'sms' => $txtSMS
+            ]);
+
+            $responseRequest = $request->json()['message'];
+            $result = $responseRequest['action'];
+
+            if ($request->status() === 200) {
+                if ($result === 'sendmessage') {
+                    $response = array('ok' => true, 'response' => $responseRequest['data']['acceptreport']);
+                } else {
+                    $response = array('ok' => false, 'response' => $responseRequest['data']['errormessage']);
+                }
+            }
+
+            return response()->json($response);
+
+        } catch (\Throwable $th) {
+            $response = array('ok' => false, 'response' => $th->getMessage());
+            return response()->json($response);
+        }
+
+    }
+
+    public function enviarFirma(Request $request)
+    {
+        // header('Access-Control-Allow-Origin: *');
+        $response = array();
         $encrypt = new Encrypt();
+        
+        $id = $encrypt->desencriptar($request->idConvocadoReunion);
 
-        $id = $encrypt->encriptar($request->idConvocadoReunion);
-        $txtSMS = "Para acceder a la reunión, debe acceder al siguiente link: " . "http://192.168.2.85/public/acceso-reunion/reunion/{$id}";
+        if ($request->firmaBase64) {
 
-        $response = Http::post("http://192.168.2.120:8801/api/messenger/enviar-sms/{$request->numeroCelular}", [
-            'password' => 'tJXc1Mo/dBQUbqD5kg==',
-            'sms' => $txtSMS
-        ]);
+            $imgExplode = explode(';base64,', $request->firmaBase64);
+            $imgType = explode('/', $imgExplode[0])[1];
+            $decodeImg = base64_decode($imgExplode[1]);
+            $filename = uniqid() . '.' . $imgType;
 
-        dd($response);
+            file_put_contents(public_path("storage/firmas/{$filename}"), $decodeImg);
 
+            $request = Http::withOptions([
+                'curl' => array(CURLOPT_SSL_VERIFYPEER => false, CURLOPT_SSL_VERIFYHOST => false),
+                'verify' => false,
+            ])->get("https://192.168.2.85:3009/get-url-firma", [
+                'url_firma' => 'firmas/' . $filename,
+                'id_convocado_reunion' => $id
+            ]);
+
+            if ($request->status() === 200) {
+
+                $result = $request->json();
+
+                if ($result['ok']) {
+                    $response = array('ok' => true, 'response' => 'Firma ok');
+                } else {
+                    $response = array('ok' => false, 'response' => 'Error');
+                }
+
+                return response()->json($response);
+            }
+
+        }
     }
 
 }
