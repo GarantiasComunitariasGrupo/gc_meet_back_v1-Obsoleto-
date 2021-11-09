@@ -8,14 +8,14 @@ use App\Mail\TestMail;
 
 class Gcm_Mail_Controller extends Controller
 {
-    public function sendEmail($title, $body, $destinatario)
+    public function sendEmail($title, $body, $destinatarios)
     {
         $detalle = [
             'title' => $title,
             'body' => $body
         ];
 
-        Mail::to($destinatario)->send(new TestMail($detalle));
+        Mail::to($destinatarios)->send(new TestMail($detalle));
         return true;
     }
 }

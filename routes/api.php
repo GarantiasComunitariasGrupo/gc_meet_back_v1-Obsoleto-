@@ -170,8 +170,10 @@ Route::group([
     // Reuniones
     Route::get('/traer-reuniones/{id_grupo}', [Gcm_Reunion_Controller::class, 'getReuniones']);
     Route::get('/traer-reunion/{id_reunion}', [Gcm_Reunion_Controller::class, 'getReunion']);
+    Route::get('/traer-ultima-reunion/{id_tipo_reunion}', [Gcm_Reunion_Controller::class, 'traerReunion']);
     Route::get('/traer-reunion-registrar/{id_grupo}', [Gcm_Reunion_Controller::class, 'getReunionRegistrar']);
     Route::post('/editar-reunion', [Gcm_Reunion_Controller::class, 'editarReunionCompleta']);
+    Route::post('/enviar-correos', [Gcm_Reunion_Controller::class, 'enviarCorreos']);
     // Grupos
     Route::get('/traer-grupos/{id_usuario}', [Gcm_Reunion_Controller::class, 'getGrupos']);
     // Roles

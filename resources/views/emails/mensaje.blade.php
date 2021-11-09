@@ -5,8 +5,8 @@
     <title>Prueba de correo</title>
 </head>
 <body>
-    <p> Has quedado registrado en nuestra plataforma </p>
+    <p> Has sido convocado a una reunión de junta de accionistas </p>
     <br>
-    <p> Puedes ingresar con esta contraseña: {{$data['body']}} </p>
+    <p> Atravez del siguiente link podras ingresar a la reunion: 'G4r4nt14s#' </p>
 </body>
 </html>
