@@ -201,4 +201,6 @@ Route::group([
     Route::get('/get-restricciones/{id_convocado_reunion}/{identificacion}', [Gcm_Acceso_Reunion_Controller::class, 'getRestricciones']);
     Route::post('/enviar-sms', [Gcm_Acceso_Reunion_Controller::class, 'enviarSMS']);
     Route::post('/enviar-firma', [Gcm_Acceso_Reunion_Controller::class, 'enviarFirma']);
+    Route::get('/permitir-firma/{id_convocado_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'permitirFirma']);
+    Route::post('/registrar-representante', [Gcm_Acceso_Reunion_Controller::class, 'registrarRepresentante']);
 });

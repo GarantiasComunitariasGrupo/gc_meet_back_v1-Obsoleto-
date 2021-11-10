@@ -9,6 +9,7 @@ use App\Http\Classes\Encrypt;
 use App\Http\Controllers\Gcm_Mail_Controller;
 use App\Models\Gcm_Log_Accion_Sistema;
 use App\Models\Gcm_Recurso;
+use App\Models\Gcm_Relacion;
 use App\Models\Gcm_Restriccion_Rol_Representante;
 use Illuminate\Support\Facades\Http;
 
@@ -254,43 +255,152 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
     public function enviarFirma(Request $request)
     {
-        // header('Access-Control-Allow-Origin: *');
-        $response = array();
-        $encrypt = new Encrypt();
-        
-        $id = $encrypt->desencriptar($request->idConvocadoReunion);
+        try {
 
-        if ($request->firmaBase64) {
+            $response = array();
+            $encrypt = new Encrypt();
+            
+            $id = $encrypt->desencriptar($request->idConvocadoReunion);
 
-            $imgExplode = explode(';base64,', $request->firmaBase64);
-            $imgType = explode('/', $imgExplode[0])[1];
-            $decodeImg = base64_decode($imgExplode[1]);
-            $filename = uniqid() . '.' . $imgType;
+            if ($request->firmaBase64) {
 
-            file_put_contents(public_path("storage/firmas/{$filename}"), $decodeImg);
+                $imgExplode = explode(';base64,', $request->firmaBase64);
+                $imgType = explode('/', $imgExplode[0])[1];
+                $decodeImg = base64_decode($imgExplode[1]);
+                $filename = uniqid() . '.' . $imgType;
 
-            $request = Http::withOptions([
-                'curl' => array(CURLOPT_SSL_VERIFYPEER => false, CURLOPT_SSL_VERIFYHOST => false),
-                'verify' => false,
-            ])->get("https://192.168.2.85:3009/get-url-firma", [
-                'url_firma' => 'firmas/' . $filename,
-                'id_convocado_reunion' => $id
-            ]);
+                $reunion = Gcm_Convocado_Reunion::where('id_convocado_reunion', $id)
+                ->first();
 
-            if ($request->status() === 200) {
-
-                $result = $request->json();
-
-                if ($result['ok']) {
-                    $response = array('ok' => true, 'response' => 'Firma ok');
+                if (file_exists(public_path("storage/firmas/{$reunion->id_reunion}"))) {
+                    file_put_contents(public_path("storage/firmas/{$reunion->id_reunion}/{$filename}"), $decodeImg);
+                    chmod(public_path("storage/firmas/{$reunion->id_reunion}/{$filename}"), 0555);
                 } else {
-                    $response = array('ok' => false, 'response' => 'Error');
+                    $folder = mkdir(public_path("storage/firmas/{$reunion->id_reunion}"), 0777);
+                    if ($folder) {
+                        file_put_contents(public_path("storage/firmas/{$reunion->id_reunion}/{$filename}"), $decodeImg);
+                        chmod(public_path("storage/firmas/{$reunion->id_reunion}/{$filename}"), 0555);
+                    }
                 }
 
-                return response()->json($response);
+                $request = Http::withOptions([
+                    'curl' => array(CURLOPT_SSL_VERIFYPEER => false, CURLOPT_SSL_VERIFYHOST => false),
+                    'verify' => false,
+                ])->get("https://192.168.2.85:3009/get-url-firma", [
+                    'url_firma' => "firmas/{$reunion->id_reunion}/{$filename}",
+                    'id_convocado_reunion' => $id
+                ]);
+
+                if ($request->status() === 200) {
+
+                    $result = $request->json();
+
+                    if ($result['ok']) {
+                        $response = array('ok' => true, 'response' => 'Firma ok');
+                    } else {
+                        $response = array('ok' => false, 'response' => 'Error');
+                    }
+
+                    return response()->json($response);
+                }
+
+            }
+        } catch(\Throwable $th) {
+            $response = array('ok' => false, 'response' => $th->getMessage());
+            return response()->json($response);
+        }
+    }
+
+    public function permitirFirma($idConvocadoReunion)
+    {
+        $encrypt = new Encrypt();
+        $response = array();
+
+        $id = $encrypt->desencriptar($idConvocadoReunion);
+
+        $convocado = Gcm_Convocado_Reunion::where('representacion', $id)
+        ->first();
+
+        $response = array(
+            'ok' => (!$convocado) ? true : false,
+            'response' => (!$convocado) ?: 'Usted ya realizó este proceso.'
+        );
+
+        return response()->json($response);
+    }
+
+    public function registrarRepresentante(Request $request)
+    {
+        $mailController = new Gcm_Mail_Controller();
+        $encrypt = new Encrypt();
+        $response = array();
+
+        DB::beginTransaction();
+        
+        try {
+
+            $anfitrion = Gcm_Convocado_Reunion::where('id_convocado_reunion', $request->params['id_convocado_reunion'])->first();
+            $participacionRepresentante = $anfitrion->participacion;
+
+            $recurso = Gcm_Recurso::where('identificacion', $request->params['identificacion'])->first();
+
+            if (!$recurso) {
+                $recurso = Gcm_Recurso::create([
+                    'identificacion' => $request->params['identificacion'],
+                    'nombre' => $request->params['nombre'],
+                    'correo' => $request->params['correo'],
+                    'estado' => 1
+                ]);
             }
 
+            $relacion = Gcm_Relacion::where('id_grupo', $request->params['id_grupo'])
+            ->where('id_rol', $request->params['id_rol'])
+            ->where('id_recurso', $recurso->id_recurso)
+            ->first();
+
+            if (!$relacion) {
+                $relacion = Gcm_Relacion::create([
+                    'id_grupo' => $request->params['id_grupo'],
+                    'id_rol' => $request->params['id_rol'],
+                    'id_recurso' => $recurso->id_recurso,
+                    'estado' => 1,
+                ]);
+            }
+
+            $convocado = Gcm_Convocado_Reunion::create([
+                'id_reunion' => $request->params['id_reunion'],
+                'representacion' => $request->params['id_convocado_reunion'],
+                'id_relacion' => $relacion->id_relacion,
+                'fecha' => date('Y-m-d H:i:s'),
+                'tipo' => 0,
+                'participacion' => $participacionRepresentante,
+                'soporte' => $request->params['url_firma']
+            ]);
+
+            DB::commit();
+
+            $idConvocadoReunion = $encrypt->encriptar($convocado->id_convocado_reunion);
+
+            $body = "{$request->parmams['nombreAnfitrion']} lo ha invitado a usted a que lo represente en una reunión.
+                    Link: http://192.168.2.85:4200/public/acceso-reunion/reunion/{$idConvocadoReunion}";
+
+            $send = $mailController->send(
+                'emails.formato-email',
+                'Invitación de representación - GCMeet',
+                'Invitación ?',
+                $body,
+                $request->params['correo']
+            );
+
+            $response = array('ok' => true, 'response' => ['recurso' => $recurso, 'convocado' => $convocado, 'mail' => $send]);
+            return response()->json($response);
+
+        } catch (\Throwable $th) {
+            DB::rollback();
+            $response = array('ok' => false, 'response' => $th->getMessage());
+            return response()->json($response);
         }
+
     }
 
 }
