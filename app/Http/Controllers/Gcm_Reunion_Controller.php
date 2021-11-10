@@ -582,6 +582,16 @@ class Gcm_Reunion_Controller extends Controller
 
                     $response = $tipo_reunion_nueva->save();
                     $id_tipo_reunion = $tipo_reunion_nueva->id_tipo_reunion;
+
+                    $log_accciones_sistema_nuevo = new Gcm_Log_Accion_Usuario;
+                    $log_accciones_sistema_nuevo->id_usuario = 1;
+                    $log_accciones_sistema_nuevo->accion = 0;
+                    $log_accciones_sistema_nuevo->tabla = 'gcm_log_acciones_usuario';
+                    $log_accciones_sistema_nuevo->lugar = 'lugar';
+                    $log_accciones_sistema_nuevo->detalle = 'detalle';
+
+                    $response = $log_accciones_sistema_nuevo->save();
+
                 }
 
                 // Actualiza los datos de la reunión
@@ -658,18 +668,35 @@ class Gcm_Reunion_Controller extends Controller
                                     $response = $relacion_nueva->save();
                                 }
 
-                                // Registra el convocado
-                                $convocado = new Gcm_Convocado_Reunion;
-                                $convocado->id_reunion = $convocados[$i]['id_reunion'];
-                                $convocado->representacion = null;
-                                $convocado->id_relacion = $relacion_nueva->id_relacion;
-                                $convocado->tipo = $convocados[$i]['tipo'];
-                                $convocado->nit = null;
-                                $convocado->razon_social = null;
-                                $convocado->participacion = null;
-                                $convocado->soporte = null;
-                
-                                $response = $convocado->save();
+                                // Registra el convocado con nit y razon social
+                                if ($convocados[$i]['tipo'] === '2') {
+                                    
+                                    $convocado = new Gcm_Convocado_Reunion;
+                                    $convocado->id_reunion = $data['id_reunion'];
+                                    $convocado->representacion = null;
+                                    $convocado->id_relacion = $relacion_nueva->id_relacion;
+                                    $convocado->tipo = $convocados[$i]['tipo'];
+                                    $convocado->nit = $convocados[$i]['nit'];
+                                    $convocado->razon_social = $convocados[$i]['razon_social'];
+                                    $convocado->participacion = null;
+                                    $convocado->soporte = null;
+
+                                    $response = $convocado->save();
+                                } else {
+
+                                    // Registra el convocado sin nit ni razon social
+                                    $convocado = new Gcm_Convocado_Reunion;
+                                    $convocado->id_reunion = $data['id_reunion'];
+                                    $convocado->representacion = null;
+                                    $convocado->id_relacion = $relacion_nueva->id_relacion;
+                                    $convocado->tipo = $convocados[$i]['tipo'];
+                                    $convocado->nit = null;
+                                    $convocado->razon_social = null;
+                                    $convocado->participacion = null;
+                                    $convocado->soporte = null;
+            
+                                    $response = $convocado->save();
+                                }
 
                             } else { // En caso de que si exista el recurso
 
@@ -745,7 +772,7 @@ class Gcm_Reunion_Controller extends Controller
                                 if ($convocados[$i]['tipo'] === '2') {
                                     
                                     $convocado = new Gcm_Convocado_Reunion;
-                                    $convocado->id_reunion = $convocados[$i]['id_reunion'];
+                                    $convocado->id_reunion = $data['id_reunion'];
                                     $convocado->representacion = null;
                                     $convocado->id_relacion = $relacion_nueva->id_relacion;
                                     $convocado->tipo = $convocados[$i]['tipo'];
@@ -759,7 +786,7 @@ class Gcm_Reunion_Controller extends Controller
 
                                     // Registra el convocado sin nit ni razon social
                                     $convocado = new Gcm_Convocado_Reunion;
-                                    $convocado->id_reunion = $convocados[$i]['id_reunion'];
+                                    $convocado->id_reunion = $data['id_reunion'];
                                     $convocado->representacion = null;
                                     $convocado->id_relacion = $relacion_nueva->id_relacion;
                                     $convocado->tipo = $convocados[$i]['tipo'];
@@ -797,7 +824,7 @@ class Gcm_Reunion_Controller extends Controller
                     for ($i=0; $i < count($request->titulo); $i++) {
 
                         $programa_nuevo = new Gcm_Programacion;
-                        $programa_nuevo->id_reunion = $this->stringNullToNull($request->id_reunion[$i]);
+                        $programa_nuevo->id_reunion = $this->stringNullToNull($data['id_reunion']);
                         $programa_nuevo->titulo = $this->stringNullToNull($request->titulo[$i]);
                         $programa_nuevo->descripcion = $this->stringNullToNull($request->descripcion[$i]);
                         $programa_nuevo->orden = $i+1;
@@ -860,7 +887,7 @@ class Gcm_Reunion_Controller extends Controller
                             for ($j=0; $j < count($request['opcion_titulo'.$i]) ; $j++) {
         
                                 $opcion_nueva = new Gcm_Programacion;
-                                $opcion_nueva->id_reunion = $this->stringNullToNull($request->id_reunion[$i]);
+                                $opcion_nueva->id_reunion = $this->stringNullToNull($data['id_reunion']);
                                 $opcion_nueva->titulo = $this->stringNullToNull($request['opcion_titulo'.$i][$j]);
                                 $opcion_nueva->descripcion = $this->stringNullToNull($request['opcion_descripcion'.$i][$j]);
                                 $opcion_nueva->orden = $j+1;
