@@ -154,7 +154,7 @@ Route::group([
     Route::get('/traer-reuniones/{id_grupo}', [Gcm_Reunion_Controller::class, 'getReuniones']);
     Route::get('/traer-reunion/{id_reunion}', [Gcm_Reunion_Controller::class, 'getReunion']);
     // Grupos
-    Route::get('/traer-grupos/{id_usuario}', [Gcm_Reunion_Controller::class, 'getGrupos']);
+    Route::get('/traer-grupos', [Gcm_Reunion_Controller::class, 'getGrupos']);
     // Programas
     Route::get('/traer-programas/{id_reunion}', [Gcm_Reunion_Controller::class, 'getProgramas']);
     // Convocados
