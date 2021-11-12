@@ -197,10 +197,14 @@ Route::group([
     Route::get('/validacion-convocado/{identificacion}/{id_convocado_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'validacionConvocado']);
     Route::get('/buscar-invitacion/{identificacion}', [Gcm_Acceso_Reunion_Controller::class, 'buscarInvitacion']);
     Route::get('/get-id-convocado/{identificacion}/{id_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'getIdConvocado']);
-    // Route::post('/actualizar-celular-recurso', [Gcm_Acceso_Reunion_Controller::class, 'actualizarCelularRecurso']);
     Route::get('/get-restricciones/{id_convocado_reunion}/{identificacion}', [Gcm_Acceso_Reunion_Controller::class, 'getRestricciones']);
     Route::post('/enviar-sms', [Gcm_Acceso_Reunion_Controller::class, 'enviarSMS']);
     Route::post('/enviar-firma', [Gcm_Acceso_Reunion_Controller::class, 'enviarFirma']);
     Route::get('/permitir-firma/{id_convocado_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'permitirFirma']);
     Route::post('/registrar-representante', [Gcm_Acceso_Reunion_Controller::class, 'registrarRepresentante']);
+    Route::get('/get-representante/{id_convocado_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'getRepresentante']);
+    Route::post('/cancelar-representacion', [Gcm_Acceso_Reunion_Controller::class, 'cancelarRepresentacion']);
+    Route::post('/get-representados', [Gcm_Acceso_Reunion_Controller::class, 'getRepresentados']);
+    Route::get('/encriptar/{valor}', [Gcm_Acceso_Reunion_Controller::class, 'encriptar']);
+    Route::post('/cancelar-representaciones', [Gcm_Acceso_Reunion_Controller::class, 'cancelarRepresentaciones']);
 });

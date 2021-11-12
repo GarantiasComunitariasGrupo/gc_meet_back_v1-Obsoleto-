@@ -173,21 +173,6 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         return response()->json($response);
     }
 
-    public function actualizarCelularRecurso(Request $request)
-    {
-        $response = array();
-
-        $update = Gcm_Recurso::where('identificacion', $request->documentoIdentidad)
-        ->update(['telefono' => $request->telefono]);
-
-        $response = array(
-            'ok' => ($update) ? true : false,
-            'response' => ($update) ? 'Número de teléfono actualizado' : 'Error'
-        );
-
-        return response()->json($response);
-    }
-
     public function getRestricciones($idConvocadoReunion, $identificacion)
     {
         $response = array();
@@ -377,6 +362,9 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 'soporte' => $request->params['url_firma']
             ]);
 
+            $celular = Gcm_Recurso::where('identificacion', $request->params['identificacion'])
+            ->update(['telefono' => $request->params['celular']]);
+
             DB::commit();
 
             $idConvocadoReunion = $encrypt->encriptar($convocado->id_convocado_reunion);
@@ -401,6 +389,75 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             return response()->json($response);
         }
 
+    }
+
+    public function getRepresentante($idConvocadoReunion)
+    {
+        $representante = DB::table('gcm_convocados_reunion AS gcr')
+        ->join('gcm_relaciones AS grc', 'gcr.id_relacion', '=', 'grc.id_relacion')
+        ->join('gcm_recursos AS grs', 'grc.id_recurso', '=', 'grs.id_recurso')
+        ->where('gcr.representacion', $idConvocadoReunion)
+        ->select(['*'])
+        ->first();
+
+        $response = array(
+            'ok' => ($representante) ? true : false,
+            'response' => ($representante) ? $representante : 'No hay resultados'
+        );
+
+        return response()->json($response);
+    }
+
+    public function getRepresentados(Request $request)
+    {
+        $representados = DB::table('gcm_convocados_reunion AS gcr1')
+        ->join('gcm_convocados_reunion AS gcr2', 'gcr1.representacion', '=', 'gcr2.id_convocado_reunion')
+        ->join('gcm_relaciones AS grc', 'grc.id_relacion', '=', 'gcr2.id_relacion')
+        ->join('gcm_recursos AS grs', 'grs.id_recurso', '=', 'grc.id_recurso')
+        ->whereNotNull('gcr1.representacion')
+        ->whereIn('gcr1.id_convocado_reunion', $request->idConvocadoReunion)
+        ->get();
+
+        $response = array(
+            'ok' => (count($representados) > 0) ? true : false,
+            'response' => (count($representados) > 0) ? $representados : 'No hay resultados'
+        );
+
+        return response()->json($response);
+    }
+
+    public function cancelarRepresentacion(Request $request)
+    {
+        try {
+
+            $delete = Gcm_Convocado_Reunion::where('id_convocado_reunion', $request->idConvocadoReunion)
+            ->delete();
+
+            $response = array(
+                'ok' => ($delete) ? true : false,
+                'response' => ($delete) ? 'Se ha cancelado la invitación de representación' : 'Error cancelando invitación'
+            );
+
+            return response()->json($response);
+
+        } catch (\Throwable $th) {
+            $response = array('ok' => false, 'response' => $th->getMessage());
+            return response()->json($response);
+        }
+
+    }
+
+    public function encriptar($valor)
+    {
+        $encrypt = new Encrypt();
+
+        $resultado = $encrypt->encriptar($valor);
+        return response()->json($resultado);
+    }
+
+    public function cancelarRepresentaciones(Request $request)
+    {
+        return response()->json($request);
     }
 
 }
