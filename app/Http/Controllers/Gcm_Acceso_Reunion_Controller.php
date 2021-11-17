@@ -12,6 +12,7 @@ use App\Models\Gcm_Recurso;
 use App\Models\Gcm_Relacion;
 use App\Models\Gcm_Restriccion_Rol_Representante;
 use Illuminate\Support\Facades\Http;
+use App\Http\Controllers\Gcm_Log_Acciones_Sistema_Controller;
 
 class Gcm_Acceso_Reunion_Controller extends Controller
 {
@@ -82,7 +83,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                     $send['identificador'] = 'Consulta invitaciones';
 
                     Gcm_Log_Accion_Sistema::create([
-                        'accion' => 5, 'tabla' => null,
+                        'accion' => 4, 'tabla' => null,
                         'fecha' => date('Y-m-d H:i:s'), 'lugar' => 'Invitar reunión',
                         'detalle' => json_encode($send)
                     ]);
@@ -222,11 +223,16 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             $result = $responseRequest['action'];
 
             if ($request->status() === 200) {
+
                 if ($result === 'sendmessage') {
                     $response = array('ok' => true, 'response' => $responseRequest['data']['acceptreport']);
                 } else {
                     $response = array('ok' => false, 'response' => $responseRequest['data']['errormessage']);
                 }
+
+                $response['descripcion'] = 'Envío SMS firma digital';
+                Gcm_Log_Acciones_Sistema_Controller::save(5, $response, null, null);
+
             }
 
             return response()->json($response);
@@ -369,7 +375,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
             $idConvocadoReunion = $encrypt->encriptar($convocado->id_convocado_reunion);
 
-            $body = "{$request->parmams['nombreAnfitrion']} lo ha invitado a usted a que lo represente en una reunión.
+            $body = "{$request->params['nombreAnfitrion']} lo ha invitado a usted a que lo represente en una reunión.
                     Link: http://192.168.2.85:4200/public/acceso-reunion/reunion/{$idConvocadoReunion}";
 
             $send = $mailController->send(
@@ -379,6 +385,10 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 $body,
                 $request->params['correo']
             );
+
+            $send['correos'] = $request->params['correo'];
+            $send['descripcion'] = 'Correo designación de poder';
+            Gcm_Log_Acciones_Sistema_Controller::save(4, $send, null, null);
 
             $response = array('ok' => true, 'response' => ['recurso' => $recurso, 'convocado' => $convocado, 'mail' => $send]);
             return response()->json($response);
@@ -430,8 +440,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
     {
         try {
 
-            $delete = Gcm_Convocado_Reunion::where('id_convocado_reunion', $request->idConvocadoReunion)
-            ->delete();
+            $delete = Gcm_Convocado_Reunion::groupDeletion(Gcm_Convocado_Reunion::where('id_convocado_reunion', $request->idConvocadoReunion)->get());
 
             $response = array(
                 'ok' => ($delete) ? true : false,
@@ -451,13 +460,107 @@ class Gcm_Acceso_Reunion_Controller extends Controller
     {
         $encrypt = new Encrypt();
 
-        $resultado = $encrypt->encriptar($valor);
+        $resultado = $encrypt->desencriptar($valor);
+        // $resultado = $encrypt->encriptar($valor);
         return response()->json($resultado);
     }
 
     public function cancelarRepresentaciones(Request $request)
     {
-        return response()->json($request);
+        $mailController = new Gcm_Mail_Controller();
+        $response = array();
+        $log = array();
+
+        try {
+
+            if (!empty($request->params)) {
+    
+                foreach ($request->params as $key => $row) {
+                    
+                    $body = "Cordial saludo, {$row['nombreRepresentado']}. El motivo de este correo es para notificarle que {$row['nombreRepresentante']} ha cancelado la representación a su nombre para la reunión.";
+    
+                    $send = $mailController->send(
+                        'emails.formato-email',
+                        'Cancelación de representación - GCMeet',
+                        'Cancelación ?',
+                        $body,
+                        $row['correo']
+                    );
+
+                    $delete = Gcm_Convocado_Reunion::groupDeletion(Gcm_Convocado_Reunion::where('id_convocado_reunion', $row['id_convocado_reunion'])->get());
+    
+                    if (!$send['ok']) {
+                        array_push($log['email'], ['error' => $send['error']]);
+                    }
+    
+                    if (!$delete) {
+                        array_push($log['delete'], ['error' => "Error eliminando {$row['id_convocado_reunion']}"]);
+                    }
+    
+                }
+
+                $mail['result'] = (empty($log['email'])) ? true : false;
+                (!empty($log['email'])) ? $mail['error'] = $log['email'] : null;
+                $mail['correos'] = array_column(array($request->params), 'correo');
+                $mail['descripcion'] = 'Correo cancelación de representaciones';
+                Gcm_Log_Acciones_Sistema_Controller::save(4, $mail, null, null);
+
+                $response = array(
+                    'ok' => empty($log) ? true : false,
+                    'response' => empty($log)
+                        ? 'Las representaciones se han cancelado correctamente.'
+                        : $log
+                );
+    
+                return response()->json($response);
+            }
+
+        } catch (\Throwable $th) {
+            $response = array('ok' => false, 'response' => $th->getMessage());
+            return response()->json($response);
+        }
+
+    }
+
+    public function getAvanceReunion($idConvocadoReunion)
+    {
+        $response = array();
+
+        $reunion = DB::table('gcm_convocados_reunion AS gcr')
+        ->join('gcm_programacion AS gp', 'gcr.id_reunion', '=', 'gp.id_reunion')
+        ->where('id_convocado_reunion', $idConvocadoReunion)
+        ->get();
+
+        $response = array(
+            'ok' => (count($reunion) > 0) ? true : false,
+            'response' => (count($reunion) > 0) ? $reunion : 'No hay resultados'
+        );
+
+        return response()->json($response);
+    }
+
+    public function getListadoReuniones($idReunion, $identificacion)
+    {
+        $response = array();
+
+        $base = DB::table('gcm_convocados_reunion AS gcr')
+        ->join('gcm_reuniones AS grns', 'gcr.id_reunion', '=', 'grns.id_reunion')
+        ->join('gcm_relaciones AS grc', 'gcr.id_relacion', '=', 'grc.id_relacion')
+        ->join('gcm_recursos AS grs', 'grc.id_recurso', '=', 'grs.id_recurso')
+        ->join('gcm_grupos AS ggps', 'grc.id_grupo', '=', 'ggps.id_grupo')
+        ->where('grs.identificacion', $identificacion)
+        ->where('grns.id_reunion', '!=', $idReunion)
+        ->whereIn('grns.estado', [0, 1])
+        ->groupBy('grns.id_reunion')
+        ->select(['gcr.*', 'grns.*', 'grc.*', 'ggps.descripcion AS descripcion_grupo'])
+        ->get();
+
+        $response = array(
+            'ok' => (count($base) > 0) ? true : false,
+            'response' => (count($base) > 0) ? $base : 'No hay resultados'
+        );
+
+        return response()->json($response);
     }
 
 }

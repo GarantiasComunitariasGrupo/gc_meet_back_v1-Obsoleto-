@@ -3,9 +3,10 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+// use Illuminate\Database\Eloquent\Model;
+use App\Utilities\ModelWithEvents;
 
-class Gcm_Convocado_Reunion extends Model
+class Gcm_Convocado_Reunion extends ModelWithEvents
 {
     use HasFactory;
 
