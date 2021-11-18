@@ -20,9 +20,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
      * Función encargada de consultar las reuniones con estado (En espera, en curso)
      * a las que esté convocado un recurso 
      * y enviarle las respectivas invitaciones a su correo electrónico
-     * 
      * @param $identificacion -> documento de identidad
-     * 
      * @return JSON
      */
     public function buscarInvitacion($identificacion)
@@ -38,6 +36,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             ->join('gcm_relaciones AS grc', 'gcr.id_relacion', '=', 'grc.id_relacion')
             ->join('gcm_recursos AS grcs', 'grc.id_recurso', '=', 'grcs.id_recurso')
             ->where('identificacion', $identificacion)
+            ->where('gcr.estado', 1)
             ->whereIn('grns.estado', [0, 1])
             ->groupBy('gcr.id_reunion')
             ->select(['gcr.*', 'grcs.*', 'grns.descripcion'])
@@ -114,13 +113,10 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
     /**
      * Función encargada de validar si un recurso tiene acceso a una reunión específica.
-     * 
      * Se desencripta $idConvocadoReunion y se hace una consulta para validar
      * si la identificación asociada a ese registro coincide con la enviada por el usuario
-     * 
-     * @param @identificacion -> documento de identidad
+     * @param $identificacion -> documento de identidad
      * @param $idConvocadoReunion -> id_convocado_reunion encriptado
-     * 
      * @return JSON
      */
     public function validacionConvocado($identificacion, $idConvocadoReunion)
@@ -140,6 +136,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         ->join('gcm_relaciones AS grc', 'gcr.id_relacion', '=', 'grc.id_relacion')
         ->join('gcm_recursos AS grcs', 'grc.id_recurso', '=', 'grcs.id_recurso')
         ->where('id_convocado_reunion', $id)
+        ->where('gcr.estado', 1)
         ->where('grcs.identificacion', $identificacion)
         ->first();
 
@@ -154,6 +151,13 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         return response()->json($response);
     }
 
+    /**
+     * Función encargada de consultar los diferentes id_convocado_reunion
+     * que tenga un convocado para la reunión
+     * @param $identificacion -> documento de identidad
+     * @param $idReunion -> id_reunion
+     * @return JSON
+     */
     public function getIdConvocado($identificacion, $idReunion)
     {
         $response = array();
@@ -162,6 +166,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         ->join('gcm_relaciones AS grc', 'gcr.id_relacion', '=', 'grc.id_relacion')
         ->join('gcm_recursos AS grcs', 'grc.id_recurso', '=', 'grcs.id_recurso')
         ->where('gcr.id_reunion', $idReunion)
+        ->where('gcr.estado', 1)
         ->where('grcs.identificacion', $identificacion)
         ->select(['*'])
         ->get();
@@ -174,6 +179,12 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         return response()->json($response);
     }
 
+    /**
+     * Función encargada de consultar las restricciones que pueda tener un representante
+     * @param $idConvocadoReunion -> id_convocado_reunion
+     * @param $identificacion -> documento de identidad
+     * @return JSON
+     */
     public function getRestricciones($idConvocadoReunion, $identificacion)
     {
         $response = array();
@@ -181,6 +192,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         $tipoReunion = DB::table(DB::raw('gcm_convocados_reunion AS gcr'))
         ->join(DB::raw('gcm_reuniones AS grns'), 'gcr.id_reunion', '=', 'grns.id_reunion')
         ->where('gcr.id_convocado_reunion', $idConvocadoReunion)
+        ->where('gcr.estado', 1)
         ->select(['id_tipo_reunion'])
         ->first();
 
@@ -204,6 +216,11 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         return response()->json($response);
     }
 
+    /**
+     * Función encargada de enviar SMS con link para que el convocado pueda firmar
+     * @param Request $request
+     * @return JSON
+     */
     public function enviarSMS(Request $request)
     {
         try {
@@ -211,17 +228,21 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             $encrypt = new Encrypt();
             $response = array();
 
+            /**Se encripta id_convocado_reunion */
             $id = $encrypt->encriptar($request->idConvocadoReunion);
             $txtSMS = "Para acceder a la reunión, debe acceder al siguiente link: " . "http://192.168.2.85:4200/public/acceso-reunion/firma/{$id}";
 
+            /** Petición HTTP::POST para consumir servicio de envío SMS */
             $request = Http::post("http://192.168.2.120:8801/api/messenger/enviar-sms/{$request->numeroCelular}", [
                 'password' => 'tJXc1Mo/dBQUbqD5kg==',
                 'sms' => $txtSMS
             ]);
 
+            /** Se captura respuesta de la petición */
             $responseRequest = $request->json()['message'];
             $result = $responseRequest['action'];
 
+            /** Se valida estado de la petición */
             if ($request->status() === 200) {
 
                 if ($result === 'sendmessage') {
@@ -230,6 +251,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                     $response = array('ok' => false, 'response' => $responseRequest['data']['errormessage']);
                 }
 
+                /** Se guarda log para acciones del sistema */
                 $response['descripcion'] = 'Envío SMS firma digital';
                 Gcm_Log_Acciones_Sistema_Controller::save(5, $response, null, null);
 
@@ -244,6 +266,12 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
     }
 
+    /**
+     * Función encargada de recibir base64 de la imagen de la firma
+     * y guardarla en su respectivo directorio
+     * @param Request $request
+     * @return JSON
+     */
     public function enviarFirma(Request $request)
     {
         try {
@@ -251,29 +279,49 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             $response = array();
             $encrypt = new Encrypt();
             
+            /**Se desencripta id_convocad_reunion */
             $id = $encrypt->desencriptar($request->idConvocadoReunion);
 
+            /**Se valida que haya llegado el base64 de la imagen */
             if ($request->firmaBase64) {
 
+                /** Se separa el contenido del base64 */
                 $imgExplode = explode(';base64,', $request->firmaBase64);
+                /** Se captura extensión de la imagen*/
                 $imgType = explode('/', $imgExplode[0])[1];
+                /** Se decodifica el base64 de la imagen*/
                 $decodeImg = base64_decode($imgExplode[1]);
+                /** Nombre para el archivo */
                 $filename = uniqid() . '.' . $imgType;
 
+                /**Se obtiene info. del id_convocado_reunion */
                 $reunion = Gcm_Convocado_Reunion::where('id_convocado_reunion', $id)
+                ->where('estado', 1)
                 ->first();
 
+                /** Si existe la carpeta con el nombre de => id_reunion */
                 if (file_exists(public_path("storage/firmas/{$reunion->id_reunion}"))) {
+                    /** Se crea archivo con la imagen de la firma */
                     file_put_contents(public_path("storage/firmas/{$reunion->id_reunion}/{$filename}"), $decodeImg);
+                    /** Se otorgan permisos 0555 para el archivo creado */
                     chmod(public_path("storage/firmas/{$reunion->id_reunion}/{$filename}"), 0555);
                 } else {
+                    /** No existe la carpeta con el nombre de => id_reunion */
+
+                    /** Se crea carpeta. Se le otorgan permisos 0777*/
                     $folder = mkdir(public_path("storage/firmas/{$reunion->id_reunion}"), 0777);
+
                     if ($folder) {
+                        /** Se crea archivo con la imagen de la firma */
                         file_put_contents(public_path("storage/firmas/{$reunion->id_reunion}/{$filename}"), $decodeImg);
+                        /** Se otorgan permisos 0555 para el archivo creado */
                         chmod(public_path("storage/firmas/{$reunion->id_reunion}/{$filename}"), 0555);
                     }
                 }
 
+                /**
+                 * Se realiza petición HTTP::GET para enviar URL de la firma a el socket de NODEJS
+                 */
                 $request = Http::withOptions([
                     'curl' => array(CURLOPT_SSL_VERIFYPEER => false, CURLOPT_SSL_VERIFYHOST => false),
                     'verify' => false,
@@ -282,8 +330,10 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                     'id_convocado_reunion' => $id
                 ]);
 
+                /** Se valida estado de la petición */
                 if ($request->status() === 200) {
 
+                    /** Se captura respuesta de la petición */
                     $result = $request->json();
 
                     if ($result['ok']) {
@@ -302,14 +352,21 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         }
     }
 
+    /**
+     * Función encargada de consultar si un convocado ya realizó la firma
+     * @param $idConvocadoReunion -> id_convocado_reunion
+     * @return JSON
+     */
     public function permitirFirma($idConvocadoReunion)
     {
         $encrypt = new Encrypt();
         $response = array();
 
+        /**Se desencripta id_convocado_reunion */
         $id = $encrypt->desencriptar($idConvocadoReunion);
 
         $convocado = Gcm_Convocado_Reunion::where('representacion', $id)
+        ->where('estado', 1)
         ->first();
 
         $response = array(
@@ -320,21 +377,30 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         return response()->json($response);
     }
 
+    /**
+     * Función encargada de registrar un representante
+     * @param Request $request
+     * @return JSON
+     */
     public function registrarRepresentante(Request $request)
     {
         $mailController = new Gcm_Mail_Controller();
         $encrypt = new Encrypt();
         $response = array();
 
+        /**Transacción SQL */
         DB::beginTransaction();
         
         try {
 
-            $anfitrion = Gcm_Convocado_Reunion::where('id_convocado_reunion', $request->params['id_convocado_reunion'])->first();
+            /** Se consulta la participación que tiene el convocado para asignarsela al representante del mismo */
+            $anfitrion = Gcm_Convocado_Reunion::where('id_convocado_reunion', $request->params['id_convocado_reunion'])->where('estado', 1)->first();
             $participacionRepresentante = $anfitrion->participacion;
 
+            /**Se consulta recurso */
             $recurso = Gcm_Recurso::where('identificacion', $request->params['identificacion'])->first();
 
+            /** Si no existe el recurso, se registra */
             if (!$recurso) {
                 $recurso = Gcm_Recurso::create([
                     'identificacion' => $request->params['identificacion'],
@@ -344,11 +410,13 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 ]);
             }
 
+            /**Se consulta la relación */
             $relacion = Gcm_Relacion::where('id_grupo', $request->params['id_grupo'])
             ->where('id_rol', $request->params['id_rol'])
             ->where('id_recurso', $recurso->id_recurso)
             ->first();
 
+            /** Si no existe la relación, se registra */
             if (!$relacion) {
                 $relacion = Gcm_Relacion::create([
                     'id_grupo' => $request->params['id_grupo'],
@@ -358,6 +426,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 ]);
             }
 
+            /** Se registra el convocado */
             $convocado = Gcm_Convocado_Reunion::create([
                 'id_reunion' => $request->params['id_reunion'],
                 'representacion' => $request->params['id_convocado_reunion'],
@@ -368,16 +437,20 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 'soporte' => $request->params['url_firma']
             ]);
 
+            /** Se actualiza número de celular en caso de ser modificado */
             $celular = Gcm_Recurso::where('identificacion', $request->params['identificacion'])
             ->update(['telefono' => $request->params['celular']]);
 
             DB::commit();
 
+            /** Se encripta id_convocado_reunion */
             $idConvocadoReunion = $encrypt->encriptar($convocado->id_convocado_reunion);
 
+            /** Cuerpo del correo */
             $body = "{$request->params['nombreAnfitrion']} lo ha invitado a usted a que lo represente en una reunión.
                     Link: http://192.168.2.85:4200/public/acceso-reunion/reunion/{$idConvocadoReunion}";
 
+            /** Se envía correo electrónico de invitación al representante */
             $send = $mailController->send(
                 'emails.formato-email',
                 'Invitación de representación - GCMeet',
@@ -386,6 +459,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 $request->params['correo']
             );
 
+            /** Se guarda log de acciones del sistema */
             $send['correos'] = $request->params['correo'];
             $send['descripcion'] = 'Correo designación de poder';
             Gcm_Log_Acciones_Sistema_Controller::save(4, $send, null, null);
@@ -401,12 +475,18 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
     }
 
+    /**
+     * Función encargada de consultar si un convocado tiene un representante para la reunión
+     * @param $idConvocadoReunion -> id_convocado_reunion
+     * @return JSON
+     */
     public function getRepresentante($idConvocadoReunion)
     {
         $representante = DB::table('gcm_convocados_reunion AS gcr')
         ->join('gcm_relaciones AS grc', 'gcr.id_relacion', '=', 'grc.id_relacion')
         ->join('gcm_recursos AS grs', 'grc.id_recurso', '=', 'grs.id_recurso')
         ->where('gcr.representacion', $idConvocadoReunion)
+        ->where('gcr.estado', 1)
         ->select(['*'])
         ->first();
 
@@ -418,6 +498,11 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         return response()->json($response);
     }
 
+    /**
+     * Función encargada de consultar las designaciones de poder que se le otorgaron a un representante
+     * @param Request $request
+     * @return JSON
+     */
     public function getRepresentados(Request $request)
     {
         $representados = DB::table('gcm_convocados_reunion AS gcr1')
@@ -425,6 +510,8 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         ->join('gcm_relaciones AS grc', 'grc.id_relacion', '=', 'gcr2.id_relacion')
         ->join('gcm_recursos AS grs', 'grs.id_recurso', '=', 'grc.id_recurso')
         ->whereNotNull('gcr1.representacion')
+        ->where('gcr1.estado', 1)
+        ->where('gcr2.estado', 1)
         ->whereIn('gcr1.id_convocado_reunion', $request->idConvocadoReunion)
         ->get();
 
@@ -436,11 +523,18 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         return response()->json($response);
     }
 
+    /**
+     * Función encargada de cancelar una designación de poder
+     * @param Request $request
+     * @return JSON
+     */
     public function cancelarRepresentacion(Request $request)
     {
         try {
 
-            $delete = Gcm_Convocado_Reunion::groupDeletion(Gcm_Convocado_Reunion::where('id_convocado_reunion', $request->idConvocadoReunion)->get());
+            $delete = Gcm_Convocado_Reunion::groupDeletion(
+                Gcm_Convocado_Reunion::where('id_convocado_reunion', $request->idConvocadoReunion)->where('estado', 1)->get()
+            );
 
             $response = array(
                 'ok' => ($delete) ? true : false,
@@ -456,15 +550,26 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
     }
 
-    public function encriptar($valor)
+    /** 
+     * Función privada para realizar pruebas de encriptar/desencriptar un valor
+     * @param $valor -> string a encriptar/desencriptar
+     * @param $tipo -> acción
+     * @return JSON
+     */
+    protected function encriptar($valor, $tipo)
     {
         $encrypt = new Encrypt();
-
-        $resultado = $encrypt->desencriptar($valor);
-        // $resultado = $encrypt->encriptar($valor);
+        $accion = (+$tipo === 1) ? 'encriptar' : 'desencriptar';
+        $resultado = $encrypt->$accion($valor);
+        
         return response()->json($resultado);
     }
 
+    /**
+     * Función encargada de cancelar las designaciones de poder que se le otorgaron a un representante
+     * @param Request $request
+     * @return JSON
+     */
     public function cancelarRepresentaciones(Request $request)
     {
         $mailController = new Gcm_Mail_Controller();
@@ -475,10 +580,15 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
             if (!empty($request->params)) {
     
+                /**
+                 * Se iteran las designaciones de poder
+                 */
                 foreach ($request->params as $key => $row) {
                     
+                    /**Cuerpo del correo */
                     $body = "Cordial saludo, {$row['nombreRepresentado']}. El motivo de este correo es para notificarle que {$row['nombreRepresentante']} ha cancelado la representación a su nombre para la reunión.";
     
+                    /** Se envía correo electrónico */
                     $send = $mailController->send(
                         'emails.formato-email',
                         'Cancelación de representación - GCMeet',
@@ -487,8 +597,11 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                         $row['correo']
                     );
 
-                    $delete = Gcm_Convocado_Reunion::groupDeletion(Gcm_Convocado_Reunion::where('id_convocado_reunion', $row['id_convocado_reunion'])->get());
+                    $delete = Gcm_Convocado_Reunion::groupDeletion(Gcm_Convocado_Reunion::where('id_convocado_reunion', $row['id_convocado_reunion'])->where('estado', 1)->get());
     
+                    /**
+                     * Valida errores en el envío del correo electrónico
+                     */
                     if (!$send['ok']) {
                         array_push($log['email'], ['error' => $send['error']]);
                     }
@@ -499,6 +612,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
     
                 }
 
+                /** Se guarda log de acciones del sistema */
                 $mail['result'] = (empty($log['email'])) ? true : false;
                 (!empty($log['email'])) ? $mail['error'] = $log['email'] : null;
                 $mail['correos'] = array_column(array($request->params), 'correo');
@@ -522,6 +636,11 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
     }
 
+    /**
+     * Función encargada de consultar la programación de una reunión
+     * @param $idConvocadoReunion -> id_convocado_reunion
+     * @return JSON
+     */
     public function getAvanceReunion($idConvocadoReunion)
     {
         $response = array();
@@ -529,6 +648,8 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         $reunion = DB::table('gcm_convocados_reunion AS gcr')
         ->join('gcm_programacion AS gp', 'gcr.id_reunion', '=', 'gp.id_reunion')
         ->where('id_convocado_reunion', $idConvocadoReunion)
+        ->where('gcr.estado', 1)
+        ->where('gp.estado', '!=', 4)
         ->get();
 
         $response = array(
@@ -539,6 +660,13 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         return response()->json($response);
     }
 
+    /**
+     * Función enargada de obtener las reuniones en estado de espera/en curso a las que está invitado un convocado
+     * Nota: Se buscan reuniones diferentes a la reunión actual
+     * @param $idReunion -> id_reunion
+     * @param $identificacion -> documento de identidad
+     * @return JSON
+     */
     public function getListadoReuniones($idReunion, $identificacion)
     {
         $response = array();
@@ -550,6 +678,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         ->join('gcm_grupos AS ggps', 'grc.id_grupo', '=', 'ggps.id_grupo')
         ->where('grs.identificacion', $identificacion)
         ->where('grns.id_reunion', '!=', $idReunion)
+        ->where('gcr.estado', 1)
         ->whereIn('grns.estado', [0, 1])
         ->groupBy('grns.id_reunion')
         ->select(['gcr.*', 'grns.*', 'grc.*', 'ggps.descripcion AS descripcion_grupo'])

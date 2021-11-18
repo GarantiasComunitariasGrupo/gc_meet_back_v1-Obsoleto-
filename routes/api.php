@@ -205,7 +205,7 @@ Route::group([
     Route::get('/get-representante/{id_convocado_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'getRepresentante']);
     Route::post('/cancelar-representacion', [Gcm_Acceso_Reunion_Controller::class, 'cancelarRepresentacion']);
     Route::post('/get-representados', [Gcm_Acceso_Reunion_Controller::class, 'getRepresentados']);
-    Route::get('/encriptar/{valor}', [Gcm_Acceso_Reunion_Controller::class, 'encriptar']);
+    Route::get('/encriptar/{valor}/{tipo}', [Gcm_Acceso_Reunion_Controller::class, 'encriptar']);
     Route::post('/cancelar-representaciones', [Gcm_Acceso_Reunion_Controller::class, 'cancelarRepresentaciones']);
     Route::get('/get-avance-reunion/{id_convocado_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'getAvanceReunion']);
     Route::get('/get-listado-reuniones/{id_reunion}/{identificacion}', [Gcm_Acceso_Reunion_Controller::class, 'getListadoReuniones']);
