@@ -105,8 +105,8 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             return response()->json($response);
 
         } catch (\Throwable $th) {
-            $response = array('ok' => false, 'response' => $th->getMessage());
-            return response()->json($response);
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['Error' => $th->getMessage(), 'detalle' => 'Function => buscarInvitacion()'], null, null);
+            return response()->json(['ok' => false, 'response' => $th->getMessage()]);
         }
 
     }
@@ -121,34 +121,41 @@ class Gcm_Acceso_Reunion_Controller extends Controller
      */
     public function validacionConvocado($identificacion, $idConvocadoReunion)
     {
-        $encrypt = new Encrypt();
-        $response = array();
+        try {
 
-        /**
-         * Se obtiene el valor del parámetro ya desencriptado
-         */
-        $id = $encrypt->desencriptar($idConvocadoReunion);
+            $encrypt = new Encrypt();
+            $response = array();
+    
+            /**
+             * Se obtiene el valor del parámetro ya desencriptado
+             */
+            $id = $encrypt->desencriptar($idConvocadoReunion);
+    
+            /**
+             * Consulta de validación
+             */
+            $convocado = DB::table('gcm_convocados_reunion AS gcr')
+            ->join('gcm_relaciones AS grc', 'gcr.id_relacion', '=', 'grc.id_relacion')
+            ->join('gcm_recursos AS grcs', 'grc.id_recurso', '=', 'grcs.id_recurso')
+            ->where('id_convocado_reunion', $id)
+            ->where('gcr.estado', 1)
+            ->where('grcs.identificacion', $identificacion)
+            ->first();
 
-        /**
-         * Consulta de validación
-         */
-        $convocado = DB::table('gcm_convocados_reunion AS gcr')
-        ->join('gcm_relaciones AS grc', 'gcr.id_relacion', '=', 'grc.id_relacion')
-        ->join('gcm_recursos AS grcs', 'grc.id_recurso', '=', 'grcs.id_recurso')
-        ->where('id_convocado_reunion', $id)
-        ->where('gcr.estado', 1)
-        ->where('grcs.identificacion', $identificacion)
-        ->first();
+            /**
+             * Respuesta
+             */
+            $response = array(
+                'ok' => ($convocado) ? true : false,
+                'response' => ($convocado) ? $convocado : 'El usuario no fue convocado a la reunión'
+            );
+    
+            return response()->json($response);
 
-        /**
-         * Respuesta
-         */
-        $response = array(
-            'ok' => ($convocado) ? true : false,
-            'response' => ($convocado) ? $convocado : 'El usuario no fue convocado a la reunión'
-        );
-
-        return response()->json($response);
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['Error' => $th->getMessage(), 'Detalle' => 'Function => validacionConvocado()'], null, null);
+            return response()->json(['ok' => false, 'response' => $th->getMessage()]);
+        }
     }
 
     /**
@@ -160,23 +167,31 @@ class Gcm_Acceso_Reunion_Controller extends Controller
      */
     public function getIdConvocado($identificacion, $idReunion)
     {
-        $response = array();
+        try {
 
-        $base = DB::table('gcm_convocados_reunion AS gcr')
-        ->join('gcm_relaciones AS grc', 'gcr.id_relacion', '=', 'grc.id_relacion')
-        ->join('gcm_recursos AS grcs', 'grc.id_recurso', '=', 'grcs.id_recurso')
-        ->where('gcr.id_reunion', $idReunion)
-        ->where('gcr.estado', 1)
-        ->where('grcs.identificacion', $identificacion)
-        ->select(['*'])
-        ->get();
+            $response = array();
+    
+            $base = DB::table('gcm_convocados_reunion AS gcr')
+            ->join('gcm_relaciones AS grc', 'gcr.id_relacion', '=', 'grc.id_relacion')
+            ->join('gcm_recursos AS grcs', 'grc.id_recurso', '=', 'grcs.id_recurso')
+            ->where('gcr.id_reunion', $idReunion)
+            ->where('gcr.estado', 1)
+            ->where('grcs.identificacion', $identificacion)
+            ->select(['*'])
+            ->get();
+    
+            $response = array(
+                'ok' => (count($base) > 0) ? true : false,
+                'response' => (count($base) > 0) ? $base : 'El usuario no fue convocado a la reunión o la invitación fue cancelada.'
+            );
+    
+            return response()->json($response);
 
-        $response = array(
-            'ok' => (count($base) > 0) ? true : false,
-            'response' => (count($base) > 0) ? $base : 'El usuario no fue convocado a la reunión o la invitación fue cancelada.'
-        );
-
-        return response()->json($response);
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['Error' => $th->getMessage(), 'Detalle' => 'Function => getIdConvocado()'], null, null);
+            return response()->json(['ok' => false, 'response' => $th->getMessage()]);
+        }
+        
     }
 
     /**
@@ -187,33 +202,42 @@ class Gcm_Acceso_Reunion_Controller extends Controller
      */
     public function getRestricciones($idConvocadoReunion, $identificacion)
     {
-        $response = array();
+        try {
 
-        $tipoReunion = DB::table(DB::raw('gcm_convocados_reunion AS gcr'))
-        ->join(DB::raw('gcm_reuniones AS grns'), 'gcr.id_reunion', '=', 'grns.id_reunion')
-        ->where('gcr.id_convocado_reunion', $idConvocadoReunion)
-        ->where('gcr.estado', 1)
-        ->select(['id_tipo_reunion'])
-        ->first();
+            $response = array();
+    
+            $tipoReunion = DB::table(DB::raw('gcm_convocados_reunion AS gcr'))
+            ->join(DB::raw('gcm_reuniones AS grns'), 'gcr.id_reunion', '=', 'grns.id_reunion')
+            ->where('gcr.id_convocado_reunion', $idConvocadoReunion)
+            ->where('gcr.estado', 1)
+            ->where('grns.estado', '!=', 4)
+            ->select(['id_tipo_reunion'])
+            ->first();
+    
+            $roles = DB::table(DB::raw('gcm_recursos AS grs'))
+            ->join(DB::raw('gcm_relaciones AS grc'), 'grs.id_recurso', '=', 'grc.id_recurso')
+            ->where('identificacion', $identificacion)
+            ->where('grc.estado', 1)
+            ->select(['id_rol'])
+            ->get();
+    
+            $restricciones = Gcm_Restriccion_Rol_Representante::where('estado', 1)
+            ->where('id_tipo_reunion', $tipoReunion->id_tipo_reunion)
+            ->whereIn('id_rol', array_column($roles->toArray(), 'id_rol'))
+            ->get();
+    
+            $response = array(
+                'ok' => (count($restricciones) > 0) ? true : false,
+                'response' => (count($restricciones) > 0) ? $restricciones : 'No hay resultados'
+            );
+    
+            return response()->json($response);
 
-        $roles = DB::table(DB::raw('gcm_recursos AS grs'))
-        ->join(DB::raw('gcm_relaciones AS grc'), 'grs.id_recurso', '=', 'grc.id_recurso')
-        ->where('identificacion', $identificacion)
-        ->where('grc.estado', 1)
-        ->select(['id_rol'])
-        ->get();
-
-        $restricciones = Gcm_Restriccion_Rol_Representante::where('estado', 1)
-        ->where('id_tipo_reunion', $tipoReunion->id_tipo_reunion)
-        ->whereIn('id_rol', array_column($roles->toArray(), 'id_rol'))
-        ->get();
-
-        $response = array(
-            'ok' => (count($restricciones) > 0) ? true : false,
-            'response' => (count($restricciones) > 0) ? $restricciones : 'No hay resultados'
-        );
-
-        return response()->json($response);
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['Error' => $th->getMessage(), 'Detalle' => 'Function => getRestricciones()'], null, null);
+            return response()->json(['ok' => false, 'response' => $th->getMessage()]);
+        }
+        
     }
 
     /**
@@ -260,8 +284,8 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             return response()->json($response);
 
         } catch (\Throwable $th) {
-            $response = array('ok' => false, 'response' => $th->getMessage());
-            return response()->json($response);
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['Error' => $th->getMessage(), 'Detalle' => 'Function => enviarSMS()'], null, null);
+            return response()->json(['ok' => false, 'response' => $th->getMessage()]);
         }
 
     }
@@ -347,8 +371,8 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
             }
         } catch(\Throwable $th) {
-            $response = array('ok' => false, 'response' => $th->getMessage());
-            return response()->json($response);
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['Error' => $th->getMessage(), 'Detalle' => 'Function => enviarFirma()'], null, null);
+            return response()->json(['ok' => false, 'response' => $th->getMessage()]);
         }
     }
 
@@ -359,22 +383,30 @@ class Gcm_Acceso_Reunion_Controller extends Controller
      */
     public function permitirFirma($idConvocadoReunion)
     {
-        $encrypt = new Encrypt();
-        $response = array();
+        try {
 
-        /**Se desencripta id_convocado_reunion */
-        $id = $encrypt->desencriptar($idConvocadoReunion);
+            $encrypt = new Encrypt();
+            $response = array();
+    
+            /**Se desencripta id_convocado_reunion */
+            $id = $encrypt->desencriptar($idConvocadoReunion);
+    
+            $convocado = Gcm_Convocado_Reunion::where('representacion', $id)
+            ->where('estado', 1)
+            ->first();
+    
+            $response = array(
+                'ok' => (!$convocado) ? true : false,
+                'response' => (!$convocado) ?: 'Usted ya realizó este proceso.'
+            );
+    
+            return response()->json($response);
 
-        $convocado = Gcm_Convocado_Reunion::where('representacion', $id)
-        ->where('estado', 1)
-        ->first();
-
-        $response = array(
-            'ok' => (!$convocado) ? true : false,
-            'response' => (!$convocado) ?: 'Usted ya realizó este proceso.'
-        );
-
-        return response()->json($response);
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['Error' => $th->getMessage(), 'Detalle' => 'Function => permitirFirma()'], null, null);
+            return response()->json(['ok' => false, 'response' => $th->getMessage()]);
+        }
+        
     }
 
     /**
@@ -469,8 +501,8 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
         } catch (\Throwable $th) {
             DB::rollback();
-            $response = array('ok' => false, 'response' => $th->getMessage());
-            return response()->json($response);
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['Error' => $th->getMessage(), 'Detalle' => 'Function => registrarRepresentante()'], null, null);
+            return response()->json(['ok' => false, 'response' => $th->getMessage()]);
         }
 
     }
@@ -482,20 +514,28 @@ class Gcm_Acceso_Reunion_Controller extends Controller
      */
     public function getRepresentante($idConvocadoReunion)
     {
-        $representante = DB::table('gcm_convocados_reunion AS gcr')
-        ->join('gcm_relaciones AS grc', 'gcr.id_relacion', '=', 'grc.id_relacion')
-        ->join('gcm_recursos AS grs', 'grc.id_recurso', '=', 'grs.id_recurso')
-        ->where('gcr.representacion', $idConvocadoReunion)
-        ->where('gcr.estado', 1)
-        ->select(['*'])
-        ->first();
+        try {
+        
+            $representante = DB::table('gcm_convocados_reunion AS gcr')
+            ->join('gcm_relaciones AS grc', 'gcr.id_relacion', '=', 'grc.id_relacion')
+            ->join('gcm_recursos AS grs', 'grc.id_recurso', '=', 'grs.id_recurso')
+            ->where('gcr.representacion', $idConvocadoReunion)
+            ->where('gcr.estado', 1)
+            ->select(['*'])
+            ->first();
+    
+            $response = array(
+                'ok' => ($representante) ? true : false,
+                'response' => ($representante) ? $representante : 'No hay resultados'
+            );
+    
+            return response()->json($response);
 
-        $response = array(
-            'ok' => ($representante) ? true : false,
-            'response' => ($representante) ? $representante : 'No hay resultados'
-        );
-
-        return response()->json($response);
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['Error' => $th->getMessage(), 'Detalle' => 'Function => getRepresentante()'], null, null);
+            return response()->json(['ok' => false, 'response' => $th->getMessage()]);
+        }
+        
     }
 
     /**
@@ -505,22 +545,30 @@ class Gcm_Acceso_Reunion_Controller extends Controller
      */
     public function getRepresentados(Request $request)
     {
-        $representados = DB::table('gcm_convocados_reunion AS gcr1')
-        ->join('gcm_convocados_reunion AS gcr2', 'gcr1.representacion', '=', 'gcr2.id_convocado_reunion')
-        ->join('gcm_relaciones AS grc', 'grc.id_relacion', '=', 'gcr2.id_relacion')
-        ->join('gcm_recursos AS grs', 'grs.id_recurso', '=', 'grc.id_recurso')
-        ->whereNotNull('gcr1.representacion')
-        ->where('gcr1.estado', 1)
-        ->where('gcr2.estado', 1)
-        ->whereIn('gcr1.id_convocado_reunion', $request->idConvocadoReunion)
-        ->get();
+        try {
 
-        $response = array(
-            'ok' => (count($representados) > 0) ? true : false,
-            'response' => (count($representados) > 0) ? $representados : 'No hay resultados'
-        );
+            $representados = DB::table('gcm_convocados_reunion AS gcr1')
+            ->join('gcm_convocados_reunion AS gcr2', 'gcr1.representacion', '=', 'gcr2.id_convocado_reunion')
+            ->join('gcm_relaciones AS grc', 'grc.id_relacion', '=', 'gcr2.id_relacion')
+            ->join('gcm_recursos AS grs', 'grs.id_recurso', '=', 'grc.id_recurso')
+            ->whereNotNull('gcr1.representacion')
+            ->where('gcr1.estado', 1)
+            ->where('gcr2.estado', 1)
+            ->whereIn('gcr1.id_convocado_reunion', $request->idConvocadoReunion)
+            ->get();
+    
+            $response = array(
+                'ok' => (count($representados) > 0) ? true : false,
+                'response' => (count($representados) > 0) ? $representados : 'No hay resultados'
+            );
+    
+            return response()->json($response);
 
-        return response()->json($response);
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['Error' => $th->getMessage(), 'Detalle' => 'Function => getRepresentados()'], null, null);
+            return response()->json(['ok' => false, 'response' => $th->getMessage()]);
+        }
+
     }
 
     /**
@@ -532,20 +580,20 @@ class Gcm_Acceso_Reunion_Controller extends Controller
     {
         try {
 
-            $delete = Gcm_Convocado_Reunion::groupDeletion(
-                Gcm_Convocado_Reunion::where('id_convocado_reunion', $request->idConvocadoReunion)->where('estado', 1)->get()
-            );
+            $change = Gcm_Convocado_Reunion::where('id_convocado_reunion', $request->idConvocadoReunion)
+            ->where('estado', 1)
+            ->update(['estado' => 0]);
 
             $response = array(
-                'ok' => ($delete) ? true : false,
-                'response' => ($delete) ? 'Se ha cancelado la invitación de representación' : 'Error cancelando invitación'
+                'ok' => ($change) ? true : false,
+                'response' => ($change) ? 'Se ha cancelado la invitación de representación' : 'Error cancelando invitación'
             );
 
             return response()->json($response);
 
         } catch (\Throwable $th) {
-            $response = array('ok' => false, 'response' => $th->getMessage());
-            return response()->json($response);
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['Error' => $th->getMessage(), 'Detalle' => 'Function => cancelarRepresentacion()'], null, null);
+            return response()->json(['ok' => false, 'response' => $th->getMessage()]);
         }
 
     }
@@ -597,7 +645,9 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                         $row['correo']
                     );
 
-                    $delete = Gcm_Convocado_Reunion::groupDeletion(Gcm_Convocado_Reunion::where('id_convocado_reunion', $row['id_convocado_reunion'])->where('estado', 1)->get());
+                    $change = Gcm_Convocado_Reunion::where('id_convocado_reunion', $row['id_convocado_reunion'])
+                    ->where('estado', 1)
+                    ->update(['estado' => 0]);
     
                     /**
                      * Valida errores en el envío del correo electrónico
@@ -606,8 +656,8 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                         array_push($log['email'], ['error' => $send['error']]);
                     }
     
-                    if (!$delete) {
-                        array_push($log['delete'], ['error' => "Error eliminando {$row['id_convocado_reunion']}"]);
+                    if (!$change) {
+                        array_push($log['change'], ['error' => "Error actualizando {$row['id_convocado_reunion']}"]);
                     }
     
                 }
@@ -630,8 +680,8 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             }
 
         } catch (\Throwable $th) {
-            $response = array('ok' => false, 'response' => $th->getMessage());
-            return response()->json($response);
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['Error' => $th->getMessage(), 'Detalle' => 'Function => cancelarRepresentaciones()'], null, null);
+            return response()->json(['ok' => false, 'response' => $th->getMessage()]);
         }
 
     }
@@ -643,21 +693,29 @@ class Gcm_Acceso_Reunion_Controller extends Controller
      */
     public function getAvanceReunion($idConvocadoReunion)
     {
-        $response = array();
+        try {
+            
+            $response = array();
+    
+            $reunion = DB::table('gcm_convocados_reunion AS gcr')
+            ->join('gcm_programacion AS gp', 'gcr.id_reunion', '=', 'gp.id_reunion')
+            ->where('id_convocado_reunion', $idConvocadoReunion)
+            ->where('gcr.estado', 1)
+            ->where('gp.estado', '!=', 4)
+            ->get();
+    
+            $response = array(
+                'ok' => (count($reunion) > 0) ? true : false,
+                'response' => (count($reunion) > 0) ? $reunion : 'No hay resultados'
+            );
+    
+            return response()->json($response);
 
-        $reunion = DB::table('gcm_convocados_reunion AS gcr')
-        ->join('gcm_programacion AS gp', 'gcr.id_reunion', '=', 'gp.id_reunion')
-        ->where('id_convocado_reunion', $idConvocadoReunion)
-        ->where('gcr.estado', 1)
-        ->where('gp.estado', '!=', 4)
-        ->get();
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['Error' => $th->getMessage(), 'Detalle' => 'Function => getAvanceReunion()'], null, null);
+            return response()->json(['ok' => false, 'response' => $th->getMessage()]);
+        }
 
-        $response = array(
-            'ok' => (count($reunion) > 0) ? true : false,
-            'response' => (count($reunion) > 0) ? $reunion : 'No hay resultados'
-        );
-
-        return response()->json($response);
     }
 
     /**
@@ -669,27 +727,35 @@ class Gcm_Acceso_Reunion_Controller extends Controller
      */
     public function getListadoReuniones($idReunion, $identificacion)
     {
-        $response = array();
+        try {
 
-        $base = DB::table('gcm_convocados_reunion AS gcr')
-        ->join('gcm_reuniones AS grns', 'gcr.id_reunion', '=', 'grns.id_reunion')
-        ->join('gcm_relaciones AS grc', 'gcr.id_relacion', '=', 'grc.id_relacion')
-        ->join('gcm_recursos AS grs', 'grc.id_recurso', '=', 'grs.id_recurso')
-        ->join('gcm_grupos AS ggps', 'grc.id_grupo', '=', 'ggps.id_grupo')
-        ->where('grs.identificacion', $identificacion)
-        ->where('grns.id_reunion', '!=', $idReunion)
-        ->where('gcr.estado', 1)
-        ->whereIn('grns.estado', [0, 1])
-        ->groupBy('grns.id_reunion')
-        ->select(['gcr.*', 'grns.*', 'grc.*', 'ggps.descripcion AS descripcion_grupo'])
-        ->get();
+            $response = array();
+    
+            $base = DB::table('gcm_convocados_reunion AS gcr')
+            ->join('gcm_reuniones AS grns', 'gcr.id_reunion', '=', 'grns.id_reunion')
+            ->join('gcm_relaciones AS grc', 'gcr.id_relacion', '=', 'grc.id_relacion')
+            ->join('gcm_recursos AS grs', 'grc.id_recurso', '=', 'grs.id_recurso')
+            ->join('gcm_grupos AS ggps', 'grc.id_grupo', '=', 'ggps.id_grupo')
+            ->where('grs.identificacion', $identificacion)
+            ->where('grns.id_reunion', '!=', $idReunion)
+            ->where('gcr.estado', 1)
+            ->whereIn('grns.estado', [0, 1])
+            ->groupBy('grns.id_reunion')
+            ->select(['gcr.*', 'grns.*', 'grc.*', 'ggps.descripcion AS descripcion_grupo'])
+            ->get();
+    
+            $response = array(
+                'ok' => (count($base) > 0) ? true : false,
+                'response' => (count($base) > 0) ? $base : 'No hay resultados'
+            );
+    
+            return response()->json($response);
 
-        $response = array(
-            'ok' => (count($base) > 0) ? true : false,
-            'response' => (count($base) > 0) ? $base : 'No hay resultados'
-        );
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['Error' => $th->getMessage(), 'Detalle' => 'Function => getListadoReuniones()'], null, null);
+            return response()->json(['ok' => false, 'response' => $th->getMessage()]);
+        }
 
-        return response()->json($response);
     }
 
 }
