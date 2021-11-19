@@ -32,87 +32,113 @@ class Gcm_Reunion_Controller extends Controller
          * Trae todos los grupos registrados por un usuario con un estado en comun
          */
         public function getGrupos() {
-            $grupos = Gcm_Grupo::where('estado', '1')->get();
-            return $grupos;
+
+            try {
+                $grupos = Gcm_Grupo::where('estado', '1')->get();
+                // return $grupos;
+                return response()->json($grupos);
+            } catch (\Throwable $th) {
+                
+            }
         }
 
         /**
          * Consulta todas las reuniones con un tipo de reunion que tiene un grupo en comun
          */
         public function getReuniones($id_grupo) {
-            $reuniones = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
-            ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo')
-            ->where('gcm_tipo_reuniones.id_grupo', '=', $id_grupo)
-            ->orderBy('gcm_reuniones.estado', 'asc')
-            ->orderBy('gcm_reuniones.fecha_actualizacion', 'desc')
-            ->get();
-            return $reuniones;
+
+            try {
+
+                $reuniones = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
+                ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo')
+                ->where('gcm_tipo_reuniones.id_grupo', '=', $id_grupo)
+                ->orderBy('gcm_reuniones.estado', 'asc')
+                ->orderBy('gcm_reuniones.fecha_actualizacion', 'desc')
+                ->get();
+                return $reuniones;
+                
+            } catch (\Throwable $th) {
+                //throw $th;
+            }
         }
 
         /**
          * Trae todos los datos de una reunión en especifico
          */
         public function getReunion($id_reunion) {
-            $reunion = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
-            ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo', 'gcm_tipo_reuniones.id_grupo')
-            ->where('id_reunion', $id_reunion)->get();
-            return $reunion;
+            try {
+
+                $reunion = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
+                ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo', 'gcm_tipo_reuniones.id_grupo')
+                ->where('id_reunion', $id_reunion)->get();
+                return $reunion;
+                
+            } catch (\Throwable $th) {
+                //throw $th;
+            }
         }
 
         /**
         * Trae todas los programas registradas en una reunion
         */ 
         public function getProgramas($id_reunion) {
-            //toma todos los datos de programacion sin importar si tiene o no archivos
-            $base = Gcm_Programacion::leftJoin('gcm_archivos_programacion', 'gcm_archivos_programacion.id_programa', '=', 'gcm_programacion.id_programa')
-            ->select(
-                'gcm_programacion.*',
-                DB::raw('GROUP_CONCAT(gcm_archivos_programacion.descripcion SEPARATOR "|") AS descripciones_archivos'),
-                DB::raw('GROUP_CONCAT(gcm_archivos_programacion.peso SEPARATOR "|") AS pesos_archivos'),
-                DB::raw('GROUP_CONCAT(gcm_archivos_programacion.url SEPARATOR "|") AS url_archivos')
-            )->where([['id_reunion', $id_reunion], ['estado', '!=', '4']])->groupBy('gcm_programacion.id_programa')->get()->toArray();
 
-            $base = array_map(function($item) {
-                $item['archivos'] = [];
-                if (!empty($item['descripciones_archivos'])) {
-                    $descripcionesArchivo = explode('|', $item['descripciones_archivos']);
-                    $pesosArchivo = explode('|', $item['pesos_archivos']);
-                    $urlArchivo = explode('|', $item['url_archivos']);
+            try {
+
+                //toma todos los datos de programacion sin importar si tiene o no archivos
+                $base = Gcm_Programacion::leftJoin('gcm_archivos_programacion', 'gcm_archivos_programacion.id_programa', '=', 'gcm_programacion.id_programa')
+                ->select(
+                    'gcm_programacion.*',
+                    DB::raw('GROUP_CONCAT(gcm_archivos_programacion.descripcion SEPARATOR "|") AS descripciones_archivos'),
+                    DB::raw('GROUP_CONCAT(gcm_archivos_programacion.peso SEPARATOR "|") AS pesos_archivos'),
+                    DB::raw('GROUP_CONCAT(gcm_archivos_programacion.url SEPARATOR "|") AS url_archivos')
+                )->where([['id_reunion', $id_reunion], ['estado', '!=', '4']])->groupBy('gcm_programacion.id_programa')->get()->toArray();
     
-                    for ($i = 0; $i < count($descripcionesArchivo); $i++) { 
-                        array_push($item['archivos'], [
-                            "descripcion" => $descripcionesArchivo[$i],
-                            "peso" => $pesosArchivo[$i],
-                            "url" => $urlArchivo[$i],
-                        ]);
+                $base = array_map(function($item) {
+                    $item['archivos'] = [];
+                    if (!empty($item['descripciones_archivos'])) {
+                        $descripcionesArchivo = explode('|', $item['descripciones_archivos']);
+                        $pesosArchivo = explode('|', $item['pesos_archivos']);
+                        $urlArchivo = explode('|', $item['url_archivos']);
+        
+                        for ($i = 0; $i < count($descripcionesArchivo); $i++) { 
+                            array_push($item['archivos'], [
+                                "descripcion" => $descripcionesArchivo[$i],
+                                "peso" => $pesosArchivo[$i],
+                                "url" => $urlArchivo[$i],
+                            ]);
+                        }
                     }
-                }
-
-                unset($item['descripciones_archivos']);
-                unset($item['pesos_archivos']);
-                unset($item['url_archivos']);
-
-                return $item;
-            }, $base);
-
-
-            $programas = array_filter($base, function($item){
-                return $item['relacion'] === null || $item['relacion'] === '';
-            });
-
-            $programas = array_values($programas);
-
-            $programas = array_map(function($item) use($base) {
-                $item['opciones'] = array_filter($base, function ($elm) use($item) {
-                    return $elm['relacion'] === $item['id_programa'];
+    
+                    unset($item['descripciones_archivos']);
+                    unset($item['pesos_archivos']);
+                    unset($item['url_archivos']);
+    
+                    return $item;
+                }, $base);
+    
+    
+                $programas = array_filter($base, function($item){
+                    return $item['relacion'] === null || $item['relacion'] === '';
                 });
-                $item['opciones'] = array_values($item['opciones']);
-
-                return $item;
-
-            }, $programas);
-
-            return $programas;
+    
+                $programas = array_values($programas);
+    
+                $programas = array_map(function($item) use($base) {
+                    $item['opciones'] = array_filter($base, function ($elm) use($item) {
+                        return $elm['relacion'] === $item['id_programa'];
+                    });
+                    $item['opciones'] = array_values($item['opciones']);
+    
+                    return $item;
+    
+                }, $programas);
+    
+                return $programas;
+                
+            } catch (\Throwable $th) {
+                //throw $th;
+            }
         }
 
         /**
@@ -120,27 +146,34 @@ class Gcm_Reunion_Controller extends Controller
          */
         public function getConvocados($id_reunion) {
 
-            $convocados = DB::table(DB::raw('gcm_convocados_reunion AS gcr'))
-                ->join(DB::raw('gcm_relaciones AS grc'), 'gcr.id_relacion', '=', 'grc.id_relacion')
-                ->join(DB::raw('gcm_recursos AS grs'), 'grc.id_recurso', '=', 'grs.id_recurso')
-                ->join(DB::raw('gcm_roles AS grl'), 'grc.id_rol', '=', 'grl.id_rol')
-                ->where(DB::raw('gcr.id_reunion'), $id_reunion)
-                ->select([
-                    DB::raw('grs.*'),
-                    DB::raw('grl.id_rol'),
-                    DB::raw('grl.descripcion AS rol'),
-                    'gcr.id_convocado_reunion',
-                    'gcr.nit',
-                    'gcr.razon_social',
-                    'gcr.participacion',
-                    'gcr.representacion',
-                    'gcr.tipo',
-                    'gcr.id_reunion',
-                    'gcr.id_relacion',
-                    'gcr.fecha',
-                    'gcr.soporte',
-                ])->get();
-            return $convocados;
+            try {
+
+                $convocados = DB::table(DB::raw('gcm_convocados_reunion AS gcr'))
+                    ->join(DB::raw('gcm_relaciones AS grc'), 'gcr.id_relacion', '=', 'grc.id_relacion')
+                    ->join(DB::raw('gcm_recursos AS grs'), 'grc.id_recurso', '=', 'grs.id_recurso')
+                    ->join(DB::raw('gcm_roles AS grl'), 'grc.id_rol', '=', 'grl.id_rol')
+                    ->where(DB::raw('gcr.id_reunion'), $id_reunion)
+                    ->select([
+                        DB::raw('grs.*'),
+                        DB::raw('grl.id_rol'),
+                        DB::raw('grl.descripcion AS rol'),
+                        'gcr.id_convocado_reunion',
+                        'gcr.nit',
+                        'gcr.razon_social',
+                        'gcr.participacion',
+                        'gcr.representacion',
+                        'gcr.tipo',
+                        'gcr.id_reunion',
+                        'gcr.id_relacion',
+                        'gcr.fecha',
+                        'gcr.soporte',
+                    ])->get();
+                return $convocados;
+                
+            } catch (\Throwable $th) {
+                //throw $th;
+            }
+
         }
 
 
@@ -150,110 +183,138 @@ class Gcm_Reunion_Controller extends Controller
          * Consulta todos los recursos registrados
          */
         public function getRecursos() {
-            $grupo = 1;
-            $getMaxFecha = function ($exceptions = [], $nullExceptions = []) use ($grupo) {
-                // Consulta la máxima fecha de convocatoria de un recurso de acuerdo a las condiciones
-                $statement = DB::table('gcm_convocados_reunion AS s1_crn')
-                ->join('gcm_reuniones AS s1_rns', 's1_rns.id_reunion', 's1_crn.id_reunion')
-                ->join('gcm_tipo_reuniones AS s1_trs', 's1_trs.id_tipo_reunion', 's1_rns.id_tipo_reunion')
-                ->join('gcm_relaciones AS s1_rln', 's1_rln.id_relacion', 's1_crn.id_relacion')
-                ->join('gcm_roles AS s1_rls', 's1_rls.id_rol', 's1_rln.id_rol')
-                ->join('gcm_recursos AS s1_rcs', 's1_rcs.id_recurso', 's1_rln.id_recurso')
-                ->whereNull('s1_crn.representacion')->where([
-                    ['s1_trs.id_grupo', $grupo], ['s1_rcs.estado', 1],
-                    ['s1_rls.estado', 1], ['s1_rln.estado', 1],
-                ])->groupBy('s1_rcs.id_recurso')
-                ->select('s1_rln.id_recurso', DB::raw('MAX(s1_crn.fecha) AS fecha'));
-                // Excepciones para consultas where normales
-                foreach ($exceptions as $key => $value) {
-                    $statement->where($key, $value);
-                }
-                // Excepciones para consultas where not null
-                foreach ($nullExceptions as $value) {
-                    $statement->whereNotNull($value);
-                }
-                return $statement;
-            };
 
-            $getInfoRecurso = function ($maxFechaQuery, $alias, $joins = []) {
-                $statement = DB::table('gcm_convocados_reunion AS crn')
-                ->join('gcm_relaciones AS rln', 'rln.id_relacion', 'crn.id_relacion')
-                ->joinSub($maxFechaQuery, $alias, function ($join) use ($alias) {
-                    $join->on("{$alias}.id_recurso", 'rln.id_recurso');
-                    $join->on("{$alias}.fecha", 'crn.fecha');
-                });
-                // Información de tablas
-                foreach ($joins as $value) {
-                    $statement->join($value[0], $value[1], $value[2]);
-                }
-                return $statement;
-            };
+            try {
 
-            $roles = $getMaxFecha();
-            $rol_recursos = $getInfoRecurso($roles, 'rol', [
-                ['gcm_roles AS rls', 'rls.id_rol', 'rln.id_rol']
-            ])->select('rln.id_recurso', 'rls.descripcion AS rol');
-
-            $participacion = $getMaxFecha(['s1_rns.quorum' => 1]);
-            $participacion_recursos = $getInfoRecurso($participacion, 'participacion')
-            ->select('rln.id_recurso', 'crn.participacion');
-
-            $entidad = $getMaxFecha([], ['s1_crn.nit']);
-            $entidad_recursos = $getInfoRecurso($entidad, 'entidad')
-            ->select('rln.id_recurso', 'crn.nit', 'crn.razon_social', 'crn.soporte');
-
-            $respuesta = DB::table('gcm_recursos AS rcs')
-            ->leftJoinSub($rol_recursos, 'rol_recurso', function($join) {
-                $join->on('rol_recurso.id_recurso', 'rcs.id_recurso');
-            })->leftJoinSub($participacion_recursos, 'participacion_recurso', function($join) {
-                $join->on('participacion_recurso.id_recurso', 'rcs.id_recurso');
-            })->leftJoinSub($entidad_recursos, 'entidad_recurso', function($join) {
-                $join->on('entidad_recurso.id_recurso', 'rcs.id_recurso');
-            })->select(
-                'rcs.*', 
-                'rol_recurso.rol', 
-                'participacion_recurso.participacion', 
-                DB::raw('IF(entidad_recurso.nit IS NULL, 0, 2) AS tipo'),
-                'entidad_recurso.nit', 
-                'entidad_recurso.razon_social', 
-                'entidad_recurso.soporte'
-            )->where('rcs.estado', 1)->get();
-
-            return $respuesta;
+                $grupo = 1;
+                $getMaxFecha = function ($exceptions = [], $nullExceptions = []) use ($grupo) {
+                    // Consulta la máxima fecha de convocatoria de un recurso de acuerdo a las condiciones
+                    $statement = DB::table('gcm_convocados_reunion AS s1_crn')
+                    ->join('gcm_reuniones AS s1_rns', 's1_rns.id_reunion', 's1_crn.id_reunion')
+                    ->join('gcm_tipo_reuniones AS s1_trs', 's1_trs.id_tipo_reunion', 's1_rns.id_tipo_reunion')
+                    ->join('gcm_relaciones AS s1_rln', 's1_rln.id_relacion', 's1_crn.id_relacion')
+                    ->join('gcm_roles AS s1_rls', 's1_rls.id_rol', 's1_rln.id_rol')
+                    ->join('gcm_recursos AS s1_rcs', 's1_rcs.id_recurso', 's1_rln.id_recurso')
+                    ->whereNull('s1_crn.representacion')->where([
+                        ['s1_trs.id_grupo', $grupo], ['s1_rcs.estado', 1],
+                        ['s1_rls.estado', 1], ['s1_rln.estado', 1],
+                    ])->groupBy('s1_rcs.id_recurso')
+                    ->select('s1_rln.id_recurso', DB::raw('MAX(s1_crn.fecha) AS fecha'));
+                    // Excepciones para consultas where normales
+                    foreach ($exceptions as $key => $value) {
+                        $statement->where($key, $value);
+                    }
+                    // Excepciones para consultas where not null
+                    foreach ($nullExceptions as $value) {
+                        $statement->whereNotNull($value);
+                    }
+                    return $statement;
+                };
+    
+                $getInfoRecurso = function ($maxFechaQuery, $alias, $joins = []) {
+                    $statement = DB::table('gcm_convocados_reunion AS crn')
+                    ->join('gcm_relaciones AS rln', 'rln.id_relacion', 'crn.id_relacion')
+                    ->joinSub($maxFechaQuery, $alias, function ($join) use ($alias) {
+                        $join->on("{$alias}.id_recurso", 'rln.id_recurso');
+                        $join->on("{$alias}.fecha", 'crn.fecha');
+                    });
+                    // Información de tablas
+                    foreach ($joins as $value) {
+                        $statement->join($value[0], $value[1], $value[2]);
+                    }
+                    return $statement;
+                };
+    
+                $roles = $getMaxFecha();
+                $rol_recursos = $getInfoRecurso($roles, 'rol', [
+                    ['gcm_roles AS rls', 'rls.id_rol', 'rln.id_rol']
+                ])->select('rln.id_recurso', 'rls.descripcion AS rol');
+    
+                $participacion = $getMaxFecha(['s1_rns.quorum' => 1]);
+                $participacion_recursos = $getInfoRecurso($participacion, 'participacion')
+                ->select('rln.id_recurso', 'crn.participacion');
+    
+                $entidad = $getMaxFecha([], ['s1_crn.nit']);
+                $entidad_recursos = $getInfoRecurso($entidad, 'entidad')
+                ->select('rln.id_recurso', 'crn.nit', 'crn.razon_social', 'crn.soporte');
+    
+                $respuesta = DB::table('gcm_recursos AS rcs')
+                ->leftJoinSub($rol_recursos, 'rol_recurso', function($join) {
+                    $join->on('rol_recurso.id_recurso', 'rcs.id_recurso');
+                })->leftJoinSub($participacion_recursos, 'participacion_recurso', function($join) {
+                    $join->on('participacion_recurso.id_recurso', 'rcs.id_recurso');
+                })->leftJoinSub($entidad_recursos, 'entidad_recurso', function($join) {
+                    $join->on('entidad_recurso.id_recurso', 'rcs.id_recurso');
+                })->select(
+                    'rcs.*', 
+                    'rol_recurso.rol', 
+                    'participacion_recurso.participacion', 
+                    DB::raw('IF(entidad_recurso.nit IS NULL, 0, 2) AS tipo'),
+                    'entidad_recurso.nit', 
+                    'entidad_recurso.razon_social', 
+                    'entidad_recurso.soporte'
+                )->where('rcs.estado', 1)->get();
+    
+                return $respuesta;
+                
+            } catch (\Throwable $th) {
+                //throw $th;
+            }
         }
 
         /**
          * Consulta todos los roles que tienen una relacion donde el grupo tiene en comun con la tabla tipos de reuniones que tiene en comun con la tabla reuniones.
          */
         public function getRoles($id_reunion) {
-            $roles = Gcm_Rol::join('gcm_relaciones', 'gcm_roles.id_rol', '=', 'gcm_relaciones.id_rol')
-            ->join('gcm_tipo_reuniones', 'gcm_relaciones.id_grupo', '=', 'gcm_tipo_reuniones.id_grupo')
-            ->join('gcm_reuniones', 'gcm_tipo_reuniones.id_tipo_reunion', '=', 'gcm_reuniones.id_tipo_reunion')
-            ->leftJoin('gcm_roles as rl2', 'gcm_roles.relacion', '=', 'rl2.id_rol')
-            ->select('gcm_roles.*', 'rl2.descripcion as nombre_relacion')
-            ->where([['gcm_reuniones.id_reunion', $id_reunion], ['gcm_roles.estado', 1]])
-            ->groupBy('gcm_roles.id_rol')->get();
-            return $roles;
+
+            try {
+
+                $roles = Gcm_Rol::join('gcm_relaciones', 'gcm_roles.id_rol', '=', 'gcm_relaciones.id_rol')
+                ->join('gcm_tipo_reuniones', 'gcm_relaciones.id_grupo', '=', 'gcm_tipo_reuniones.id_grupo')
+                ->join('gcm_reuniones', 'gcm_tipo_reuniones.id_tipo_reunion', '=', 'gcm_reuniones.id_tipo_reunion')
+                ->leftJoin('gcm_roles as rl2', 'gcm_roles.relacion', '=', 'rl2.id_rol')
+                ->select('gcm_roles.*', 'rl2.descripcion as nombre_relacion')
+                ->where([['gcm_reuniones.id_reunion', $id_reunion], ['gcm_roles.estado', 1]])
+                ->groupBy('gcm_roles.id_rol')->get();
+                return $roles;
+                
+            } catch (\Throwable $th) {
+                
+            }
         }
 
         /**
          * Consulta todos los roles que tienen una relacion donde el grupo tiene en comun con la tabla tipos de reuniones que tiene en comun con la tabla reuniones.
          */
         public function getRolesRegistrar($id_grupo) {
-            $roles = Gcm_Rol::join('gcm_relaciones', 'gcm_roles.id_rol', '=', 'gcm_relaciones.id_rol')
-            ->leftJoin('gcm_roles as rl2', 'gcm_roles.relacion', '=', 'rl2.id_rol')
-            ->select('gcm_roles.*', 'rl2.descripcion as nombre_relacion')
-            ->where([['gcm_relaciones.id_grupo', $id_grupo], ['gcm_roles.estado', 1]])
-            ->groupBy('gcm_roles.id_rol')->get();
-            return $roles;
+
+            try {
+
+                $roles = Gcm_Rol::join('gcm_relaciones', 'gcm_roles.id_rol', '=', 'gcm_relaciones.id_rol')
+                ->leftJoin('gcm_roles as rl2', 'gcm_roles.relacion', '=', 'rl2.id_rol')
+                ->select('gcm_roles.*', 'rl2.descripcion as nombre_relacion')
+                ->where([['gcm_relaciones.id_grupo', $id_grupo], ['gcm_roles.estado', 1]])
+                ->groupBy('gcm_roles.id_rol')->get();
+                return $roles;
+                
+            } catch (\Throwable $th) {
+                
+            }
         }
 
         /**
          * Consulta todas las reuniones con un tipo de reunion que tiene un grupo en comun
          */
         public function getTiposReuniones($id_grupo) {
-            $tiposReuniones = Gcm_Tipo_Reunion::where([['gcm_tipo_reuniones.id_grupo', '=', $id_grupo], ['gcm_tipo_reuniones.estado', '=', 1]])->get();
-            return $tiposReuniones;
+
+            try {
+                
+                $tiposReuniones = Gcm_Tipo_Reunion::where([['gcm_tipo_reuniones.id_grupo', '=', $id_grupo], ['gcm_tipo_reuniones.estado', '=', 1]])->get();
+                return $tiposReuniones;
+
+            } catch (\Throwable $th) {
+                
+            }
         }
 
     
@@ -265,32 +326,53 @@ class Gcm_Reunion_Controller extends Controller
          * Trae todos los datos de un tipo de reunión
          */
         public function getTipoReunion($id_tipo_reunion) {
-            $tipoReunion = Gcm_Tipo_Reunion::where('id_tipo_reunion', $id_tipo_reunion)->get();
-            return $tipoReunion;
+
+            try {
+
+                $tipoReunion = Gcm_Tipo_Reunion::where('id_tipo_reunion', $id_tipo_reunion)->get();
+                return $tipoReunion;
+                
+            } catch (\Throwable $th) {
+                
+            }
         }
 
         /**
          * Consulta y trae todas las reuniones registradas con un grupo que tiene un usuario en comun
          */
         public function listarReuniones($id_usuario) {
-            $reuniones = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
-            ->join('gcm_grupos', 'gcm_tipo_reuniones.id_grupo', '=', 'gcm_grupos.id_grupo')
-            ->select('gcm_reuniones.id_reunion', 'gcm_reuniones.id_tipo_reunion', 'gcm_reuniones.descripcion', 
-            'gcm_reuniones.fecha_creacion', 'gcm_reuniones.fecha_reunion', 'gcm_reuniones.hora', 
-            'gcm_reuniones.lugar', 'gcm_reuniones.quorum', 'gcm_reuniones.estado')
-            ->where('gcm_grupos.id_usuario', '=', $id_usuario)
-            ->get();
-            return $reuniones;
+
+            try {
+
+                $reuniones = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
+                ->join('gcm_grupos', 'gcm_tipo_reuniones.id_grupo', '=', 'gcm_grupos.id_grupo')
+                ->select('gcm_reuniones.id_reunion', 'gcm_reuniones.id_tipo_reunion', 'gcm_reuniones.descripcion', 
+                'gcm_reuniones.fecha_creacion', 'gcm_reuniones.fecha_reunion', 'gcm_reuniones.hora', 
+                'gcm_reuniones.lugar', 'gcm_reuniones.quorum', 'gcm_reuniones.estado')
+                ->where('gcm_grupos.id_usuario', '=', $id_usuario)
+                ->get();
+                return $reuniones;
+                
+            } catch (\Throwable $th) {
+                
+            }
         }
 
         /**
          * Trae todos los datos de una reunión en especifico
          */
         public function getReunionRegistrar($id_grupo) {
-            $reunion = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
-            ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo', 'gcm_tipo_reuniones.id_grupo')
-            ->where('id_grupo', '=', $id_grupo)->get();
-            return $reunion;
+
+            try {
+
+                $reunion = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
+                ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo', 'gcm_tipo_reuniones.id_grupo')
+                ->where('id_grupo', '=', $id_grupo)->get();
+                return $reunion;
+                
+            } catch (\Throwable $th) {
+                
+            }
         }
 
         /**
@@ -469,8 +551,15 @@ class Gcm_Reunion_Controller extends Controller
          * Trae todos los datos de un convocado en especifico
          */
         public function getConvocado($id_convocado_reunion) {
-            $convocado = Gcm_Convocado_Reunion::where('id_convocado_reunion', $id_convocado_reunion)->get();
-            return $convocado;
+
+            try {
+
+                $convocado = Gcm_Convocado_Reunion::where('id_convocado_reunion', $id_convocado_reunion)->get();
+                return $convocado;
+                
+            } catch (\Throwable $th) {
+                
+            }
         }
 
         /**
@@ -547,8 +636,15 @@ class Gcm_Reunion_Controller extends Controller
          * Trae los datos de un programa en especifico
          */
         public function getPrograma($id_programa) {
-            $programa = Gcm_Programa::where('id_programa', $id_programa)->get();
-            return $programa;
+
+            try {
+
+                $programa = Gcm_Programa::where('id_programa', $id_programa)->get();
+                return $programa;
+                
+            } catch (\Throwable $th) {
+                
+            }
         }
 
         /**
@@ -578,14 +674,21 @@ class Gcm_Reunion_Controller extends Controller
          * @return void objeto con la reunion que se consulto
          */
         public function traerReunion($id_tipo_reunion) {
+
+            try {
+
+                $reunion = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
+                ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo', 'gcm_tipo_reuniones.id_grupo')
+                ->where('gcm_reuniones.id_tipo_reunion', '=', $id_tipo_reunion)
+                ->orderBy('fecha_actualizacion', 'desc')
+                ->limit(1)
+                ->get();
+                return $reunion;
+                
+            } catch (\Throwable $th) {
+                
+            }
             
-            $reunion = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
-            ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo', 'gcm_tipo_reuniones.id_grupo')
-            ->where('gcm_reuniones.id_tipo_reunion', '=', $id_tipo_reunion)
-            ->orderBy('fecha_actualizacion', 'desc')
-            ->limit(1)
-            ->get();
-            return $reunion;
         }
 
         /**
@@ -1038,41 +1141,45 @@ class Gcm_Reunion_Controller extends Controller
          */
         public function enviarCorreos(Request $request) {
 
-            $encrypt = new Encrypt();
+            // try {
+                $encrypt = new Encrypt();
             
-            $programas = [];
-            $mc = new Gcm_Mail_Controller();
-            $reunion = json_decode($request->reunion, true);
-            $convocados = json_decode($request->convocados, true);
-            $array_id_convocados = json_decode($request->array_id_convocados, true);
+                $programas = [];
+                $mc = new Gcm_Mail_Controller();
+                $reunion = json_decode($request->reunion, true);
+                $convocados = json_decode($request->convocados, true);
+                $array_id_convocados = json_decode($request->array_id_convocados, true);
 
-            if (isset($request->titulo)) {
-                for ($i=0; $i < count($request->titulo); $i++) {
-                    array_push($programas, [
-                        'titulo' => $request->titulo[$i],
-                        'orden' => $i+1,
-                    ]);
+                if (isset($request->titulo)) {
+                    for ($i=0; $i < count($request->titulo); $i++) {
+                        array_push($programas, [
+                            'titulo' => $request->titulo[$i],
+                            'orden' => $i+1,
+                        ]);
+                    }
                 }
-            }
 
-            for ($i=0; $i < count($convocados); $i++) {
+                for ($i=0; $i < count($convocados); $i++) {
 
-                $valorEncriptado = $encrypt->encriptar($array_id_convocados[$i]);
+                    $valorEncriptado = $encrypt->encriptar($array_id_convocados[$i]);
 
-                $detalle = [
-                    'nombre' => $convocados[$i]['nombre'],
-                    'titulo' => $reunion['titulo'],
-                    'descripcion' => $reunion['descripcion'],
-                    'fecha_reunion' => $reunion['fecha_reunion'],
-                    'hora' => $reunion['hora'],
-                    'programas' => $programas,
-                    'url' => 'gcmeet.com/public/acceso-reunion/acceso/'.$valorEncriptado,
-                ];
-                Mail::to($convocados[$i]['correo'])->send(new TestMail($detalle));
-                Gcm_Log_Acciones_Sistema_Controller::save(4, $convocados[$i]['correo'], null);
-                // $mc->sendEmail('Este es el título', $detalle, $convocados[$i]['correo']);
-            }
-
+                    $detalle = [
+                        'nombre' => $convocados[$i]['nombre'],
+                        'titulo' => $reunion['titulo'],
+                        'descripcion' => $reunion['descripcion'],
+                        'fecha_reunion' => $reunion['fecha_reunion'],
+                        'hora' => $reunion['hora'],
+                        'programas' => $programas,
+                        'url' => 'gcmeet.com/public/acceso-reunion/acceso/'.$valorEncriptado,
+                    ];
+                    Mail::to($convocados[$i]['correo'])->send(new TestMail($detalle));
+                    Gcm_Log_Acciones_Sistema_Controller::save(4, $convocados[$i]['correo'], null);
+                    // $mc->sendEmail('Este es el título', $detalle, $convocados[$i]['correo']);
+                }
+            //     return response()->json(["response" => $response], 200);
+            // } catch (Exception $e) {
+            //     return response()->json(["error" => $e->getMessage()], 500);
+            // }
         }
 
         /**
@@ -1083,47 +1190,54 @@ class Gcm_Reunion_Controller extends Controller
          */
         public function reenviarCorreos (Request $request) {
 
-            // ELOQUENT SIEMPRE DEVUELVE COLECCIONES
-            // first trae el primero que encuentre
+            // Eloquent siempre devuelve colecciones
+            // first() trae el primero que encuentre
 
-            $encrypt = new Encrypt();
-            
-            $programas = [];
-            $mc = new Gcm_Mail_Controller();
+            try {
 
-            $id_reunion = $request->id_reunion;
-
-            $reunion = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
-            ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo')
-            ->where('gcm_reuniones.id_reunion', '=', $id_reunion)->first();
-
-            $programas = Gcm_Programacion::where([['gcm_programacion.id_reunion', '=', $id_reunion], ['gcm_programacion.estado', '!=', '4']])
-            ->whereNull('gcm_programacion.relacion')->get();
-
-            for ($i=0; $i < count($request->correos); $i++) {
-
-                $recurso = Gcm_Recurso::join('gcm_relaciones', 'gcm_relaciones.id_recurso', '=', 'gcm_recursos.id_recurso')
-                ->join('gcm_convocados_reunion', 'gcm_relaciones.id_relacion', '=', 'gcm_convocados_reunion.id_relacion')
-                ->select('gcm_recursos.*')
-                ->where('gcm_convocados_reunion.id_convocado_reunion', '=', $request->correos[$i]['id_convocado'])->first();
-
-                $recurso_actualizar = Gcm_Recurso::findOrFail($recurso['id_recurso']);
-                $recurso_actualizar->correo = $request->correos[$i]['correo'];
-                $response = $recurso_actualizar->save();
-
-                $valorEncriptado = $encrypt->encriptar($request->correos[$i]['id_convocado']);
-
-                $detalle = [
-                    'nombre' => $recurso['nombre'],
-                    'titulo' => $reunion['titulo'],
-                    'descripcion' => $reunion['descripcion'],
-                    'fecha_reunion' => $reunion['fecha_reunion'],
-                    'hora' => $reunion['hora'],
-                    'programas' => $programas,
-                    'url' => 'gcmeet.com/public/acceso-reunion/acceso/'.$valorEncriptado,
-                ];
-                Mail::to($request->correos[$i]['correo'])->send(new TestMail($detalle));
-                Gcm_Log_Acciones_Sistema_Controller::save(4, $request->correos[$i]['correo'], null);
+                $encrypt = new Encrypt();
+                
+                $programas = [];
+                $mc = new Gcm_Mail_Controller();
+    
+                $id_reunion = $request->id_reunion;
+    
+                $reunion = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
+                ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo')
+                ->where('gcm_reuniones.id_reunion', '=', $id_reunion)->first();
+    
+                $programas = Gcm_Programacion::where([['gcm_programacion.id_reunion', '=', $id_reunion], ['gcm_programacion.estado', '!=', '4']])
+                ->whereNull('gcm_programacion.relacion')->get();
+    
+                for ($i=0; $i < count($request->correos); $i++) {
+    
+                    $recurso = Gcm_Recurso::join('gcm_relaciones', 'gcm_relaciones.id_recurso', '=', 'gcm_recursos.id_recurso')
+                    ->join('gcm_convocados_reunion', 'gcm_relaciones.id_relacion', '=', 'gcm_convocados_reunion.id_relacion')
+                    ->select('gcm_recursos.*')
+                    ->where('gcm_convocados_reunion.id_convocado_reunion', '=', $request->correos[$i]['id_convocado'])->first();
+    
+                    $recurso_actualizar = Gcm_Recurso::findOrFail($recurso['id_recurso']);
+                    $recurso_actualizar->correo = $request->correos[$i]['correo'];
+                    $response = $recurso_actualizar->save();
+    
+                    $valorEncriptado = $encrypt->encriptar($request->correos[$i]['id_convocado']);
+    
+                    $detalle = [
+                        'nombre' => $recurso['nombre'],
+                        'titulo' => $reunion['titulo'],
+                        'descripcion' => $reunion['descripcion'],
+                        'fecha_reunion' => $reunion['fecha_reunion'],
+                        'hora' => $reunion['hora'],
+                        'programas' => $programas,
+                        'url' => 'gcmeet.com/public/acceso-reunion/acceso/'.$valorEncriptado,
+                    ];
+                    Mail::to($request->correos[$i]['correo'])->send(new TestMail($detalle));
+                    Gcm_Log_Acciones_Sistema_Controller::save(4, $request->correos[$i]['correo'], null);
+                }
+                
+            } catch (\Throwable $th) {
+                
             }
+
         }
 }
