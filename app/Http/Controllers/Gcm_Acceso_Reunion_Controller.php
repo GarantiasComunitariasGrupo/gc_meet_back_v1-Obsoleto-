@@ -480,7 +480,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
             /** Cuerpo del correo */
             $body = "{$request->params['nombreAnfitrion']} lo ha invitado a usted a que lo represente en una reunión.
-                    Link: http://192.168.2.85:4200/public/acceso-reunion/reunion/{$idConvocadoReunion}";
+                    Link: http://192.168.2.85:4200/public/acceso-reunion/acceso/{$idConvocadoReunion}";
 
             /** Se envía correo electrónico de invitación al representante */
             $send = $mailController->send(
