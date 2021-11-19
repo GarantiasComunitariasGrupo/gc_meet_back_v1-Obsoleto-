@@ -19,9 +19,9 @@ class CrearGcmLogAccionesConvocadoTabla extends Migration
             $table->foreign('id_convocado_reunion')->references('id_convocado_reunion')->on('gcm_convocados_reunion');
             $table->string('accion', 3)->index()->required();
             $table->string('tabla', 100)->index()->required();
-            $table->dateTime('fecha')->required();
+            $table->timestampTz('fecha', $precision = 0)->required();
             $table->string('lugar', 100)->required();
-            $table->string('detalle')->required();
+            $table->longText('detalle')->required();
         });
     }
 

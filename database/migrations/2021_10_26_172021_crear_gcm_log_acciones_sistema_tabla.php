@@ -16,10 +16,10 @@ class CrearGcmLogAccionesSistemaTabla extends Migration
         Schema::create('gcm_log_acciones_sistema', function (Blueprint $table) {
             $table->bigIncrements('id_log_accion');
             $table->string('accion', 3)->index()->required();
-            $table->string('tabla', 100)->index()->required();
-            $table->dateTime('fecha')->required();
+            $table->string('tabla', 100)->index()->nullable();
+            $table->timestampTz('fecha', $precision = 0)->required();
             $table->string('lugar', 100)->required();
-            $table->string('detalle')->required();
+            $table->longText('detalle')->required();
         });
     }
 

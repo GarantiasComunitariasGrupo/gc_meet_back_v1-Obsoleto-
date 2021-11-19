@@ -3,9 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use App\Utilities\ModelWithEvents;
 
-class Gcm_Reunion extends Model
+class Gcm_Reunion extends ModelWithEvents
 {
     use HasFactory;
 
@@ -21,6 +21,7 @@ class Gcm_Reunion extends Model
         'fecha_reunion',
         'hora',
         'quorum',
-        'estado'
+        'estado',
     ];
+
 }

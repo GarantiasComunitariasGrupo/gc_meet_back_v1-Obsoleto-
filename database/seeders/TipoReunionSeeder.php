@@ -20,7 +20,7 @@ class TipoReunionSeeder extends Seeder
             'honorifico_participante' => 'Participantes',
             'honorifico_invitado' => 'Invitados',
             'honorifico_representante' => 'Representantes',
-            'imagen' => null,
+            'imagen' => '/assets/img/fondo-logo2.jpg',
             'estado' => 1,
         ]);
     }

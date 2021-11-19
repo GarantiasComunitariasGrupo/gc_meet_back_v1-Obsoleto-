@@ -27,6 +27,7 @@ class CrearGcmConvocadosReunionTable extends Migration
             $table->string('razon_social', 100)->nullable();
             $table->decimal('participacion', $precision = 5, $scale = 2)->nullable();
             $table->string('soporte', 255)->nullable();
+            $table->string('estado', 2)->index()->required()->default('1');
         });
     }
 

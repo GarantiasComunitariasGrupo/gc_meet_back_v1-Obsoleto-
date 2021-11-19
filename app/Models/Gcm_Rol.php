@@ -3,9 +3,10 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use App\Utilities\ModelWithEvents;
 
-class Gcm_Rol extends Model
+
+class Gcm_Rol extends ModelWithEvents
 {
     use HasFactory;
 

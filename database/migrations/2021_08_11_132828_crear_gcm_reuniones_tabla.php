@@ -21,7 +21,7 @@ class CrearGcmReunionesTabla extends Migration
             $table->timestampTz('fecha_actualizacion', $precision = 0);
             $table->date('fecha_reunion')->required();
             $table->time('hora')->required();
-            $table->string('quorum')->index()->required();
+            $table->string('quorum', 2)->index()->required();
             $table->string('estado', 2)->index()->required();
         });
     }

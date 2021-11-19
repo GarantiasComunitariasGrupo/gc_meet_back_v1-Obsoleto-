@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="x-apple-disable-message-reformatting">
 <link href="https://fonts.googleapis.com/css?family=Montserrat:300,400,500" rel="stylesheet">
+<script src="https://kit.fontawesome.com/1e30f8602f.js" crossorigin="anonymous"></script>
   <title></title>
   <style>
     table, td, div, h1, p {
@@ -54,36 +55,67 @@
 
             <tr align="center">
               <td style="padding: 30px; background-color:#ffffff;">
-                <h1 style="margin-bottom: 16px; font-size: 30px;">¡Hola, {{$data['nombre']}}!</h1>
+                <h1 style="margin-bottom: 16px; font-size: 30px; color: #171717;">¡Hola, {{$data['nombre']}}!</h1>
                 <p style="font-size: 15px; color: #545454">Has sido invitado a {{$data['titulo']}}</p>
               </td>
             </tr>
 
-
             <tr align="center">
-              <td style="padding:35px 30px 11px 30px;font-size:0;background-color:#ffffff;border-bottom:1px solid #f0f0f5;border-color:rgba(201,201,207,.35);">
-                
-                <div class="col-lge" style="display:inline-block;width:100%;max-width:395px;vertical-align:top;padding-bottom:20px;font-family:Arial,sans-serif;font-size:16px;line-height:22px;color:#363636;">
-                    <p style="margin-top:0;margin-bottom:12px;">
-                        Nullam mollis sapien vel cursus fermentum. Integer porttitor augue id ligula facilisis pharetra. In eu ex et elit ultricies ornare nec ac ex. Mauris sapien massa, placerat non venenatis et, tincidunt eget leo.
-                    </p>
-                    <p style="margin-top:0;margin-bottom:18px;">
-                        Nam non ante risus. Vestibulum vitae eleifend nisl, quis vehicula justo. Integer viverra efficitur pharetra. Nullam eget erat nibh.
-                    </p>
-                    
+              <td style="padding: 20px; background-color:#ffffff; width:100%; padding-bottom:20px; color:#545454; font-size: 15px; color: #545454;">
+                <div class="col-lge">
+                  <p>
+                    {{$data['descripcion']}}
+                  </p>
                 </div>
               </td>
             </tr>
 
             <tr align="center">
-              <td style="padding:30px;background-color:#ffffff;">
-                <p style="margin:0; font-size:15px; color: #545454">
+              <td style="padding: 20px; background-color:#ffffff;">
+                <div class="col-lge" style="width:100%; padding-bottom:20px; font-size:16px; color:#363636; display: flex; justify-content: space-around;">
+
+                  <div style="margin-top:0; margin-bottom:12px; font-size:14px; color: #545454; display: flex;">
+                    <img src="C:\Users\dgarciag\Desktop\Zurich\front\src\assets\img\calendario.png">
+                    <div style="align-self: center; text-align: left; padding-left: 15px;">
+                      <div>Fecha</div>
+                      <div style="font-size: 30px; color: #171717">{{$data['fecha_reunion']}}</div>
+                    </div>
+                  </div>
+
+                  <div style="margin-top:0; margin-bottom:12px; font-size:14px; color: #545454; display: flex;">
+                    <img src="C:\Users\dgarciag\Desktop\Zurich\front\src\assets\img\hora.png">
+                    <div style="align-self: center; text-align: left; padding-left: 15px;">
+                      <div>Hora</div>
+                      <div style="font-size: 30px; color: #171717">{{$data['hora']}}</div>
+                    </div>
+                  </div>
+
+                </div>
+              </td>
+            </tr>
+
+            <tr align="lef">
+              <td style="padding: 20px; background-color:#ffffff;">
+                <h1 style="margin-bottom: 16px; font-size: 15px; color: #171717">Orden del dia</h1>
+                @for($i = 0; $i < count($data['programas']); $i++)
+                <p style="font-size: 15px; color: #545454">
+                  {{$data['programas'][$i]['orden']}}. {{$data['programas'][$i]['titulo']}}
+                </p>
+                @endfor
+              </td>
+            </tr>
+
+            <tr align="center">
+              <td style="padding:20px; background-color:#ffffff;">
+                <p style="margin: 10px; font-size:15px; color: #545454">
                     Puedes ingresar a través del siguiente enlace:
                 </p>
-                <a href="https://example.com/" style="margin:0; font-size:25px; background: #4883BE; text-decoration: none; padding: 15px 15px; color: #171717; border-radius: 4px; display: inline-block;">
-                    <span style="font-weight:bold;">www.enlace.com</span>
+
+                <a href="gcmeet.com/public/acceso-reunion/.$valorEncriptado" style="margin:0; font-size:22px; background: #4883BE; text-decoration: none; padding: 15px 15px; color: #171717; border-radius: 4px; display: inline-block;">
+                    <span style="font-weight:bold;">{{$data['url']}}</span>
                 </a>
-                <p style="margin:0; font-size:13px; color: #545454">
+                
+                <p style="margin: 12px; font-size:13px; color: #545454">
                     Este enlace es único e intransferible
                 </p>
               </td>

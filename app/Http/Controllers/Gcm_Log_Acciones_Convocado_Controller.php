@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Gcm_Log_Accion_Usuario;
+use App\Models\Gcm_Log_Accion_Convocado;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 
-class Gcm_Log_Acciones_Usuario_Controller extends Controller
+class Gcm_Log_Acciones_Convocado_Controller extends Controller
 {
     /**
-     * Guarda una acción realizada por el usuario
+     * Guarda una acción realizada por el convocado
      *
      * @param [type] $action Tipo de acción realizada
      * @param [type] $item Registro afectado
@@ -20,9 +20,9 @@ class Gcm_Log_Acciones_Usuario_Controller extends Controller
     public static function save($action, $item, $tableName = null, $place = null)
     {
         if ($tableName === null && $item instanceof Model) {$tableName = $item->getTable();}
-        if ($place === null) {$place = Gcm_Log_Acciones_Usuario_Controller::getIp();}
-        $log_accion_usuario_new = new Gcm_Log_Accion_Usuario();
-        $log_accion_usuario_new->id_usuario = 'gcm_danilo';
+        if ($place === null) {$place = Gcm_Log_Acciones_Convocado_Controller::getIp();}
+        $log_accion_usuario_new = new Gcm_Log_Accion_Convocado();
+        $log_accion_usuario_new->id_convocado_reunion = 'gcm_danilo';
         $log_accion_usuario_new->accion = $action;
         $log_accion_usuario_new->tabla = $tableName;
         $log_accion_usuario_new->lugar = $place;

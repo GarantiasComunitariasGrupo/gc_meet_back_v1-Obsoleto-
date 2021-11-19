@@ -159,6 +159,8 @@ Route::group([
     Route::get('/traer-programas/{id_reunion}', [Gcm_Reunion_Controller::class, 'getProgramas']);
     // Convocados
     Route::get('/traer-convocados/{id_reunion}', [Gcm_Reunion_Controller::class, 'getConvocados']);
+    Route::post('/reenviar-correos', [Gcm_Reunion_Controller::class, 'reenviarCorreos']);
+
 });
 
 /**
@@ -178,8 +180,10 @@ Route::group([
     Route::get('/traer-grupos/{id_usuario}', [Gcm_Reunion_Controller::class, 'getGrupos']);
     // Roles
     Route::get('/traer-roles/{id_reunion}', [Gcm_Reunion_Controller::class, 'getRoles']);
+    Route::get('/traer-roles-registrar/{id_grupo}', [Gcm_Reunion_Controller::class, 'getRolesRegistrar']);
     // Tipos de reuniones
     Route::get('/traer-tiposReuniones/{id_reunion}', [Gcm_Reunion_Controller::class, 'getTiposReuniones']);
+    Route::get('/traer-tipo-reunion/{id_tipo_reunion}', [Gcm_Reunion_Controller::class, 'getTipoReunion']);
     // Programas
     Route::get('/traer-programas/{id_reunion}', [Gcm_Reunion_Controller::class, 'getProgramas']);
     // Recursos
