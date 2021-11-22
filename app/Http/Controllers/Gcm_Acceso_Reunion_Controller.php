@@ -10,6 +10,7 @@ use App\Http\Controllers\Gcm_Mail_Controller;
 use App\Models\Gcm_Log_Accion_Sistema;
 use App\Models\Gcm_Recurso;
 use App\Models\Gcm_Relacion;
+use App\Models\Gcm_Programacion;
 use App\Models\Gcm_Restriccion_Rol_Representante;
 use Illuminate\Support\Facades\Http;
 use App\Http\Controllers\Gcm_Log_Acciones_Sistema_Controller;
@@ -756,6 +757,96 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             return response()->json(['ok' => false, 'response' => $th->getMessage()]);
         }
 
+    }
+
+    public function getTipoConvocado($idConvocadoReunion)
+    {
+        try {
+
+            $response = array();
+
+            $base = DB::table('gcm_convocados_reunion AS gcr')
+            ->join('gcm_relaciones AS grc', 'gcr.id_relacion', '=', 'grc.id_relacion')
+            ->join('gcm_recursos AS grcs', 'grc.id_recurso', '=', 'grcs.id_recurso')
+            ->leftJoin('gcm_usuarios AS gu', 'grcs.identificacion', '=', 'gu.id_usuario')
+            ->where('id_convocado_reunion', $idConvocadoReunion)
+            ->where('gcr.estado', 1)
+            ->select(['*', DB::raw("IF(gu.id_usuario IS NULL, 'Convocado', 'Admin') tipoAcceso")])
+            ->first();
+
+            $response = array(
+                'ok' => ($base) ? true : false,
+                'response' => ($base) ? $base : 'No hay resultados'
+            );
+
+            return response()->json($response);
+
+        } catch (\Throwable $th) {
+           Gcm_Log_Acciones_Sistema_Controller::save(7, ['Error' => $th->getMessage(), 'Detalle' => 'Function => getTipoConvocado()'], null, null);
+           return response()->json(['ok' => false, 'response' => $th->getMessage()]);
+        }
+    }
+
+    public function getProgramacion($id_reunion)
+    {
+        try {
+            //toma todos los datos de programacion sin importar si tiene o no archivos
+            $base = Gcm_Programacion::leftJoin('gcm_archivos_programacion', 'gcm_archivos_programacion.id_programa', '=', 'gcm_programacion.id_programa')
+            ->select(
+                'gcm_programacion.*',
+                DB::raw('GROUP_CONCAT(gcm_archivos_programacion.descripcion SEPARATOR "|") AS descripciones_archivos'),
+                DB::raw('GROUP_CONCAT(gcm_archivos_programacion.peso SEPARATOR "|") AS pesos_archivos'),
+                DB::raw('GROUP_CONCAT(gcm_archivos_programacion.url SEPARATOR "|") AS url_archivos')
+            )->where([['id_reunion', $id_reunion], ['estado', '!=', '4']])->groupBy('gcm_programacion.id_programa')->get()->toArray();
+
+            $base = array_map(function($item) {
+                $item['archivos'] = [];
+                if (!empty($item['descripciones_archivos'])) {
+                    $descripcionesArchivo = explode('|', $item['descripciones_archivos']);
+                    $pesosArchivo = explode('|', $item['pesos_archivos']);
+                    $urlArchivo = explode('|', $item['url_archivos']);
+    
+                    for ($i = 0; $i < count($descripcionesArchivo); $i++) { 
+                        array_push($item['archivos'], [
+                            "descripcion" => $descripcionesArchivo[$i],
+                            "peso" => $pesosArchivo[$i],
+                            "url" => $urlArchivo[$i],
+                        ]);
+                    }
+                }
+
+                unset($item['descripciones_archivos']);
+                unset($item['pesos_archivos']);
+                unset($item['url_archivos']);
+
+                return $item;
+            }, $base);
+
+
+            $programas = array_filter($base, function($item){
+                return $item['relacion'] === null || $item['relacion'] === '';
+            });
+
+            $programas = array_values($programas);
+
+            $programas = array_map(function($item) use($base) {
+                $item['opciones'] = array_filter($base, function ($elm) use($item) {
+                    return $elm['relacion'] === $item['id_programa'];
+                });
+                $item['opciones'] = array_values($item['opciones']);
+
+                return $item;
+
+            }, $programas);
+
+            return response()->json([
+                'ok' => ($programas) ? true : false,
+                'response' => ($programas) ? $programas : 'No hay resultados'
+            ]);
+            
+        } catch (\Throwable $th) {
+            return response()->json(["error" => $e->getMessage()], 500);
+        }
     }
 
 }

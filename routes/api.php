@@ -209,4 +209,6 @@ Route::group([
     Route::post('/cancelar-representaciones', [Gcm_Acceso_Reunion_Controller::class, 'cancelarRepresentaciones']);
     Route::get('/get-avance-reunion/{id_convocado_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'getAvanceReunion']);
     Route::get('/get-listado-reuniones/{id_reunion}/{identificacion}', [Gcm_Acceso_Reunion_Controller::class, 'getListadoReuniones']);
+    Route::get('/get-tipo-convocado/{id_convocado_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'getTipoConvocado']);
+    Route::get('/get-programacion/{id_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'getProgramacion']);
 });
