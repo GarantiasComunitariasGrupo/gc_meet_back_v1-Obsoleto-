@@ -24,6 +24,7 @@ class Gcm_Convocado_Reunion extends ModelWithEvents
         'razon_social',
         'participacion',
         'soporte',
+        'estado',
     ];
 
 }

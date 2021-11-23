@@ -32,13 +32,11 @@ class Gcm_Reunion_Controller extends Controller
          * Trae todos los grupos registrados por un usuario con un estado en comun
          */
         public function getGrupos() {
-
             try {
                 $grupos = Gcm_Grupo::where('estado', '1')->get();
-                // return $grupos;
                 return response()->json($grupos);
             } catch (\Throwable $th) {
-                
+                return response()->json(["error" => $th->getMessage()], 500);
             }
         }
 
@@ -46,19 +44,16 @@ class Gcm_Reunion_Controller extends Controller
          * Consulta todas las reuniones con un tipo de reunion que tiene un grupo en comun
          */
         public function getReuniones($id_grupo) {
-
             try {
-
                 $reuniones = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
                 ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo')
-                ->where('gcm_tipo_reuniones.id_grupo', '=', $id_grupo)
+                ->where([['gcm_tipo_reuniones.id_grupo', '=', $id_grupo], ['gcm_reuniones.estado', '!=', '4']])
                 ->orderBy('gcm_reuniones.estado', 'asc')
                 ->orderBy('gcm_reuniones.fecha_actualizacion', 'desc')
                 ->get();
-                return $reuniones;
-                
+                return response()->json($reuniones);
             } catch (\Throwable $th) {
-                //throw $th;
+                return response()->json(["error" => $th->getMessage()], 500);
             }
         }
 
@@ -67,14 +62,12 @@ class Gcm_Reunion_Controller extends Controller
          */
         public function getReunion($id_reunion) {
             try {
-
                 $reunion = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
                 ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo', 'gcm_tipo_reuniones.id_grupo')
                 ->where('id_reunion', $id_reunion)->get();
-                return $reunion;
-                
+                return response()->json($reunion);
             } catch (\Throwable $th) {
-                //throw $th;
+                return response()->json(["error" => $th->getMessage()], 500);
             }
         }
 
@@ -82,9 +75,7 @@ class Gcm_Reunion_Controller extends Controller
         * Trae todas los programas registradas en una reunion
         */ 
         public function getProgramas($id_reunion) {
-
             try {
-
                 //toma todos los datos de programacion sin importar si tiene o no archivos
                 $base = Gcm_Programacion::leftJoin('gcm_archivos_programacion', 'gcm_archivos_programacion.id_programa', '=', 'gcm_programacion.id_programa')
                 ->select(
@@ -133,11 +124,10 @@ class Gcm_Reunion_Controller extends Controller
                     return $item;
     
                 }, $programas);
-    
-                return $programas;
+                return response()->json($programas);
                 
             } catch (\Throwable $th) {
-                //throw $th;
+                return response()->json(["error" => $th->getMessage()], 500);
             }
         }
 
@@ -145,14 +135,12 @@ class Gcm_Reunion_Controller extends Controller
          * Trae todos los convocados registrados en una reunion y lo utilizo para mostrar la cantidad de convocados en la vista principal de meets
          */
         public function getConvocados($id_reunion) {
-
             try {
-
                 $convocados = DB::table(DB::raw('gcm_convocados_reunion AS gcr'))
                     ->join(DB::raw('gcm_relaciones AS grc'), 'gcr.id_relacion', '=', 'grc.id_relacion')
                     ->join(DB::raw('gcm_recursos AS grs'), 'grc.id_recurso', '=', 'grs.id_recurso')
                     ->join(DB::raw('gcm_roles AS grl'), 'grc.id_rol', '=', 'grl.id_rol')
-                    ->where(DB::raw('gcr.id_reunion'), $id_reunion)
+                    ->where([[DB::raw('gcr.id_reunion'), $id_reunion], ['gcr.estado', '!=', '0']])
                     ->select([
                         DB::raw('grs.*'),
                         DB::raw('grl.id_rol'),
@@ -168,12 +156,123 @@ class Gcm_Reunion_Controller extends Controller
                         'gcr.fecha',
                         'gcr.soporte',
                     ])->get();
-                return $convocados;
-                
+                return response()->json($convocados);
             } catch (\Throwable $th) {
-                //throw $th;
+                return response()->json(["error" => $th->getMessage()], 500);
+            }
+        }
+
+        /**
+         * Realizo el reenvio de un correo electronico a los convocados de una reunion
+         *
+         * @param Request Aqui va los id de los convocados, los correos y el id de reunion
+         * @return void Retorna un mensaje donde se evidencia si el envio de los correos fue exitoso o fallo
+         */
+        public function reenviarCorreos (Request $request) {
+            // Eloquent siempre devuelve colecciones
+            // first() trae el primero que encuentre
+            try {
+
+                $encrypt = new Encrypt();
+                
+                $programas = [];
+                $mc = new Gcm_Mail_Controller();
+    
+                $id_reunion = $request->id_reunion;
+    
+                $reunion = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
+                ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo')
+                ->where('gcm_reuniones.id_reunion', '=', $id_reunion)->first();
+    
+                $programas = Gcm_Programacion::where([['gcm_programacion.id_reunion', '=', $id_reunion], ['gcm_programacion.estado', '!=', '4']])
+                ->whereNull('gcm_programacion.relacion')->get();
+    
+                for ($i=0; $i < count($request->correos); $i++) {
+    
+                    $recurso = Gcm_Recurso::join('gcm_relaciones', 'gcm_relaciones.id_recurso', '=', 'gcm_recursos.id_recurso')
+                    ->join('gcm_convocados_reunion', 'gcm_relaciones.id_relacion', '=', 'gcm_convocados_reunion.id_relacion')
+                    ->select('gcm_recursos.*')
+                    ->where('gcm_convocados_reunion.id_convocado_reunion', '=', $request->correos[$i]['id_convocado'])->first();
+    
+                    $recurso_actualizar = Gcm_Recurso::findOrFail($recurso['id_recurso']);
+                    $recurso_actualizar->correo = $request->correos[$i]['correo'];
+                    $response = $recurso_actualizar->save();
+    
+                    $valorEncriptado = $encrypt->encriptar($request->correos[$i]['id_convocado']);
+    
+                    $detalle = [
+                        'nombre' => $recurso['nombre'],
+                        'titulo' => $reunion['titulo'],
+                        'descripcion' => $reunion['descripcion'],
+                        'fecha_reunion' => $reunion['fecha_reunion'],
+                        'hora' => $reunion['hora'],
+                        'programas' => $programas,
+                        'url' => 'gcmeet.com/public/acceso-reunion/acceso/'.$valorEncriptado,
+                    ];
+                    Mail::to($request->correos[$i]['correo'])->send(new TestMail($detalle));
+                    Gcm_Log_Acciones_Sistema_Controller::save(4, $request->correos[$i]['correo'], null);
+                }
+                return response()->json(["response" => 'exitoso'], 200);
+            } catch (\Throwable $th) {
+                return response()->json(["error" => $th->getMessage()], 500);
             }
 
+        }
+
+        /**
+         * Actualiza el estado de una reunión a 'cancelada'
+         *
+         * @param [type] $id_reunion Id de la reunión la cual va ser cancelada
+         * @return void Retorna un mensaje donde se evidencia si actualizo el estado o si fallo el proceso
+         */
+        public function cancelarReunion ($id_reunion) {
+            try {
+                $reunion = Gcm_Reunion::findOrFail($id_reunion);
+                $reunion->estado = 3;
+                $response = $reunion->save();
+                return response()->json(["response" => $response], 200);
+            } catch (\Throwable $th) {
+                return response()->json(["error" => $th->getMessage()], 500);
+            }
+        }
+
+        /**
+         * Elimina una reunión y todos los registros asociados a ella que esten en las demas tablas
+         *
+         * @param [type] $id_reunion $id_reunion Id de la reunión la cual va ser eliminada
+         * @return void Retorna un mensaje donde se evidencia si elimino la reunion o si fallo el proceso
+         */
+        public function eliminarReunion ($id_reunion) {
+            try {
+                Gcm_Archivo_Programacion::groupDeletion(Gcm_Archivo_Programacion::join('gcm_programacion as p', 'p.id_programa', '=', 'gcm_archivos_programacion.id_programa')->where('p.id_reunion', '=', $id_reunion)->get());
+                Gcm_Programacion::changeStatus(Gcm_Programacion::where('id_reunion', '=', $id_reunion)->whereNotNull('relacion')->get(), 4);
+                Gcm_Programacion::changeStatus(Gcm_Programacion::where('id_reunion', '=', $id_reunion)->get(), 4);
+                Gcm_Reunion::changeStatus(Gcm_Reunion::where('id_reunion', '=', $id_reunion)->get(), 4);
+
+                return response()->json(["response" => 'se elimino con exicto'], 200);
+            } catch (\Throwable $th) {
+                return response()->json(["error" => $th->getMessage()], 500);
+            }
+        }
+
+        /**
+         * Reprograma o actualiza la fecha de una reunión, junto con este cambio se cambia el estado de cancelada a en espera
+         *
+         * @param Request $request Aqui van los datos para hacer la actualizacion posible, id_reunion, fecha y hora
+         * @return void Retorna un mensaje donde se evidencia si actualizo la reunion o si fallo el proceso
+         */
+        public function reprogramarReunion (Request $request) {
+            try {
+                $reunion = Gcm_Reunion::findOrFail($request['id_reunion']);
+                $reunion->fecha_reunion = $request['fecha_reunion'];
+                $reunion->hora = $request['hora'];
+                $reunion->estado = 0;
+
+                $response = $reunion->save();
+                return response()->json(["response" => $response], 200);
+            } catch (\Throwable $th) {
+                return response()->json(["error" => $th->getMessage()], 500);
+            }
         }
 
 
@@ -183,9 +282,7 @@ class Gcm_Reunion_Controller extends Controller
          * Consulta todos los recursos registrados
          */
         public function getRecursos() {
-
             try {
-
                 $grupo = 1;
                 $getMaxFecha = function ($exceptions = [], $nullExceptions = []) use ($grupo) {
                     // Consulta la máxima fecha de convocatoria de un recurso de acuerdo a las condiciones
@@ -255,10 +352,9 @@ class Gcm_Reunion_Controller extends Controller
                     'entidad_recurso.soporte'
                 )->where('rcs.estado', 1)->get();
     
-                return $respuesta;
-                
+                return response()->json($respuesta);
             } catch (\Throwable $th) {
-                //throw $th;
+                return response()->json(["error" => $th->getMessage()], 500);
             }
         }
 
@@ -268,7 +364,6 @@ class Gcm_Reunion_Controller extends Controller
         public function getRoles($id_reunion) {
 
             try {
-
                 $roles = Gcm_Rol::join('gcm_relaciones', 'gcm_roles.id_rol', '=', 'gcm_relaciones.id_rol')
                 ->join('gcm_tipo_reuniones', 'gcm_relaciones.id_grupo', '=', 'gcm_tipo_reuniones.id_grupo')
                 ->join('gcm_reuniones', 'gcm_tipo_reuniones.id_tipo_reunion', '=', 'gcm_reuniones.id_tipo_reunion')
@@ -276,10 +371,9 @@ class Gcm_Reunion_Controller extends Controller
                 ->select('gcm_roles.*', 'rl2.descripcion as nombre_relacion')
                 ->where([['gcm_reuniones.id_reunion', $id_reunion], ['gcm_roles.estado', 1]])
                 ->groupBy('gcm_roles.id_rol')->get();
-                return $roles;
-                
+                return response()->json($roles);
             } catch (\Throwable $th) {
-                
+                return response()->json(["error" => $th->getMessage()], 500);
             }
         }
 
@@ -287,18 +381,15 @@ class Gcm_Reunion_Controller extends Controller
          * Consulta todos los roles que tienen una relacion donde el grupo tiene en comun con la tabla tipos de reuniones que tiene en comun con la tabla reuniones.
          */
         public function getRolesRegistrar($id_grupo) {
-
             try {
-
                 $roles = Gcm_Rol::join('gcm_relaciones', 'gcm_roles.id_rol', '=', 'gcm_relaciones.id_rol')
                 ->leftJoin('gcm_roles as rl2', 'gcm_roles.relacion', '=', 'rl2.id_rol')
                 ->select('gcm_roles.*', 'rl2.descripcion as nombre_relacion')
                 ->where([['gcm_relaciones.id_grupo', $id_grupo], ['gcm_roles.estado', 1]])
                 ->groupBy('gcm_roles.id_rol')->get();
-                return $roles;
-                
+                return response()->json($roles);
             } catch (\Throwable $th) {
-                
+                return response()->json(["error" => $th->getMessage()], 500);
             }
         }
 
@@ -306,14 +397,11 @@ class Gcm_Reunion_Controller extends Controller
          * Consulta todas las reuniones con un tipo de reunion que tiene un grupo en comun
          */
         public function getTiposReuniones($id_grupo) {
-
             try {
-                
                 $tiposReuniones = Gcm_Tipo_Reunion::where([['gcm_tipo_reuniones.id_grupo', '=', $id_grupo], ['gcm_tipo_reuniones.estado', '=', 1]])->get();
-                return $tiposReuniones;
-
+                return response()->json($tiposReuniones);
             } catch (\Throwable $th) {
-                
+                return response()->json(["error" => $th->getMessage()], 500);
             }
         }
 
@@ -326,14 +414,11 @@ class Gcm_Reunion_Controller extends Controller
          * Trae todos los datos de un tipo de reunión
          */
         public function getTipoReunion($id_tipo_reunion) {
-
             try {
-
                 $tipoReunion = Gcm_Tipo_Reunion::where('id_tipo_reunion', $id_tipo_reunion)->get();
-                return $tipoReunion;
-                
+                return response()->json($tipoReunion);
             } catch (\Throwable $th) {
-                
+                return response()->json(["error" => $th->getMessage()], 500);
             }
         }
 
@@ -341,9 +426,7 @@ class Gcm_Reunion_Controller extends Controller
          * Consulta y trae todas las reuniones registradas con un grupo que tiene un usuario en comun
          */
         public function listarReuniones($id_usuario) {
-
             try {
-
                 $reuniones = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
                 ->join('gcm_grupos', 'gcm_tipo_reuniones.id_grupo', '=', 'gcm_grupos.id_grupo')
                 ->select('gcm_reuniones.id_reunion', 'gcm_reuniones.id_tipo_reunion', 'gcm_reuniones.descripcion', 
@@ -351,10 +434,9 @@ class Gcm_Reunion_Controller extends Controller
                 'gcm_reuniones.lugar', 'gcm_reuniones.quorum', 'gcm_reuniones.estado')
                 ->where('gcm_grupos.id_usuario', '=', $id_usuario)
                 ->get();
-                return $reuniones;
-                
+                return response()->json($reuniones);
             } catch (\Throwable $th) {
-                
+                return response()->json(["error" => $th->getMessage()], 500);
             }
         }
 
@@ -362,16 +444,13 @@ class Gcm_Reunion_Controller extends Controller
          * Trae todos los datos de una reunión en especifico
          */
         public function getReunionRegistrar($id_grupo) {
-
             try {
-
                 $reunion = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
                 ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo', 'gcm_tipo_reuniones.id_grupo')
                 ->where('id_grupo', '=', $id_grupo)->get();
-                return $reunion;
-                
+                return response()->json($reunion);
             } catch (\Throwable $th) {
-                
+                return response()->json(["error" => $th->getMessage()], 500);
             }
         }
 
@@ -401,9 +480,7 @@ class Gcm_Reunion_Controller extends Controller
                 'quorum.max' => '*Máximo 5 caracteres',
                 'estado.required' => '*Rellena este campo',
                 'estado.max'=> '*Maximo 2 caracteres',
-            ]
-
-            );
+            ]);
 
             if ($validator->fails()) {
                 return response()->json($validator->messages(), 422);
@@ -531,7 +608,7 @@ class Gcm_Reunion_Controller extends Controller
         /**
          * Elimina una reunion
          */
-        public function eliminarReunion($id_reunion) {
+        public function eliminarReunion_($id_reunion) {
             $reunion = Gcm_Reunion::findOrFail($id_reunion);
             $res;
             try {
@@ -551,14 +628,11 @@ class Gcm_Reunion_Controller extends Controller
          * Trae todos los datos de un convocado en especifico
          */
         public function getConvocado($id_convocado_reunion) {
-
             try {
-
                 $convocado = Gcm_Convocado_Reunion::where('id_convocado_reunion', $id_convocado_reunion)->get();
-                return $convocado;
-                
+                return response()->json($convocado);
             } catch (\Throwable $th) {
-                
+                return response()->json(["error" => $th->getMessage()], 500);
             }
         }
 
@@ -636,14 +710,11 @@ class Gcm_Reunion_Controller extends Controller
          * Trae los datos de un programa en especifico
          */
         public function getPrograma($id_programa) {
-
             try {
-
                 $programa = Gcm_Programa::where('id_programa', $id_programa)->get();
-                return $programa;
-                
+                return response()->json($programa);
             } catch (\Throwable $th) {
-                
+                return response()->json(["error" => $th->getMessage()], 500);
             }
         }
 
@@ -651,10 +722,8 @@ class Gcm_Reunion_Controller extends Controller
          * Elimina una programa
          */
         public function eliminarPrograma($id_programa) {
-
             $programa = Gcm_Programa::findOrFail($id_programa);
             $res;
-
             try {
                 $programa->delete();
                 $res = response()->json(["response" => 'Se eliminó'], 200);
@@ -674,21 +743,17 @@ class Gcm_Reunion_Controller extends Controller
          * @return void objeto con la reunion que se consulto
          */
         public function traerReunion($id_tipo_reunion) {
-
             try {
-
                 $reunion = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
                 ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo', 'gcm_tipo_reuniones.id_grupo')
                 ->where('gcm_reuniones.id_tipo_reunion', '=', $id_tipo_reunion)
                 ->orderBy('fecha_actualizacion', 'desc')
                 ->limit(1)
                 ->get();
-                return $reunion;
-                
+                return response()->json($reunion);
             } catch (\Throwable $th) {
-                
+                return response()->json(["error" => $th->getMessage()], 500);
             }
-            
         }
 
         /**
@@ -698,6 +763,7 @@ class Gcm_Reunion_Controller extends Controller
          * @return void Retorna un mensaje donde se evidencia si la actualizacion fue exitosa o fallo
          */
         public function editarReunionCompleta(Request $request) {
+
             // return response()->json($_FILES);
 
             DB::beginTransaction();
@@ -708,11 +774,23 @@ class Gcm_Reunion_Controller extends Controller
 
                 // Actualiza los datos de la reunión
                 $data = json_decode($request->reunion, true);
+                $dataCollection = collect($data);
                 $id_tipo_reunion = $data['id_tipo_reunion'];
 
-                
-                // En caso de no existir el tipo reunión, registra uno nuevo
+                // En caso de no existir el tipo reunión, registra un tipo nuevo
                 if(empty($id_tipo_reunion)) {
+
+                    $validator = Validator::make($dataCollection->all(), [
+                        'titulo'=>'required|max:255',
+                    ],[
+                        'titulo.required'=> '*Rellena este campo',
+                        'titulo.max' => '*Maximo 255 caracteres',
+                    ]);
+        
+                    if ($validator->fails()) {
+                        return response()->json($validator->messages(), 422);
+                    }
+
                     $tipo_reunion_nueva = new Gcm_Tipo_Reunion;
                     $tipo_reunion_nueva->id_grupo = $data['id_grupo'];
                     $tipo_reunion_nueva->titulo = $data['titulo'];
@@ -731,6 +809,23 @@ class Gcm_Reunion_Controller extends Controller
                 // En caso de no existir la reunión, crea una nueva
                 if(empty($id_reunion)) {
 
+                    $validator = Validator::make($dataCollection->all(), [
+                        'descripcion'=>'max:5000',
+                        'fecha_reunion'=>'required',
+                        'hora'=>'required',
+                        'quorum'=>'required|max:2',
+                    ],[
+                        'descripcion.max' => '*Maximo 5000 caracteres',
+                        'fecha_reunion.required' => '*Rellena este campo',
+                        'hora.required' => '*Rellena este campo',
+                        'quorum.required' => '*Rellena este campo',
+                        'quorum.max' => '*Máximo 2 caracteres',
+                    ]);
+                
+                    if ($validator->fails()) {
+                        return response()->json($validator->messages(), 422);
+                    }
+
                     $reunion_nueva = new Gcm_Reunion;
                     $reunion_nueva->id_tipo_reunion = $id_tipo_reunion;
                     $reunion_nueva->descripcion = $data['descripcion'];
@@ -743,6 +838,23 @@ class Gcm_Reunion_Controller extends Controller
                     $id_reunion = $reunion_nueva->id_reunion;
 
                 } else {
+                    
+                    $validator = Validator::make($dataCollection->all(), [
+                        'descripcion'=>'max:5000',
+                        'fecha_reunion'=>'required',
+                        'hora'=>'required',
+                        'quorum'=>'required|max:2',
+                    ],[
+                        'descripcion.max' => '*Maximo 5000 caracteres',
+                        'fecha_reunion.required' => '*Rellena este campo',
+                        'hora.required' => '*Rellena este campo',
+                        'quorum.required' => '*Rellena este campo',
+                        'quorum.max' => '*Máximo 2 caracteres',
+                    ]);
+                
+                    if ($validator->fails()) {
+                        return response()->json($validator->messages(), 422);
+                    }
 
                     // Actualiza los datos de la reunión
                     $reunion = Gcm_Reunion::findOrFail($id_reunion);
@@ -756,13 +868,15 @@ class Gcm_Reunion_Controller extends Controller
                     $response = $reunion->save();
                 }
 
-                // Vacea la tabla de convocados con un id_reunion en comun
-                // Gcm_Convocado_Reunion::where('id_reunion', '=', $id_reunion)->delete();
-                Gcm_Convocado_Reunion::groupDeletion(Gcm_Convocado_Reunion::where('id_reunion', '=', $id_reunion)->get());
+                // Cambia el estado de los convocados de una reunion por eliminado
+                Gcm_Convocado_Reunion::changeStatus(Gcm_Convocado_Reunion::where('id_reunion', '=', $id_reunion)->get(), 0);
 
                 $convocados = json_decode($request->convocados, true);
+
                 // Registra los convocados en el tipo Participante o Representante Legal
                 for ($i=0; $i < count($convocados); $i++) {
+
+                    $convocadosCollection = collect($convocados[$i]);
 
                     $relacion_nueva = new Gcm_Relacion;
 
@@ -771,6 +885,26 @@ class Gcm_Reunion_Controller extends Controller
                     
                     // En caso de no existir el recurso, lo registra
                     if(!$recurso_existe) {
+
+                        $validator = Validator::make($convocadosCollection->all(), [
+                            'identificacion' => 'required|max:20',
+                            'nombre' => 'required|max:255',
+                            'telefono'=> 'max:20',
+                            'correo' => 'required|max:255|email',
+                        ],[
+                            'identificacion.required' => '*Rellena este campo',
+                            'identificacion.max' => '*Maximo 20 caracteres',
+                            'nombre.required' => '*Rellena este campo',
+                            'nombre.max' => '*Maximo 255 caracteres',
+                            'telefono.max' => '*Maximo 20 caracteres',
+                            'correo.required' => '*Rellena este campo',
+                            'correo.max' => '*Máximo 255 caracteres',
+                            'correo.email' => '*Formato de correo invalido',
+                        ]);
+
+                        if ($validator->fails()) {
+                            return response()->json($validator->messages(), 422);
+                        }
 
                         $recurso_nuevo = new Gcm_Recurso;
                         $recurso_nuevo->identificacion = $convocados[$i]['identificacion'];
@@ -781,11 +915,23 @@ class Gcm_Reunion_Controller extends Controller
 
                         $response = $recurso_nuevo->save();
 
-                        // Cosulta si existe el rol ya esta registrado
+                        // Consulta si existe el rol ya esta registrado
                         $rol_existe = DB::table('gcm_roles')->where('descripcion', '=', $convocados[$i]['rol'])->first();
 
                         // En caso de no existir el rol, lo registra
                         if(!$rol_existe) {
+
+                            $validator = Validator::make($convocadosCollection->all(), [
+                                'rol' => 'required|max:100',
+                            ],[
+                                'rol.required' => '*Rellena este campo',
+                                'rol.max' => '*Maximo 100 caracteres',                                
+                            ]);
+    
+                            if ($validator->fails()) {
+                                return response()->json($validator->messages(), 422);
+                            }
+
                             $rol_nuevo = new Gcm_Rol;
                             $rol_nuevo->descripcion = $convocados[$i]['rol'];
                             $rol_nuevo->relacion = null;
@@ -803,8 +949,20 @@ class Gcm_Reunion_Controller extends Controller
 
                         } else { // En caso de que si exista el rol
 
-                            // Si si existe le actualiza el estado en caso que este este inactivo
+                            // Si existe le actualiza el estado en caso que este este inactivo
                             if ($rol_existe->estado === '0') {
+
+                                $validator = Validator::make($convocadosCollection->all(), [
+                                    'rol' => 'required|max:100',
+                                ],[
+                                    'rol.required' => '*Rellena este campo',
+                                    'rol.max' => '*Maximo 100 caracteres',                                
+                                ]);
+        
+                                if ($validator->fails()) {
+                                    return response()->json($validator->messages(), 422);
+                                }
+                                
                                 $rol = Gcm_Rol::findOrFail($rol_existe->id_rol);
                                 $rol->descripcion = $convocados[$i]['rol'];
                                 $rol->relacion = null;
@@ -827,6 +985,20 @@ class Gcm_Reunion_Controller extends Controller
 
                         // Registra el convocado con nit y razon social
                         if ($convocados[$i]['tipo'] === '2') {
+                            $validator = Validator::make($convocadosCollection->all(), [
+                                'tipo' => 'required|max:2',
+                                'nit' => 'max:20',
+                                'razon_social' => 'max:100',
+                            ],[
+                                'tipo.required'=> '*Rellena este campo',
+                                'tipo.max'=> '*Maximo 2 caracteres',
+                                'nit.max' => '*Maximo 20 caracteres',
+                                'razon_social.max' => '*Máximo 100 caracteres',
+                            ]);
+    
+                            if ($validator->fails()) {
+                                return response()->json($validator->messages(), 422);
+                            }
                             
                             $convocado = new Gcm_Convocado_Reunion;
                             $convocado->id_reunion = $id_reunion;
@@ -837,13 +1009,24 @@ class Gcm_Reunion_Controller extends Controller
                             $convocado->razon_social = $convocados[$i]['razon_social'];
                             $convocado->participacion = null;
                             $convocado->soporte = null;
+                            $convocado->estado = 1;
 
                             $response = $convocado->save();
 
                             array_push($array_id_convocados, $convocado->id_convocado_reunion);
                         } else {
-
                             // Registra el convocado sin nit ni razon social
+                            $validator = Validator::make($convocadosCollection->all(), [
+                                'tipo' => 'required|max:2',
+                            ],[
+                                'tipo.required'=> '*Rellena este campo',
+                                'tipo.max'=> '*Maximo 2 caracteres',
+                            ]);
+    
+                            if ($validator->fails()) {
+                                return response()->json($validator->messages(), 422);
+                            }
+
                             $convocado = new Gcm_Convocado_Reunion;
                             $convocado->id_reunion = $id_reunion;
                             $convocado->representacion = null;
@@ -853,6 +1036,7 @@ class Gcm_Reunion_Controller extends Controller
                             $convocado->razon_social = null;
                             $convocado->participacion = null;
                             $convocado->soporte = null;
+                            $convocado->estado = 1;
     
                             $response = $convocado->save();
 
@@ -862,6 +1046,24 @@ class Gcm_Reunion_Controller extends Controller
                     } else { // En caso de que si exista el recurso
 
                         // Actualiza el recurso con los nuevos datos, en caso de enviar el campo de telefono vacio entonces se guarda el antiguo valor del telefono y en caso de que el estado del recurso sea inactivo entonces lo activa
+
+                        $validator = Validator::make($convocadosCollection->all(), [
+                            'nombre' => 'required|max:255',
+                            'telefono'=> 'max:20',
+                            'correo' => 'required|max:255|email',
+                        ],[
+                            'nombre.required' => '*Rellena este campo',
+                            'nombre.max' => '*Maximo 255 caracteres',
+                            'telefono.max' => '*Maximo 20 caracteres',
+                            'correo.required' => '*Rellena este campo',
+                            'correo.max' => '*Máximo 255 caracteres',
+                            'correo.email' => '*Formato de correo invalido',
+                        ]);
+
+                        if ($validator->fails()) {
+                            return response()->json($validator->messages(), 422);
+                        }
+
                         $recurso = Gcm_Recurso::findOrFail($recurso_existe->id_recurso);
                         $recurso->nombre = $convocados[$i]['nombre'];
                         if(!empty($convocados[$i]['telefono'])) { $recurso->telefono = $convocados[$i]['telefono']; }
@@ -876,6 +1078,17 @@ class Gcm_Reunion_Controller extends Controller
 
                         // En caso de que no exista el rol, lo registra
                         if(!$rol_existe) {
+
+                            $validator = Validator::make($convocadosCollection->all(), [
+                                'rol' => 'required|max:100',
+                            ],[
+                                'rol.required' => '*Rellena este campo',
+                                'rol.max' => '*Maximo 100 caracteres',                                
+                            ]);
+    
+                            if ($validator->fails()) {
+                                return response()->json($validator->messages(), 422);
+                            }
 
                             $rol_nuevo = new Gcm_Rol;
                             $rol_nuevo->descripcion = $convocados[$i]['rol'];
@@ -895,6 +1108,18 @@ class Gcm_Reunion_Controller extends Controller
                         } else { // En caso de que si exista el rol
 
                             if ($rol_existe->estado === '0') {
+
+                                $validator = Validator::make($convocadosCollection->all(), [
+                                    'rol' => 'required|max:100',
+                                ],[
+                                    'rol.required' => '*Rellena este campo',
+                                    'rol.max' => '*Maximo 100 caracteres',                                
+                                ]);
+        
+                                if ($validator->fails()) {
+                                    return response()->json($validator->messages(), 422);
+                                }
+
                                 $rol = Gcm_Rol::findOrFail($rol_existe->id_rol);
                                 $rol->descripcion = $convocados[$i]['rol'];
                                 $rol->relacion = null;
@@ -902,13 +1127,11 @@ class Gcm_Reunion_Controller extends Controller
 
                                 $response = $rol->save();
                             }
-
                             // Consulta si ya existe una relacion registrada con los datos subministrados(id_grupo, id_rol, id_recurso)
                             $relacion_existe = DB::table('gcm_relaciones')->where([['id_grupo', '=',  $data['id_grupo']], ['id_rol', '=', $rol_existe->id_rol], ['id_recurso', '=', $recurso_existe->id_recurso]])->first();
                             
                             // En caso de que no exista la relación, la registra
                             if(!$relacion_existe) {
-
                                 $relacion_nueva->id_grupo = $data['id_grupo'];
                                 $relacion_nueva->id_rol = $rol_existe->id_rol;
                                 $relacion_nueva->id_recurso = $recurso_existe->id_recurso;
@@ -926,15 +1149,27 @@ class Gcm_Reunion_Controller extends Controller
                                     
                                     $response = $relacion->save();
                                 }
-
                                 // En caso de que si exista la relación actualiza el valor de id_relacion por el que trae el convocado
                                 $relacion_nueva->id_relacion = $relacion_existe->id_relacion;
                             }
-
                         }
-
-                        // Registra el convocado con nit y razon social
                         if ($convocados[$i]['tipo'] === '2') {
+                            
+                            // Registra el convocado con nit y razon social
+                            $validator = Validator::make($convocadosCollection->all(), [
+                                'tipo' => 'required|max:2',
+                                'nit' => 'max:20',
+                                'razon_social' => 'max:100',
+                            ],[
+                                'tipo.required'=> '*Rellena este campo',
+                                'tipo.max'=> '*Maximo 2 caracteres',
+                                'nit.max' => '*Maximo 20 caracteres',
+                                'razon_social.max' => '*Máximo 100 caracteres',
+                            ]);
+    
+                            if ($validator->fails()) {
+                                return response()->json($validator->messages(), 422);
+                            }
                             
                             $convocado = new Gcm_Convocado_Reunion;
                             $convocado->id_reunion = $id_reunion;
@@ -945,14 +1180,26 @@ class Gcm_Reunion_Controller extends Controller
                             $convocado->razon_social = $convocados[$i]['razon_social'];
                             $convocado->participacion = null;
                             $convocado->soporte = null;
+                            $convocado->estado = 1;
 
                             $response = $convocado->save();
 
                             // Añade al array_id_convocados los id de cada convocado que vaya agregando con el fin de poder enviarlos en la funcion de enviar correos
                             array_push($array_id_convocados, $convocado->id_convocado_reunion);
                         } else {
-
+                            
                             // Registra el convocado sin nit ni razon social
+                            $validator = Validator::make($convocadosCollection->all(), [
+                                'tipo' => 'required|max:2',
+                            ],[
+                                'tipo.required'=> '*Rellena este campo',
+                                'tipo.max'=> '*Maximo 2 caracteres',
+                            ]);
+    
+                            if ($validator->fails()) {
+                                return response()->json($validator->messages(), 422);
+                            }
+
                             $convocado = new Gcm_Convocado_Reunion;
                             $convocado->id_reunion = $id_reunion;
                             $convocado->representacion = null;
@@ -962,6 +1209,7 @@ class Gcm_Reunion_Controller extends Controller
                             $convocado->razon_social = null;
                             $convocado->participacion = null;
                             $convocado->soporte = null;
+                            $convocado->estado = 1;
     
                             $response = $convocado->save();
 
@@ -991,6 +1239,19 @@ class Gcm_Reunion_Controller extends Controller
                 if (isset($request->titulo)) {
 
                     for ($i=0; $i < count($request->titulo); $i++) {
+
+                        $validator = Validator::make($request->all(), [
+                            'titulo' => 'required|max:500',
+                            'descripcion'=>'max:500',
+                        ],[
+                            'titulo.required' => '*Rellena este campo',
+                            'titulo.max' => '*Máximo 500 caracteres',
+                            'descripcion.max' => '*Maximo 500 caracteres',
+                        ]);
+                    
+                        if ($validator->fails()) {
+                            return response()->json($validator->messages(), 422);
+                        }
                         
                         // Registra la programación de una reunion
                         $programa_nuevo = new Gcm_Programacion;
@@ -1056,6 +1317,19 @@ class Gcm_Reunion_Controller extends Controller
                         if (isset($request['opcion_titulo'.$i])) {
         
                             for ($j=0; $j < count($request['opcion_titulo'.$i]) ; $j++) {
+
+                                $validator = Validator::make($request->all(), [
+                                    'titulo' => 'required|max:500',
+                                    'descripcion'=>'max:500',
+                                ],[
+                                    'titulo.required' => '*Rellena este campo',
+                                    'titulo.max' => '*Máximo 500 caracteres',
+                                    'descripcion.max' => '*Maximo 500 caracteres',
+                                ]);
+                            
+                                if ($validator->fails()) {
+                                    return response()->json($validator->messages(), 422);
+                                }
         
                                 // Registra las opciones
                                 $opcion_nueva = new Gcm_Programacion;
@@ -1094,7 +1368,6 @@ class Gcm_Reunion_Controller extends Controller
                                         chmod(storage_path('app/public/archivos_reunion/'.$id_reunion.'/'.$picture), 0555);
         
                                         $response = $archivo_opcion_nuevo->save();
-                
                                     }
                                 }
         
@@ -1140,12 +1413,11 @@ class Gcm_Reunion_Controller extends Controller
          * @return void Retorna un mensaje donde se evidencia si el envio de los correos fue exitoso o fallo
          */
         public function enviarCorreos(Request $request) {
-
-            // try {
-                $encrypt = new Encrypt();
-            
+            try {
                 $programas = [];
+                $encrypt = new Encrypt();
                 $mc = new Gcm_Mail_Controller();
+
                 $reunion = json_decode($request->reunion, true);
                 $convocados = json_decode($request->convocados, true);
                 $array_id_convocados = json_decode($request->array_id_convocados, true);
@@ -1160,9 +1432,7 @@ class Gcm_Reunion_Controller extends Controller
                 }
 
                 for ($i=0; $i < count($convocados); $i++) {
-
                     $valorEncriptado = $encrypt->encriptar($array_id_convocados[$i]);
-
                     $detalle = [
                         'nombre' => $convocados[$i]['nombre'],
                         'titulo' => $reunion['titulo'],
@@ -1176,68 +1446,9 @@ class Gcm_Reunion_Controller extends Controller
                     Gcm_Log_Acciones_Sistema_Controller::save(4, $convocados[$i]['correo'], null);
                     // $mc->sendEmail('Este es el título', $detalle, $convocados[$i]['correo']);
                 }
-            //     return response()->json(["response" => $response], 200);
-            // } catch (Exception $e) {
-            //     return response()->json(["error" => $e->getMessage()], 500);
-            // }
-        }
-
-        /**
-         * Realizo el reenvio de un correo electronico a los convocados de una reunion
-         *
-         * @param Request Aqui va los id de los convocados, los correos y el id de reunion
-         * @return void Retorna un mensaje donde se evidencia si el envio de los correos fue exitoso o fallo
-         */
-        public function reenviarCorreos (Request $request) {
-
-            // Eloquent siempre devuelve colecciones
-            // first() trae el primero que encuentre
-
-            try {
-
-                $encrypt = new Encrypt();
-                
-                $programas = [];
-                $mc = new Gcm_Mail_Controller();
-    
-                $id_reunion = $request->id_reunion;
-    
-                $reunion = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
-                ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo')
-                ->where('gcm_reuniones.id_reunion', '=', $id_reunion)->first();
-    
-                $programas = Gcm_Programacion::where([['gcm_programacion.id_reunion', '=', $id_reunion], ['gcm_programacion.estado', '!=', '4']])
-                ->whereNull('gcm_programacion.relacion')->get();
-    
-                for ($i=0; $i < count($request->correos); $i++) {
-    
-                    $recurso = Gcm_Recurso::join('gcm_relaciones', 'gcm_relaciones.id_recurso', '=', 'gcm_recursos.id_recurso')
-                    ->join('gcm_convocados_reunion', 'gcm_relaciones.id_relacion', '=', 'gcm_convocados_reunion.id_relacion')
-                    ->select('gcm_recursos.*')
-                    ->where('gcm_convocados_reunion.id_convocado_reunion', '=', $request->correos[$i]['id_convocado'])->first();
-    
-                    $recurso_actualizar = Gcm_Recurso::findOrFail($recurso['id_recurso']);
-                    $recurso_actualizar->correo = $request->correos[$i]['correo'];
-                    $response = $recurso_actualizar->save();
-    
-                    $valorEncriptado = $encrypt->encriptar($request->correos[$i]['id_convocado']);
-    
-                    $detalle = [
-                        'nombre' => $recurso['nombre'],
-                        'titulo' => $reunion['titulo'],
-                        'descripcion' => $reunion['descripcion'],
-                        'fecha_reunion' => $reunion['fecha_reunion'],
-                        'hora' => $reunion['hora'],
-                        'programas' => $programas,
-                        'url' => 'gcmeet.com/public/acceso-reunion/acceso/'.$valorEncriptado,
-                    ];
-                    Mail::to($request->correos[$i]['correo'])->send(new TestMail($detalle));
-                    Gcm_Log_Acciones_Sistema_Controller::save(4, $request->correos[$i]['correo'], null);
-                }
-                
+                return response()->json(["response" => 'exitoso'], 200);
             } catch (\Throwable $th) {
-                
+                return response()->json(["error" => $th->getMessage()], 500);
             }
-
         }
 }
