@@ -36,7 +36,10 @@ class Gcm_Reunion_Controller extends Controller
                 $grupos = Gcm_Grupo::where('estado', '1')->get();
                 return response()->json($grupos);
             } catch (\Throwable $th) {
-                return response()->json(["error" => $th->getMessage()], 500);
+
+                $id_error = Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
+
+                return response()->json(["id_error" => $id_error], 500);
             }
         }
 
@@ -53,6 +56,7 @@ class Gcm_Reunion_Controller extends Controller
                 ->get();
                 return response()->json($reuniones);
             } catch (\Throwable $th) {
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
                 return response()->json(["error" => $th->getMessage()], 500);
             }
         }
@@ -67,6 +71,7 @@ class Gcm_Reunion_Controller extends Controller
                 ->where('id_reunion', $id_reunion)->get();
                 return response()->json($reunion);
             } catch (\Throwable $th) {
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
                 return response()->json(["error" => $th->getMessage()], 500);
             }
         }
@@ -127,6 +132,7 @@ class Gcm_Reunion_Controller extends Controller
                 return response()->json($programas);
                 
             } catch (\Throwable $th) {
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
                 return response()->json(["error" => $th->getMessage()], 500);
             }
         }
@@ -158,6 +164,7 @@ class Gcm_Reunion_Controller extends Controller
                     ])->get();
                 return response()->json($convocados);
             } catch (\Throwable $th) {
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
                 return response()->json(["error" => $th->getMessage()], 500);
             }
         }
@@ -171,7 +178,15 @@ class Gcm_Reunion_Controller extends Controller
         public function reenviarCorreos (Request $request) {
             // Eloquent siempre devuelve colecciones
             // first() trae el primero que encuentre
+
             try {
+                // Aqui realizo un array_map con el objetivo de obtener solo el correo del objeto que llega y que este se almacene en un array nuevo
+                $correosOrganizados = array_map(function ($row) {
+                    return $row['correo'];
+                }, $request->correos);
+
+                // Array para almacenar los id de los convocados para poder enviar los correos con la url de la reunion
+                $array_id_convocados = [];
 
                 $encrypt = new Encrypt();
                 
@@ -210,13 +225,32 @@ class Gcm_Reunion_Controller extends Controller
                         'url' => 'gcmeet.com/public/acceso-reunion/acceso/'.$valorEncriptado,
                     ];
                     Mail::to($request->correos[$i]['correo'])->send(new TestMail($detalle));
-                    Gcm_Log_Acciones_Sistema_Controller::save(4, $request->correos[$i]['correo'], null);
                 }
+                Gcm_Log_Acciones_Sistema_Controller::save(4, array('Descipcion' => 'Reenvio de correos a los convocados a una reunion', 'Correos' => $correosOrganizados), null);
                 return response()->json(["response" => 'exitoso'], 200);
             } catch (\Throwable $th) {
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
                 return response()->json(["error" => $th->getMessage()], 500);
             }
 
+        }
+
+        /**
+         * Actualiza el estado de una reunión a 'iniciada'
+         *
+         * @param [type] $id_reunion Id de la reunión la cual va ser iniciada
+         * @return void Retorna un mensaje donde se evidencia si actualizo el estado o si fallo el proceso
+         */
+        public function iniciarReunion ($id_reunion) {
+            try {
+                $reunion = Gcm_Reunion::findOrFail($id_reunion);
+                $reunion->estado = 1;
+                $response = $reunion->save();
+                return response()->json(["response" => $response], 200);
+            } catch (\Throwable $th) {
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
+                return response()->json(["error" => $th->getMessage()], 500);
+            }
         }
 
         /**
@@ -232,6 +266,7 @@ class Gcm_Reunion_Controller extends Controller
                 $response = $reunion->save();
                 return response()->json(["response" => $response], 200);
             } catch (\Throwable $th) {
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
                 return response()->json(["error" => $th->getMessage()], 500);
             }
         }
@@ -251,6 +286,7 @@ class Gcm_Reunion_Controller extends Controller
 
                 return response()->json(["response" => 'se elimino con exicto'], 200);
             } catch (\Throwable $th) {
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
                 return response()->json(["error" => $th->getMessage()], 500);
             }
         }
@@ -271,6 +307,7 @@ class Gcm_Reunion_Controller extends Controller
                 $response = $reunion->save();
                 return response()->json(["response" => $response], 200);
             } catch (\Throwable $th) {
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
                 return response()->json(["error" => $th->getMessage()], 500);
             }
         }
@@ -354,6 +391,7 @@ class Gcm_Reunion_Controller extends Controller
     
                 return response()->json($respuesta);
             } catch (\Throwable $th) {
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
                 return response()->json(["error" => $th->getMessage()], 500);
             }
         }
@@ -373,6 +411,7 @@ class Gcm_Reunion_Controller extends Controller
                 ->groupBy('gcm_roles.id_rol')->get();
                 return response()->json($roles);
             } catch (\Throwable $th) {
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
                 return response()->json(["error" => $th->getMessage()], 500);
             }
         }
@@ -389,6 +428,7 @@ class Gcm_Reunion_Controller extends Controller
                 ->groupBy('gcm_roles.id_rol')->get();
                 return response()->json($roles);
             } catch (\Throwable $th) {
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
                 return response()->json(["error" => $th->getMessage()], 500);
             }
         }
@@ -401,6 +441,7 @@ class Gcm_Reunion_Controller extends Controller
                 $tiposReuniones = Gcm_Tipo_Reunion::where([['gcm_tipo_reuniones.id_grupo', '=', $id_grupo], ['gcm_tipo_reuniones.estado', '=', 1]])->get();
                 return response()->json($tiposReuniones);
             } catch (\Throwable $th) {
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
                 return response()->json(["error" => $th->getMessage()], 500);
             }
         }
@@ -418,6 +459,7 @@ class Gcm_Reunion_Controller extends Controller
                 $tipoReunion = Gcm_Tipo_Reunion::where('id_tipo_reunion', $id_tipo_reunion)->get();
                 return response()->json($tipoReunion);
             } catch (\Throwable $th) {
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
                 return response()->json(["error" => $th->getMessage()], 500);
             }
         }
@@ -436,6 +478,7 @@ class Gcm_Reunion_Controller extends Controller
                 ->get();
                 return response()->json($reuniones);
             } catch (\Throwable $th) {
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
                 return response()->json(["error" => $th->getMessage()], 500);
             }
         }
@@ -450,6 +493,7 @@ class Gcm_Reunion_Controller extends Controller
                 ->where('id_grupo', '=', $id_grupo)->get();
                 return response()->json($reunion);
             } catch (\Throwable $th) {
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
                 return response()->json(["error" => $th->getMessage()], 500);
             }
         }
@@ -501,6 +545,7 @@ class Gcm_Reunion_Controller extends Controller
                 
                 return response()->json(["response" => $response], 200);
             } catch (\Throwable $th) {
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
                 return response()->json(["error" => $th->getMessage()], 500);
             }
         }
@@ -582,6 +627,7 @@ class Gcm_Reunion_Controller extends Controller
                     
                     return response()->json(["response" => $response], 200);
                 } catch (\Throwable $th) {
+                    Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
                     return response()->json(["error" => $th->getMessage()], 500);
                 }
 
@@ -600,6 +646,7 @@ class Gcm_Reunion_Controller extends Controller
 
                 $res = response()->json(["response" => 'se cambio'], 200);
             } catch (\Throwable $th) {
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
                 $res = response()->json(["error" => $th->getMessage()], 500);
             }
             return $res;
@@ -615,6 +662,7 @@ class Gcm_Reunion_Controller extends Controller
                 $reunion->delete();
                 $res = response()->json(["response" => 'Se eliminó'], 200);
             } catch (\Throwable $th) {
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
                 $res = response()->json(["error" => $th->getMessage()], 500);
             }
             return $res;
@@ -632,6 +680,7 @@ class Gcm_Reunion_Controller extends Controller
                 $convocado = Gcm_Convocado_Reunion::where('id_convocado_reunion', $id_convocado_reunion)->get();
                 return response()->json($convocado);
             } catch (\Throwable $th) {
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
                 return response()->json(["error" => $th->getMessage()], 500);
             }
         }
@@ -682,6 +731,7 @@ class Gcm_Reunion_Controller extends Controller
                 return response()->json(["response" => $response], 200);
                 
             } catch (\Throwable $th) {
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
                 DB::rollback();
                 return response()->json(["error" => $th->getMessage()], 500);
             }
@@ -698,6 +748,7 @@ class Gcm_Reunion_Controller extends Controller
 
                 $res = response()->json(["response" => 'Se eliminó'], 200);
             } catch (\Throwable $th) {
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
                 $res = response()->json(["error" => $th->getMessage()], 500);
             }
             return $res;
@@ -714,6 +765,7 @@ class Gcm_Reunion_Controller extends Controller
                 $programa = Gcm_Programa::where('id_programa', $id_programa)->get();
                 return response()->json($programa);
             } catch (\Throwable $th) {
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
                 return response()->json(["error" => $th->getMessage()], 500);
             }
         }
@@ -728,6 +780,7 @@ class Gcm_Reunion_Controller extends Controller
                 $programa->delete();
                 $res = response()->json(["response" => 'Se eliminó'], 200);
             } catch (\Throwable $th) {
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
                 $res = response()->json(["error" => $th->getMessage()], 500);
             }
             return $res;
@@ -752,6 +805,7 @@ class Gcm_Reunion_Controller extends Controller
                 ->get();
                 return response()->json($reunion);
             } catch (\Throwable $th) {
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
                 return response()->json(["error" => $th->getMessage()], 500);
             }
         }
@@ -768,7 +822,7 @@ class Gcm_Reunion_Controller extends Controller
 
             DB::beginTransaction();
             try {
-                
+                hola;
                 // Array para almacenar los id de los convocados para poder enviar los correos con la url de la reunion
                 $array_id_convocados = [];
 
@@ -1390,9 +1444,10 @@ class Gcm_Reunion_Controller extends Controller
                 
                 DB::commit();
                 return response()->json(["response" => $response, 'data' => $array_id_convocados, 'id_reunion' => $id_reunion], 200);
-            } catch (\Exception $e) {
+            } catch (\Throwable $th) {
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
                 DB::rollback();
-                return response()->json(["error" => $e->getMessage()], 500);
+                return response()->json(["error" => $th->getMessage()], 500);
             }
         }
 
@@ -1413,6 +1468,7 @@ class Gcm_Reunion_Controller extends Controller
          * @return void Retorna un mensaje donde se evidencia si el envio de los correos fue exitoso o fallo
          */
         public function enviarCorreos(Request $request) {
+
             try {
                 $programas = [];
                 $encrypt = new Encrypt();
@@ -1421,6 +1477,11 @@ class Gcm_Reunion_Controller extends Controller
                 $reunion = json_decode($request->reunion, true);
                 $convocados = json_decode($request->convocados, true);
                 $array_id_convocados = json_decode($request->array_id_convocados, true);
+
+                // Aqui realizo un array_map con el objetivo de obtener solo el correo del objeto que llega y que este se almacene en un array nuevo
+                $correosOrganizados = array_map(function ($row) {
+                    return $row['correo'];
+                }, $convocados);
 
                 if (isset($request->titulo)) {
                     for ($i=0; $i < count($request->titulo); $i++) {
@@ -1443,11 +1504,12 @@ class Gcm_Reunion_Controller extends Controller
                         'url' => 'gcmeet.com/public/acceso-reunion/acceso/'.$valorEncriptado,
                     ];
                     Mail::to($convocados[$i]['correo'])->send(new TestMail($detalle));
-                    Gcm_Log_Acciones_Sistema_Controller::save(4, $convocados[$i]['correo'], null);
                     // $mc->sendEmail('Este es el título', $detalle, $convocados[$i]['correo']);
                 }
+                Gcm_Log_Acciones_Sistema_Controller::save(4, array('Descripcion' => 'Envio del primer correo a los convocados de una reunion', 'Correos' => $correosOrganizados), null);
                 return response()->json(["response" => 'exitoso'], 200);
             } catch (\Throwable $th) {
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
                 return response()->json(["error" => $th->getMessage()], 500);
             }
         }

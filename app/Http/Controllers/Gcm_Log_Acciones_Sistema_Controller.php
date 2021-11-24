@@ -27,6 +27,7 @@ class Gcm_Log_Acciones_Sistema_Controller extends Controller
         $log_accion_sistema_new->lugar = $place;
         $log_accion_sistema_new->detalle = json_encode($item);
         $log_accion_sistema_new->save();
+        return $log_accion_sistema_new->id_log_accion;
     }
 
     /**
