@@ -3,10 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 
-class Gcm_Usuario extends Authenticatable
+//Añadimos la clase JWTSubject 
+use Tymon\JWTAuth\Contracts\JWTSubject;
+
+class Gcm_Usuario extends Authenticatable implements JWTSubject
 {
     use HasFactory, Notifiable;
 
@@ -46,4 +49,29 @@ class Gcm_Usuario extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
     ];
+
+    /**
+     * Get the identifier that will be stored in the subject claim of the JWT.
+     *
+     * @return mixed
+     */
+    public function getJWTIdentifier() {
+        return $this->getKey();
+    }
+
+    /**
+     * Return a key value array, containing any custom claims to be added to the JWT.
+     * Devuelve una matriz de valor clave, que contiene cualquier reclamo personalizado que se agregará al JWT.
+     * @return array
+     */
+    public function getJWTCustomClaims() {
+        return 
+        [
+        //     'email'=> $this->email,
+        //     'accionista'=> $this->accionista,
+        //     'representante'=> $this->representante,
+        //     'identificacion'=> $this->identificacion,
+        //     'idRol'=> $this->idRol,
+        ];
+    }
 }

@@ -8,6 +8,8 @@ use App\Http\Controllers\Gcm_Rol_Controller;
 use App\Http\Controllers\Gcm_Recurso_Controller;
 use App\Http\Controllers\Gcm_TipoReunion_Controller;
 use App\Http\Controllers\Gcm_Reunion_Controller;
+use App\Http\Controllers\AuthController;
+use Illuminate\Support\Facades\File;
 
 /*
 |--------------------------------------------------------------------------
@@ -24,11 +26,22 @@ use App\Http\Controllers\Gcm_Reunion_Controller;
 //     return $request->user();
 // });
 
+Route::group([
+    'middleware' => 'api',
+    'prefix' => 'auth'
+], function ($router) {
+    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/refresh', [AuthController::class, 'refresh']);
+    Route::get('/user-profile', [AuthController::class, 'userProfile']);
+});
 
 /**
  * Rutas del componente de usuario
  */
 Route::group([
+    // 'middleware' => 'api',
     'prefix' => 'usuario'
 ], function ($router) {
     Route::post('/agregar-usuario', [Gcm_Usuario_Controller::class, 'agregarUsuario']);
@@ -43,6 +56,7 @@ Route::group([
  * Rutas del componente de grupo
  */
 Route::group([
+    // 'middleware' => 'jwt.verify',
     'prefix' => 'grupo'
 ], function ($router) {
     Route::post('/agregar-grupo', [Gcm_Grupo_Controller::class, 'agregarGrupo']);
@@ -57,6 +71,7 @@ Route::group([
  * Rutas del componente de rol
  */
 Route::group([
+    // 'middleware' => 'jwt.verify',
     'prefix' => 'rol'
 ], function ($router) {
     Route::post('/agregar-rol', [Gcm_Rol_Controller::class, 'agregarRol']);
@@ -72,6 +87,7 @@ Route::group([
  * Rutas del componente de recurso y relación
  */
 Route::group([
+    // 'middleware' => 'jwt.verify',
     'prefix' => 'recurso'
 ], function ($router) {
     // Recurso
@@ -97,6 +113,7 @@ Route::group([
  * Rutas del componente de tipoReunion y restriccion
  */
 Route::group([
+    // 'middleware' => 'jwt.verify',
     'prefix' => 'tipoReunion'
 ], function ($router) {
     // Tipo reunión
@@ -120,6 +137,7 @@ Route::group([
  * Rutas del componente de reunion y convocado
  */
 Route::group([
+    // 'middleware' => 'jwt.verify',
     'prefix' => 'reunion'
 ], function ($router) {
     // Reunión
@@ -148,6 +166,7 @@ Route::group([
  * Rutas del componente de meets
  */
 Route::group([
+    // 'middleware' => 'jwt.verify',
     'prefix' => 'meets'
 ], function ($router) {
     // Reuniones
@@ -171,6 +190,7 @@ Route::group([
  * Rutas del componente de meet-management
  */
 Route::group([
+    // 'middleware' => 'jwt.verify',
     'prefix' => 'meet-management'
 ], function ($router) {
     // Reuniones
@@ -195,4 +215,23 @@ Route::group([
     // Convocados
     Route::get('/traer-convocados/{id_reunion}', [Gcm_Reunion_Controller::class, 'getConvocados']);
     Route::get('/autocompletar/{identificacion}', [Gcm_Reunion_Controller::class, 'autocompletar']);
+});
+
+Route::get('/buscar-archivos', function (Request $request) {
+    $params = (object) $request->all();
+
+    if (isset($params->name)) {
+
+        $path = storage_path("app/public/{$params->name}");
+        $exists = File::exists($path);
+
+        if ($exists) {
+            return response()->file($path);
+        } else {
+            return response()->json(["message" => "File doesn't exist" . $path]);
+        }
+
+    } else {
+        return response()->json(['response' => 'Archivo no existe']);
+    }
 });
