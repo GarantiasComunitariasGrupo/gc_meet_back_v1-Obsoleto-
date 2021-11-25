@@ -106,7 +106,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             return response()->json($response);
 
         } catch (\Throwable $th) {
-            Gcm_Log_Acciones_Sistema_Controller::save(7, ['Error' => $th->getMessage(), 'detalle' => 'Function => buscarInvitacion()'], null, null);
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage()]);
         }
 
@@ -154,7 +154,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             return response()->json($response);
 
         } catch (\Throwable $th) {
-            Gcm_Log_Acciones_Sistema_Controller::save(7, ['Error' => $th->getMessage(), 'Detalle' => 'Function => validacionConvocado()'], null, null);
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage()]);
         }
     }
@@ -189,7 +189,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             return response()->json($response);
 
         } catch (\Throwable $th) {
-            Gcm_Log_Acciones_Sistema_Controller::save(7, ['Error' => $th->getMessage(), 'Detalle' => 'Function => getIdConvocado()'], null, null);
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage()]);
         }
         
@@ -235,7 +235,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             return response()->json($response);
 
         } catch (\Throwable $th) {
-            Gcm_Log_Acciones_Sistema_Controller::save(7, ['Error' => $th->getMessage(), 'Detalle' => 'Function => getRestricciones()'], null, null);
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage()]);
         }
         
@@ -285,7 +285,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             return response()->json($response);
 
         } catch (\Throwable $th) {
-            Gcm_Log_Acciones_Sistema_Controller::save(7, ['Error' => $th->getMessage(), 'Detalle' => 'Function => enviarSMS()'], null, null);
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage()]);
         }
 
@@ -372,7 +372,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
             }
         } catch(\Throwable $th) {
-            Gcm_Log_Acciones_Sistema_Controller::save(7, ['Error' => $th->getMessage(), 'Detalle' => 'Function => enviarFirma()'], null, null);
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage()]);
         }
     }
@@ -404,7 +404,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             return response()->json($response);
 
         } catch (\Throwable $th) {
-            Gcm_Log_Acciones_Sistema_Controller::save(7, ['Error' => $th->getMessage(), 'Detalle' => 'Function => permitirFirma()'], null, null);
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage()]);
         }
         
@@ -502,7 +502,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
         } catch (\Throwable $th) {
             DB::rollback();
-            Gcm_Log_Acciones_Sistema_Controller::save(7, ['Error' => $th->getMessage(), 'Detalle' => 'Function => registrarRepresentante()'], null, null);
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage()]);
         }
 
@@ -533,7 +533,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             return response()->json($response);
 
         } catch (\Throwable $th) {
-            Gcm_Log_Acciones_Sistema_Controller::save(7, ['Error' => $th->getMessage(), 'Detalle' => 'Function => getRepresentante()'], null, null);
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage()]);
         }
         
@@ -566,7 +566,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             return response()->json($response);
 
         } catch (\Throwable $th) {
-            Gcm_Log_Acciones_Sistema_Controller::save(7, ['Error' => $th->getMessage(), 'Detalle' => 'Function => getRepresentados()'], null, null);
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage()]);
         }
 
@@ -593,7 +593,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             return response()->json($response);
 
         } catch (\Throwable $th) {
-            Gcm_Log_Acciones_Sistema_Controller::save(7, ['Error' => $th->getMessage(), 'Detalle' => 'Function => cancelarRepresentacion()'], null, null);
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage()]);
         }
 
@@ -681,7 +681,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             }
 
         } catch (\Throwable $th) {
-            Gcm_Log_Acciones_Sistema_Controller::save(7, ['Error' => $th->getMessage(), 'Detalle' => 'Function => cancelarRepresentaciones()'], null, null);
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage()]);
         }
 
@@ -713,7 +713,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             return response()->json($response);
 
         } catch (\Throwable $th) {
-            Gcm_Log_Acciones_Sistema_Controller::save(7, ['Error' => $th->getMessage(), 'Detalle' => 'Function => getAvanceReunion()'], null, null);
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage()]);
         }
 
@@ -753,7 +753,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             return response()->json($response);
 
         } catch (\Throwable $th) {
-            Gcm_Log_Acciones_Sistema_Controller::save(7, ['Error' => $th->getMessage(), 'Detalle' => 'Function => getListadoReuniones()'], null, null);
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage()]);
         }
 
@@ -782,7 +782,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             return response()->json($response);
 
         } catch (\Throwable $th) {
-           Gcm_Log_Acciones_Sistema_Controller::save(7, ['Error' => $th->getMessage(), 'Detalle' => 'Function => getTipoConvocado()'], null, null);
+           Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
            return response()->json(['ok' => false, 'response' => $th->getMessage()]);
         }
     }
@@ -845,7 +845,23 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             ]);
             
         } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(["error" => $e->getMessage()], 500);
+        }
+    }
+
+    public function actualizarEstadoPrograma(Request $request)
+    {
+        try {
+
+            $update = Gcm_Programacion::where('id_programa', $request->id_programa)
+            ->update(['estado' => $request->estado]);
+
+            return response()->json(['ok' => ($update) ? true : false]);
+
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
+            return response()->json(['ok' => false, 'response' => $th->getMessage()]);
         }
     }
 
