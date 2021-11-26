@@ -26,6 +26,9 @@ use Illuminate\Support\Facades\File;
 //     return $request->user();
 // });
 
+/**
+ * Rutas del componente de login
+ */
 Route::group([
     'middleware' => 'api',
     'prefix' => 'auth'
@@ -41,7 +44,7 @@ Route::group([
  * Rutas del componente de usuario
  */
 Route::group([
-    // 'middleware' => 'api',
+    'middleware' => 'jwt.verify',
     'prefix' => 'usuario'
 ], function ($router) {
     Route::post('/agregar-usuario', [Gcm_Usuario_Controller::class, 'agregarUsuario']);
@@ -56,7 +59,7 @@ Route::group([
  * Rutas del componente de grupo
  */
 Route::group([
-    // 'middleware' => 'jwt.verify',
+    'middleware' => 'jwt.verify',
     'prefix' => 'grupo'
 ], function ($router) {
     Route::post('/agregar-grupo', [Gcm_Grupo_Controller::class, 'agregarGrupo']);
@@ -71,7 +74,7 @@ Route::group([
  * Rutas del componente de rol
  */
 Route::group([
-    // 'middleware' => 'jwt.verify',
+    'middleware' => 'jwt.verify',
     'prefix' => 'rol'
 ], function ($router) {
     Route::post('/agregar-rol', [Gcm_Rol_Controller::class, 'agregarRol']);
@@ -87,7 +90,7 @@ Route::group([
  * Rutas del componente de recurso y relación
  */
 Route::group([
-    // 'middleware' => 'jwt.verify',
+    'middleware' => 'jwt.verify',
     'prefix' => 'recurso'
 ], function ($router) {
     // Recurso
@@ -113,7 +116,7 @@ Route::group([
  * Rutas del componente de tipoReunion y restriccion
  */
 Route::group([
-    // 'middleware' => 'jwt.verify',
+    'middleware' => 'jwt.verify',
     'prefix' => 'tipoReunion'
 ], function ($router) {
     // Tipo reunión
@@ -137,7 +140,7 @@ Route::group([
  * Rutas del componente de reunion y convocado
  */
 Route::group([
-    // 'middleware' => 'jwt.verify',
+    'middleware' => 'jwt.verify',
     'prefix' => 'reunion'
 ], function ($router) {
     // Reunión
@@ -166,7 +169,7 @@ Route::group([
  * Rutas del componente de meets
  */
 Route::group([
-    // 'middleware' => 'jwt.verify',
+    'middleware' => 'jwt.verify',
     'prefix' => 'meets'
 ], function ($router) {
     // Reuniones
@@ -190,7 +193,7 @@ Route::group([
  * Rutas del componente de meet-management
  */
 Route::group([
-    // 'middleware' => 'jwt.verify',
+    'middleware' => 'jwt.verify',
     'prefix' => 'meet-management'
 ], function ($router) {
     // Reuniones

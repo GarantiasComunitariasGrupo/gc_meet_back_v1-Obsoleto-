@@ -2,21 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-
 use Illuminate\Support\Facades\Auth;
-use Validator;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
+use JWTAuth;
+use Tymon\JWTAuth\Exceptions\JWTException;
+use App\Models\Gcm_Usuario;
 
 class AuthController extends Controller
 {
-    /**
-     * Create a new AuthController instance.
-     *
-     * @return void
-     */
-    // public function __construct() {
-    //     $this->middleware('auth:api', ['except' => ['login', 'register']]);
-    // }
 
     /**
      * Get a JWT via given credentials.
@@ -26,24 +22,32 @@ class AuthController extends Controller
     public function login(Request $request)
     {
     	$validator = Validator::make($request->all(), [
-            'id_usuario' => 'required|email',
+            'id_usuario' => 'required',
             'contrasena' => 'required',
+        ],[
+            'id_usuario.required' => 'El campo usuario es obligatorio',
+            'contrasena.required' => 'El campo contraseña es obligatorio',
         ]);
 
         if ($validator->fails()) {
             return response()->json($validator->errors(), 422);
         }
-        
-        $credenciales = ['id_usuario' =>$request->input('id_usuario'), 'contrasena' =>$request->input('contrasena')];
-        
-        $token = auth()->attempt($credenciales);
 
-        if (!$token) {
-            $res = response()->json(['message' => 'Datos incorrectos', 'status' => false], 200);
-        } else {
-            $res = $this->createNewToken($token);
+        // $credenciales = $request->only(['id_usuario', 'contrasena']);
+        $credenciales = ['id_usuario' => $request->input('id_usuario'), 'password' =>$request->input('contrasena')];
+        
+        try {
+            $token = JWTAuth::attempt($credenciales);
+            // $token = JWTAuth::attempt(["id_usuario" => $credenciales['id_usuario'], 'password' => $credenciales['contrasena']]);
+            if (!$token) {
+                $res = response()->json(['message' => 'Datos incorrectos', 'status' => false], 200);
+            } else {
+                $res = $this->createNewToken($token);
+            }
+            return $res;
+        } catch (JWTException $e) {
+            return response()->json(["error" => 'No se pudo crear el token' . $e->getMessage()], 500);
         }
-        return $res;
     }
 
     /**
@@ -52,20 +56,17 @@ class AuthController extends Controller
      * @return \Illuminate\Http\JsonResponse
      */
     public function register(Request $request) {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|between:2,100',
-            'email' => 'required|string|email|max:100|unique:users',
-            'password' => 'required|string|confirmed|min:6',
+
+        $password = 'danilo123';
+
+        $user = Gcm_Usuario::create([
+            "id_usuario" => 'gc_meet',
+            "nombre" => 'Admin',
+            "correo" => 'danilogg2015@gmail2.com',
+            "estado" => '1',
+            "tipo" => '0',
+            "contrasena" => Hash::make($password),
         ]);
-
-        if($validator->fails()){
-            return response()->json($validator->errors()->toJson(), 400);
-        }
-
-        $user = User::create(array_merge(
-                    $validator->validated(),
-                    ['password' => bcrypt($request->password)]
-                ));
 
         return response()->json([
             'message' => 'User successfully registered',

@@ -3,10 +3,10 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Notifications\Notifiable;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 
-//Añadimos la clase JWTSubject 
+//Añadimos la clase JWTSubject
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
 class Gcm_Usuario extends Authenticatable implements JWTSubject
@@ -16,6 +16,13 @@ class Gcm_Usuario extends Authenticatable implements JWTSubject
     protected $table = 'gcm_usuarios';
     protected $primaryKey = 'id_usuario';
     public $timestamps = false;
+
+    /**
+     * The "type" of the non auto-incrementing ID.
+     *
+     * @var string
+     */
+    protected $keyType = 'string';
 
     /**
      * The attributes that are mass assignable.
@@ -37,17 +44,7 @@ class Gcm_Usuario extends Authenticatable implements JWTSubject
      * @var array
      */
     protected $hidden = [
-        'password',
-        'remember_token',
-    ];
-
-    /**
-     * The attributes that should be cast to native types.
-     *
-     * @var array
-     */
-    protected $casts = [
-        'email_verified_at' => 'datetime',
+        'contrasena',
     ];
 
     /**
@@ -55,8 +52,20 @@ class Gcm_Usuario extends Authenticatable implements JWTSubject
      *
      * @return mixed
      */
-    public function getJWTIdentifier() {
+    public function getJWTIdentifier()
+    {
         return $this->getKey();
+    }
+
+    /**
+     * Get the identifier that will be stored in the subject claim of the JWT.
+     *
+     * @return mixed
+     */
+
+    public function getAuthPassword()
+    {
+        return $this->contrasena;
     }
 
     /**
@@ -64,14 +73,15 @@ class Gcm_Usuario extends Authenticatable implements JWTSubject
      * Devuelve una matriz de valor clave, que contiene cualquier reclamo personalizado que se agregará al JWT.
      * @return array
      */
-    public function getJWTCustomClaims() {
-        return 
-        [
-        //     'email'=> $this->email,
-        //     'accionista'=> $this->accionista,
-        //     'representante'=> $this->representante,
-        //     'identificacion'=> $this->identificacion,
-        //     'idRol'=> $this->idRol,
+    public function getJWTCustomClaims()
+    {
+        return
+            [
+            //     'email'=> $this->email,
+            //     'accionista'=> $this->accionista,
+            //     'representante'=> $this->representante,
+            //     'identificacion'=> $this->identificacion,
+            //     'idRol'=> $this->idRol,
         ];
     }
 }
