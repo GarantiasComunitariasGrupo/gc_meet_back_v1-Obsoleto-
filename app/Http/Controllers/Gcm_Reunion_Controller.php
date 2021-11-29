@@ -36,10 +36,8 @@ class Gcm_Reunion_Controller extends Controller
                 $grupos = Gcm_Grupo::where('estado', '1')->get();
                 return response()->json($grupos);
             } catch (\Throwable $th) {
-
-                $id_error = Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
-
-                return response()->json(["id_error" => $id_error], 500);
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
+                return response()->json(["error" => $th->getMessage()], 500);
             }
         }
 
@@ -226,13 +224,12 @@ class Gcm_Reunion_Controller extends Controller
                     ];
                     Mail::to($request->correos[$i]['correo'])->send(new TestMail($detalle));
                 }
-                Gcm_Log_Acciones_Sistema_Controller::save(4, array('Descipcion' => 'Reenvio de correos a los convocados a una reunion', 'Correos' => $correosOrganizados), null);
+                Gcm_Log_Acciones_Sistema_Controller::save(4, array('Descripcion' => 'Reenvio de correos a los convocados a una reunion', 'Correos' => $correosOrganizados), null);
                 return response()->json(["response" => 'exitoso'], 200);
             } catch (\Throwable $th) {
                 Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
                 return response()->json(["error" => $th->getMessage()], 500);
             }
-
         }
 
         /**
@@ -818,11 +815,8 @@ class Gcm_Reunion_Controller extends Controller
          */
         public function editarReunionCompleta(Request $request) {
 
-            // return response()->json($_FILES);
-
             DB::beginTransaction();
             try {
-                hola;
                 // Array para almacenar los id de los convocados para poder enviar los correos con la url de la reunion
                 $array_id_convocados = [];
 
@@ -842,6 +836,7 @@ class Gcm_Reunion_Controller extends Controller
                     ]);
         
                     if ($validator->fails()) {
+                        Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors()), null);
                         return response()->json($validator->messages(), 422);
                     }
 
@@ -877,6 +872,7 @@ class Gcm_Reunion_Controller extends Controller
                     ]);
                 
                     if ($validator->fails()) {
+                        Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors()), null);
                         return response()->json($validator->messages(), 422);
                     }
 
@@ -907,6 +903,7 @@ class Gcm_Reunion_Controller extends Controller
                     ]);
                 
                     if ($validator->fails()) {
+                        Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors()), null);
                         return response()->json($validator->messages(), 422);
                     }
 
@@ -934,7 +931,7 @@ class Gcm_Reunion_Controller extends Controller
 
                     $relacion_nueva = new Gcm_Relacion;
 
-                    // Cosulta si existe el convocado ya fue registrado como recurso
+                    // Consulta si existe el convocado ya fue registrado como recurso
                     $recurso_existe = DB::table('gcm_recursos')->where('identificacion', '=', $convocados[$i]['identificacion'])->first();
                     
                     // En caso de no existir el recurso, lo registra
@@ -957,6 +954,7 @@ class Gcm_Reunion_Controller extends Controller
                         ]);
 
                         if ($validator->fails()) {
+                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors()), null);
                             return response()->json($validator->messages(), 422);
                         }
 
@@ -983,6 +981,7 @@ class Gcm_Reunion_Controller extends Controller
                             ]);
     
                             if ($validator->fails()) {
+                                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors()), null);
                                 return response()->json($validator->messages(), 422);
                             }
 
@@ -1014,6 +1013,7 @@ class Gcm_Reunion_Controller extends Controller
                                 ]);
         
                                 if ($validator->fails()) {
+                                    Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors()), null);
                                     return response()->json($validator->messages(), 422);
                                 }
                                 
@@ -1051,6 +1051,7 @@ class Gcm_Reunion_Controller extends Controller
                             ]);
     
                             if ($validator->fails()) {
+                                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors()), null);
                                 return response()->json($validator->messages(), 422);
                             }
                             
@@ -1078,6 +1079,7 @@ class Gcm_Reunion_Controller extends Controller
                             ]);
     
                             if ($validator->fails()) {
+                                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors()), null);
                                 return response()->json($validator->messages(), 422);
                             }
 
@@ -1115,6 +1117,7 @@ class Gcm_Reunion_Controller extends Controller
                         ]);
 
                         if ($validator->fails()) {
+                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors()), null);
                             return response()->json($validator->messages(), 422);
                         }
 
@@ -1141,6 +1144,7 @@ class Gcm_Reunion_Controller extends Controller
                             ]);
     
                             if ($validator->fails()) {
+                                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors()), null);
                                 return response()->json($validator->messages(), 422);
                             }
 
@@ -1171,6 +1175,7 @@ class Gcm_Reunion_Controller extends Controller
                                 ]);
         
                                 if ($validator->fails()) {
+                                    Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors()), null);
                                     return response()->json($validator->messages(), 422);
                                 }
 
@@ -1222,6 +1227,7 @@ class Gcm_Reunion_Controller extends Controller
                             ]);
     
                             if ($validator->fails()) {
+                                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors()), null);
                                 return response()->json($validator->messages(), 422);
                             }
                             
@@ -1251,6 +1257,7 @@ class Gcm_Reunion_Controller extends Controller
                             ]);
     
                             if ($validator->fails()) {
+                                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors()), null);
                                 return response()->json($validator->messages(), 422);
                             }
 
@@ -1304,6 +1311,7 @@ class Gcm_Reunion_Controller extends Controller
                         ]);
                     
                         if ($validator->fails()) {
+                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors()), null);
                             return response()->json($validator->messages(), 422);
                         }
                         
@@ -1348,7 +1356,7 @@ class Gcm_Reunion_Controller extends Controller
             
                                     $response = $archivo_nuevo->save();
                                 } else {
-                                    DB::rollback();
+                                    // DB::rollback();
                                     return response()->json(['error' => 'La extensión del archivo no es permitida'], 500);
                                 }
                             }
@@ -1382,6 +1390,7 @@ class Gcm_Reunion_Controller extends Controller
                                 ]);
                             
                                 if ($validator->fails()) {
+                                    Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors()), null);
                                     return response()->json($validator->messages(), 422);
                                 }
         

@@ -34,6 +34,8 @@ Route::group([
     'prefix' => 'auth'
 ], function ($router) {
     Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/recuperar', [AuthController::class, 'recuperarContrasena']);
+    Route::post('/restablecer', [AuthController::class, 'restablecerContrasena']);
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/refresh', [AuthController::class, 'refresh']);
