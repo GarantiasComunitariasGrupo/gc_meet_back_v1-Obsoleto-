@@ -11,6 +11,7 @@ use App\Models\Gcm_Log_Accion_Sistema;
 use App\Models\Gcm_Recurso;
 use App\Models\Gcm_Relacion;
 use App\Models\Gcm_Programacion;
+use App\Models\Gcm_Respuesta_Convocado;
 use App\Models\Gcm_Restriccion_Rol_Representante;
 use Illuminate\Support\Facades\Http;
 use App\Http\Controllers\Gcm_Log_Acciones_Sistema_Controller;
@@ -858,6 +859,48 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             ->update(['estado' => $request->estado]);
 
             return response()->json(['ok' => ($update) ? true : false]);
+
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
+            return response()->json(['ok' => false, 'response' => $th->getMessage()]);
+        }
+    }
+
+    public function votacion(Request $request)
+    {
+        try {
+
+            $store = DB::table('gcm_respuestas_convocados')->insert([
+                'id_convocado_reunion' => $request->id_convocado_reunion,
+                'id_programa' => $request->id_programa,
+                'descripcion' => json_encode(['votacion' => (+$request->tipo === 1) ? 'true' : 'false'])
+            ]);
+
+            return response()->json([
+                'ok' => ($store) ? true : false,
+                'response' => ($store) ? 'Voto registrado correctamente' : 'Error guardando voto'
+            ]);
+
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
+            return response()->json(['ok' => false, 'response' => $th->getMessage()]);
+        }
+    }
+
+    public function entradaTexto(Request $request)
+    {
+        try {
+            
+            $store = DB::table('gcm_respuestas_convocados')->insert([
+                'id_convocado_reunion' => $request->id_convocado_reunion,
+                'id_programa' => $request->id_programa,
+                'descripcion' => json_encode(['texto' => $request->texto])
+            ]);
+
+            return response()->json([
+                'ok' => ($store) ? true : false,
+                'response' => ($store) ? 'Voto registrado correctamente' : 'Error guardando voto'
+            ]);
 
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);

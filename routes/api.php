@@ -213,4 +213,6 @@ Route::group([
     Route::get('/get-programacion/{id_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'getProgramacion']);
     Route::post('/avanzar-paso', [Gcm_Acceso_Reunion_Controller::class, 'avanzarPrograma']);
     Route::post('/actualizar-estado-programa', [Gcm_Acceso_Reunion_Controller::class, 'actualizarEstadoPrograma']);
+    Route::post('/votacion', [Gcm_Acceso_Reunion_Controller::class, 'votacion']);
+    Route::post('/entradaTexto', [Gcm_Acceso_Reunion_Controller::class, 'entradaTexto']);
 });
