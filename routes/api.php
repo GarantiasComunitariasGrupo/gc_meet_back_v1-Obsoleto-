@@ -147,7 +147,6 @@ Route::group([
 ], function ($router) {
     // Reunión
     Route::post('/agregar-reunion', [Gcm_Reunion_Controller::class, 'agregarReunion']);
-    Route::get('/listar-reuniones/{id_usuario}', [Gcm_Reunion_Controller::class, 'listarReuniones']);
     Route::get('/listar-reuniones-select', [Gcm_Reunion_Controller::class, 'listarReunionesSelect']);
     Route::put('/editar-reunion/{id_reunion}', [Gcm_Reunion_Controller::class, 'editarReunion']);
     Route::put('/cambiar-estado', [Gcm_Reunion_Controller::class, 'cambiarEstado']);
@@ -202,7 +201,6 @@ Route::group([
     Route::get('/traer-reuniones/{id_grupo}', [Gcm_Reunion_Controller::class, 'getReuniones']);
     Route::get('/traer-reunion/{id_reunion}', [Gcm_Reunion_Controller::class, 'getReunion']);
     Route::get('/traer-ultima-reunion/{id_tipo_reunion}', [Gcm_Reunion_Controller::class, 'traerReunion']);
-    Route::get('/traer-reunion-registrar/{id_grupo}', [Gcm_Reunion_Controller::class, 'getReunionRegistrar']);
     Route::post('/editar-reunion', [Gcm_Reunion_Controller::class, 'editarReunionCompleta']);
     Route::post('/enviar-correos', [Gcm_Reunion_Controller::class, 'enviarCorreos']);
     // Grupos

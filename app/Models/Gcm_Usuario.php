@@ -75,13 +75,10 @@ class Gcm_Usuario extends Authenticatable implements JWTSubject
      */
     public function getJWTCustomClaims()
     {
-        return
-            [
-            //     'email'=> $this->email,
-            //     'accionista'=> $this->accionista,
-            //     'representante'=> $this->representante,
-            //     'identificacion'=> $this->identificacion,
-            //     'idRol'=> $this->idRol,
-        ];
+        return[
+                'id_usuario' => $this->id_usuario,
+                'correo'     => $this->correo,
+                'nombre'     => $this->nombre,
+            ];
     }
 }

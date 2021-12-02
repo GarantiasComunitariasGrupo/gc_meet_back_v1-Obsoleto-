@@ -66,7 +66,7 @@ class Gcm_Reunion_Controller extends Controller
             try {
                 $reunion = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
                 ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo', 'gcm_tipo_reuniones.id_grupo')
-                ->where('id_reunion', $id_reunion)->get();
+                ->where([['id_reunion', $id_reunion], ['estado', '!=', '4']])->get();
                 return response()->json($reunion);
             } catch (\Throwable $th) {
                 Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
@@ -195,7 +195,7 @@ class Gcm_Reunion_Controller extends Controller
     
                 $reunion = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
                 ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo')
-                ->where('gcm_reuniones.id_reunion', '=', $id_reunion)->first();
+                ->where([['gcm_reuniones.id_reunion', '=', $id_reunion], ['gcm_reuniones.estado', '!=', 4]])->first();
     
                 $programas = Gcm_Programacion::where([['gcm_programacion.id_reunion', '=', $id_reunion], ['gcm_programacion.estado', '!=', '4']])
                 ->whereNull('gcm_programacion.relacion')->get();
@@ -317,6 +317,7 @@ class Gcm_Reunion_Controller extends Controller
          */
         public function getRecursos() {
             try {
+                
                 $grupo = 1;
                 $getMaxFecha = function ($exceptions = [], $nullExceptions = []) use ($grupo) {
                     // Consulta la máxima fecha de convocatoria de un recurso de acuerdo a las condiciones
@@ -327,8 +328,10 @@ class Gcm_Reunion_Controller extends Controller
                     ->join('gcm_roles AS s1_rls', 's1_rls.id_rol', 's1_rln.id_rol')
                     ->join('gcm_recursos AS s1_rcs', 's1_rcs.id_recurso', 's1_rln.id_recurso')
                     ->whereNull('s1_crn.representacion')->where([
+                        ['s1_rns.estado', '!=', 4],
                         ['s1_trs.id_grupo', $grupo], ['s1_rcs.estado', 1],
                         ['s1_rls.estado', 1], ['s1_rln.estado', 1],
+                        ['s1_crn.estado', 1]
                     ])->groupBy('s1_rcs.id_recurso')
                     ->select('s1_rln.id_recurso', DB::raw('MAX(s1_crn.fecha) AS fecha'));
                     // Excepciones para consultas where normales
@@ -348,7 +351,7 @@ class Gcm_Reunion_Controller extends Controller
                     ->joinSub($maxFechaQuery, $alias, function ($join) use ($alias) {
                         $join->on("{$alias}.id_recurso", 'rln.id_recurso');
                         $join->on("{$alias}.fecha", 'crn.fecha');
-                    });
+                    })->where('crn.estado', 1);
                     // Información de tablas
                     foreach ($joins as $value) {
                         $statement->join($value[0], $value[1], $value[2]);
@@ -376,10 +379,11 @@ class Gcm_Reunion_Controller extends Controller
                     $join->on('participacion_recurso.id_recurso', 'rcs.id_recurso');
                 })->leftJoinSub($entidad_recursos, 'entidad_recurso', function($join) {
                     $join->on('entidad_recurso.id_recurso', 'rcs.id_recurso');
-                })->select(
+                })
+                ->select(
                     'rcs.*', 
-                    'rol_recurso.rol', 
-                    'participacion_recurso.participacion', 
+                    'rol_recurso.rol',
+                    'participacion_recurso.participacion',
                     DB::raw('IF(entidad_recurso.nit IS NULL, 0, 2) AS tipo'),
                     'entidad_recurso.nit', 
                     'entidad_recurso.razon_social', 
@@ -455,40 +459,6 @@ class Gcm_Reunion_Controller extends Controller
             try {
                 $tipoReunion = Gcm_Tipo_Reunion::where('id_tipo_reunion', $id_tipo_reunion)->get();
                 return response()->json($tipoReunion);
-            } catch (\Throwable $th) {
-                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
-                return response()->json(["error" => $th->getMessage()], 500);
-            }
-        }
-
-        /**
-         * Consulta y trae todas las reuniones registradas con un grupo que tiene un usuario en comun
-         */
-        public function listarReuniones($id_usuario) {
-            try {
-                $reuniones = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
-                ->join('gcm_grupos', 'gcm_tipo_reuniones.id_grupo', '=', 'gcm_grupos.id_grupo')
-                ->select('gcm_reuniones.id_reunion', 'gcm_reuniones.id_tipo_reunion', 'gcm_reuniones.descripcion', 
-                'gcm_reuniones.fecha_creacion', 'gcm_reuniones.fecha_reunion', 'gcm_reuniones.hora', 
-                'gcm_reuniones.lugar', 'gcm_reuniones.quorum', 'gcm_reuniones.estado')
-                ->where('gcm_grupos.id_usuario', '=', $id_usuario)
-                ->get();
-                return response()->json($reuniones);
-            } catch (\Throwable $th) {
-                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
-                return response()->json(["error" => $th->getMessage()], 500);
-            }
-        }
-
-        /**
-         * Trae todos los datos de una reunión en especifico
-         */
-        public function getReunionRegistrar($id_grupo) {
-            try {
-                $reunion = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
-                ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo', 'gcm_tipo_reuniones.id_grupo')
-                ->where('id_grupo', '=', $id_grupo)->get();
-                return response()->json($reunion);
             } catch (\Throwable $th) {
                 Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
                 return response()->json(["error" => $th->getMessage()], 500);
@@ -855,6 +825,7 @@ class Gcm_Reunion_Controller extends Controller
                 }
                 
                 $id_reunion = $data['id_reunion'];
+                
                 // En caso de no existir la reunión, crea una nueva
                 if(empty($id_reunion)) {
 
@@ -920,7 +891,7 @@ class Gcm_Reunion_Controller extends Controller
                 }
 
                 // Cambia el estado de los convocados de una reunion por eliminado
-                Gcm_Convocado_Reunion::changeStatus(Gcm_Convocado_Reunion::where('id_reunion', '=', $id_reunion)->get(), 0);
+                Gcm_Convocado_Reunion::changeStatus(Gcm_Convocado_Reunion::where([['id_reunion', '=', $id_reunion], ['estado', 1]])->get(), 0);
 
                 $convocados = json_decode($request->convocados, true);
 
@@ -1062,6 +1033,7 @@ class Gcm_Reunion_Controller extends Controller
                             $convocado->tipo = $convocados[$i]['tipo'];
                             $convocado->nit = $convocados[$i]['nit'];
                             $convocado->razon_social = $convocados[$i]['razon_social'];
+                            // $convocado->fecha = date('Y-m-d H:i:s');
                             $convocado->participacion = null;
                             $convocado->soporte = null;
                             $convocado->estado = 1;
@@ -1088,6 +1060,7 @@ class Gcm_Reunion_Controller extends Controller
                             $convocado->representacion = null;
                             $convocado->id_relacion = $relacion_nueva->id_relacion;
                             $convocado->tipo = $convocados[$i]['tipo'];
+                            // $convocado->fecha = date('Y-m-d H:i:s');
                             $convocado->nit = null;
                             $convocado->razon_social = null;
                             $convocado->participacion = null;
@@ -1238,6 +1211,7 @@ class Gcm_Reunion_Controller extends Controller
                             $convocado->tipo = $convocados[$i]['tipo'];
                             $convocado->nit = $convocados[$i]['nit'];
                             $convocado->razon_social = $convocados[$i]['razon_social'];
+                            // $convocado->fecha = date('Y-m-d H:i:s');
                             $convocado->participacion = null;
                             $convocado->soporte = null;
                             $convocado->estado = 1;
@@ -1266,6 +1240,7 @@ class Gcm_Reunion_Controller extends Controller
                             $convocado->representacion = null;
                             $convocado->id_relacion = $relacion_nueva->id_relacion;
                             $convocado->tipo = $convocados[$i]['tipo'];
+                            // $convocado->fecha = date('Y-m-d H:i:s');
                             $convocado->nit = null;
                             $convocado->razon_social = null;
                             $convocado->participacion = null;
