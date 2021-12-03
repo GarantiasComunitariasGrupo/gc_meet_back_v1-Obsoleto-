@@ -214,5 +214,8 @@ Route::group([
     Route::post('/avanzar-paso', [Gcm_Acceso_Reunion_Controller::class, 'avanzarPrograma']);
     Route::post('/actualizar-estado-programa', [Gcm_Acceso_Reunion_Controller::class, 'actualizarEstadoPrograma']);
     Route::post('/votacion', [Gcm_Acceso_Reunion_Controller::class, 'votacion']);
-    Route::post('/entradaTexto', [Gcm_Acceso_Reunion_Controller::class, 'entradaTexto']);
+    Route::post('/entrada-texto', [Gcm_Acceso_Reunion_Controller::class, 'entradaTexto']);
+    Route::post('/seleccion-unica', [Gcm_Acceso_Reunion_Controller::class, 'seleccionUnica']);
+    Route::post('/seleccion-multiple', [Gcm_Acceso_Reunion_Controller::class, 'seleccionMultiple']);
+    Route::get('/get-respuestas-convocado/{id_convocado_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'getRespuestasConvocado']);
 });

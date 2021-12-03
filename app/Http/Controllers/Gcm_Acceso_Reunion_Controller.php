@@ -18,6 +18,7 @@ use App\Http\Controllers\Gcm_Log_Acciones_Sistema_Controller;
 
 class Gcm_Acceso_Reunion_Controller extends Controller
 {
+
     /**
      * Función encargada de consultar las reuniones con estado (En espera, en curso)
      * a las que esté convocado un recurso 
@@ -259,7 +260,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             $txtSMS = "Para acceder a la reunión, debe acceder al siguiente link: " . "http://192.168.2.85:4200/public/acceso-reunion/firma/{$id}";
 
             /** Petición HTTP::POST para consumir servicio de envío SMS */
-            $request = Http::post("http://192.168.2.120:8801/api/messenger/enviar-sms/{$request->numeroCelular}", [
+            $request = Http::post("http://192.168.2.85:8500/api/messenger/enviar-sms/{$request->numeroCelular}", [
                 'password' => 'tJXc1Mo/dBQUbqD5kg==',
                 'sms' => $txtSMS
             ]);
@@ -901,6 +902,77 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 'ok' => ($store) ? true : false,
                 'response' => ($store) ? 'Voto registrado correctamente' : 'Error guardando voto'
             ]);
+
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
+            return response()->json(['ok' => false, 'response' => $th->getMessage()]);
+        }
+    }
+
+    public function seleccionUnica(Request $request)
+    {
+        try {
+
+            $store = DB::table('gcm_respuestas_convocados')->insert([
+                'id_convocado_reunion' => $request->id_convocado_reunion,
+                'id_programa' => $request->id_programa,
+                'descripcion' => json_encode(['seleccion' => $request->seleccion])
+            ]);
+
+            return response()->json([
+                'ok' => ($store) ? true : false,
+                'response' => ($store) ? 'Voto registrado correctamente' : 'Error guardando voto'
+            ]);
+
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
+            return response()->json(['ok' => false, 'response' => $th->getMessage()]);
+        }
+    }
+
+    public function seleccionMultiple(Request $request)
+    {
+        try {
+            
+            $store = DB::table('gcm_respuestas_convocados')->insert([
+                'id_convocado_reunion' => $request->id_convocado_reunion,
+                'id_programa' => $request->id_programa,
+                'descripcion' => json_encode(['seleccion' => $request->seleccion])
+            ]);
+
+            return response()->json([
+                'ok' => ($store) ? true : false,
+                'response' => ($store) ? 'Voto registrado correctamente' : 'Error guardando voto'
+            ]);
+
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
+            return response()->json(['ok' => false, 'response' => $th->getMessage()]);
+        }
+    }
+
+    public function getRespuestasConvocado($id_convocado_reunion)
+    {
+        try {
+
+            $response = array();
+
+            $base = DB::table('gcm_programacion AS gp')
+            ->join('gcm_respuestas_convocados AS grc', 'gp.id_programa', '=', 'grc.id_programa')
+            ->join('gcm_convocados_reunion AS gcr', 'gcr.id_reunion', '=', 'gp.id_reunion')
+            ->where('gcr.id_convocado_reunion', $id_convocado_reunion)
+            ->where('gcr.estado', 1)
+            ->where('gp.estado', '!=', 4)
+            ->groupBy('gp.id_programa')
+            ->select(['gp.*', 'grc.id_convocado_reunion', 'grc.descripcion AS descripcion_respuesta'])
+            ->get();
+
+            $response = array(
+                'ok' => count($base) > 0 ? true : false,
+                'response' => count($base) > 0 ? $base : 'No hay resultados'
+            );
+
+            return response()->json($response);
 
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
