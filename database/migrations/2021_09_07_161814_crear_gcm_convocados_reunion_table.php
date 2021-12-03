@@ -21,7 +21,7 @@ class CrearGcmConvocadosReunionTable extends Migration
             $table->foreign('representacion')->references('id_convocado_reunion')->on('gcm_convocados_reunion');
             $table->unsignedBigInteger('id_relacion');
             $table->foreign('id_relacion')->references('id_relacion')->on('gcm_relaciones');
-            $table->timestampTz('fecha', $precision = 0);
+            $table->timestamp('fecha', $precision = 0);
             $table->string('tipo', 2)->index()->required();
             $table->string('nit', 20)->index()->nullable();
             $table->string('razon_social', 100)->nullable();

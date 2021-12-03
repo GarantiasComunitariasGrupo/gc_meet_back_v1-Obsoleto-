@@ -214,7 +214,7 @@ Route::group([
     // Programas
     Route::get('/traer-programas/{id_reunion}', [Gcm_Reunion_Controller::class, 'getProgramas']);
     // Recursos
-    Route::get('/traer-recursos', [Gcm_Reunion_Controller::class, 'getRecursos']);
+    Route::get('/traer-recursos/{id_grupo}', [Gcm_Reunion_Controller::class, 'getRecursos']);
     // Convocados
     Route::get('/traer-convocados/{id_reunion}', [Gcm_Reunion_Controller::class, 'getConvocados']);
     Route::get('/autocompletar/{identificacion}', [Gcm_Reunion_Controller::class, 'autocompletar']);
