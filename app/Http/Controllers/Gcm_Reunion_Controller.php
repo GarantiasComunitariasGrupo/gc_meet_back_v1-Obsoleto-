@@ -1014,7 +1014,7 @@ class Gcm_Reunion_Controller extends Controller
                         $programa_nuevo->descripcion = $this->stringNullToNull($request->descripcion[$i]);
                         $programa_nuevo->orden = $i+1;
                         $programa_nuevo->numeracion = $this->stringNullToNull($request->numeracion[$i]);
-                        $programa_nuevo->tipo = ($request->tipo[$i] == 1 || $request->tipo[$i] == 4) && isset($request['opcion_titulo'.$i]) && count($request['opcion_titulo'.$i]) > 0 ? 0 : $request->tipo[$i];
+                        $programa_nuevo->tipo = $this->stringNullToNull($request->tipo[$i]);
                         $programa_nuevo->relacion = null;
                         $programa_nuevo->estado = $request->estado[$i] ? $request->estado[$i] : 0;
         
@@ -1093,7 +1093,7 @@ class Gcm_Reunion_Controller extends Controller
                                 $opcion_nueva->descripcion = $this->stringNullToNull($request['opcion_descripcion'.$i][$j]);
                                 $opcion_nueva->orden = $j+1;
                                 $opcion_nueva->numeracion = 1;
-                                $opcion_nueva->tipo = $request->tipo[$i] == 1 ? 1 : ($request->tipo[$i] == 4 ? 4 : $request['opcion_tipo'.$i][$j]);
+                                $opcion_nueva->tipo = 0;
                                 $opcion_nueva->relacion = $this->stringNullToNull($programa_nuevo->id_programa);
                                 $opcion_nueva->estado = $request['opcion_estado'.$i][$j] ? $request['opcion_estado'.$i][$j] : 0;
         
