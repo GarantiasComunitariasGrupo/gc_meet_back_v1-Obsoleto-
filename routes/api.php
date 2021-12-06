@@ -218,4 +218,7 @@ Route::group([
     Route::post('/seleccion-unica', [Gcm_Acceso_Reunion_Controller::class, 'seleccionUnica']);
     Route::post('/seleccion-multiple', [Gcm_Acceso_Reunion_Controller::class, 'seleccionMultiple']);
     Route::get('/get-respuestas-convocado/{id_convocado_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'getRespuestasConvocado']);
+    Route::get('/get-lista-convocados/{id_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'getListaConvocados']);
+    Route::post('/guardar-acceso-reunion', [Gcm_Acceso_Reunion_Controller::class, 'guardarAccesoReunion']);
+    Route::post('/actualizar-acceso-reunion', [Gcm_Acceso_Reunion_Controller::class, 'actualizarAccesoReunion']);
 });

@@ -980,4 +980,68 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         }
     }
 
+    public function getListaConvocados($idReunion)
+    {
+        $response = array();
+
+        try {
+
+            $base = DB::table(DB::raw('gcm_convocados_reunion AS gcr'))
+            ->join(DB::raw('gcm_relaciones AS grc'), 'gcr.id_relacion', '=', 'grc.id_relacion')
+            ->join(DB::raw('gcm_recursos AS grs'), 'grc.id_recurso', '=', 'grs.id_recurso')
+            ->join(DB::raw('gcm_roles AS grl'), 'grc.id_rol', '=', 'grl.id_rol')
+            ->where(DB::raw('gcr.id_reunion'), $idReunion)
+            ->where('gcr.estado', 1)
+            ->groupBy('grs.id_recurso')
+            ->select([
+                DB::raw('grs.*'),
+                DB::raw('grl.id_rol'),
+                DB::raw('grl.descripcion AS rol'),
+                'grc.id_grupo',
+                'gcr.id_convocado_reunion',
+                'gcr.nit',
+                'gcr.razon_social',
+                'gcr.participacion',
+                'gcr.representacion'
+            ])->get();
+    
+            $response = array(
+                'ok' => (count($base) > 0) ? true : false,
+                'response' => (count($base) > 0) ? $base : 'No hay resultados'
+            );
+    
+            return response()->json($response);
+            
+        } catch (\Throwable $th) {
+           Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
+           return response()->json(['ok' => false, 'response' => $th->getMessage()]);
+        }
+    }
+
+    public function guardarAccesoReunion(Request $request)
+    {
+        $response = array();
+        $datetime = date('Y-m-d h:i:s');
+
+        try {
+            $store = DB::statement("INSERT INTO gcm_asistencia_reuniones (id_convocado_reunion, fecha_ingreso, estado) VALUES ($request->id_convocado_reunion, '{$datetime}', 1) ON DUPLICATE KEY UPDATE estado = 1");
+            return response()->json(['ok' => ($store) ? true : false]);
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
+           return response()->json(['ok' => false, 'response' => $th->getMessage()]);
+        }
+    }
+
+    public function actualizarAccesoReunion(Request $request)
+    {
+        try {
+            $update = Gcm_Asistencia_Reunion::where('id_convocado_reunion', $request->id_convocado_reunion)
+            ->update(['fecha_salida' => date('Y-m-d H:i:s'), 'estado' => 0]);
+            return response()->json(['ok' => ($update) ? true : false]);
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
+           return response()->json(['ok' => false, 'response' => $th->getMessage()]);
+        }
+    }
+
 }
