@@ -168,7 +168,7 @@ class AuthController extends Controller
 
                 $detalle = [
                     'nombre' => $usuario_existe->nombre,
-                    'url' => '192.168.2.183:4200/public/login/restablecer/' . $valorEncriptado,
+                    'url' => '192.168.2.71:4200/public/login/restablecer/' . $valorEncriptado,
                 ];
 
                 Mail::to($usuario_existe->correo)->send(new Recuperar($detalle));
