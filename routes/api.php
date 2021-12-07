@@ -205,6 +205,7 @@ Route::group([
     Route::post('/enviar-correos', [Gcm_Reunion_Controller::class, 'enviarCorreos']);
     // Grupos
     Route::get('/traer-grupos/{id_usuario}', [Gcm_Reunion_Controller::class, 'getGrupos']);
+    Route::get('/traer-grupo/{id_grupo}', [Gcm_Reunion_Controller::class, 'getGrupo']);
     // Roles
     Route::get('/traer-roles/{id_reunion}', [Gcm_Reunion_Controller::class, 'getRoles']);
     Route::get('/traer-roles-registrar/{id_grupo}', [Gcm_Reunion_Controller::class, 'getRolesRegistrar']);
