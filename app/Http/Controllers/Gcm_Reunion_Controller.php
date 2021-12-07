@@ -65,7 +65,8 @@ class Gcm_Reunion_Controller extends Controller
         public function getReunion($id_reunion) {
             try {
                 $reunion = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
-                ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo', 'gcm_tipo_reuniones.id_grupo')
+                ->join('gcm_grupos', 'gcm_tipo_reuniones.id_grupo', '=', 'gcm_grupos.id_grupo')
+                ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo', 'gcm_tipo_reuniones.id_grupo', 'gcm_grupos.logo')
                 ->where([['id_reunion', $id_reunion], ['gcm_reuniones.estado', '!=', '4']])->get();
                 return response()->json($reunion);
             } catch (\Throwable $th) {
@@ -297,11 +298,11 @@ class Gcm_Reunion_Controller extends Controller
         public function reprogramarReunion (Request $request) {
             try {
 
-                $validator = Validator::make($dataCollection->all(), [
+                $validator = Validator::make($request->all(), [
                     'fecha_reunion'=>'required',
                     'hora'=>'required',
                 ],[
-                    'titulo.required'=> '*Rellena este campo',
+                    'fecha_reunion.required'=> '*Rellena este campo',
                     'hora.required'=> '*Rellena este campo',
                 ]);
     
