@@ -13,6 +13,7 @@ use App\Models\Gcm_Relacion;
 use App\Models\Gcm_Programacion;
 use App\Models\Gcm_Respuesta_Convocado;
 use App\Models\Gcm_Restriccion_Rol_Representante;
+use App\Models\Gcm_Asistencia_Reunion;
 use Illuminate\Support\Facades\Http;
 use App\Http\Controllers\Gcm_Log_Acciones_Sistema_Controller;
 
@@ -799,7 +800,8 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 DB::raw('GROUP_CONCAT(gcm_archivos_programacion.descripcion SEPARATOR "|") AS descripciones_archivos'),
                 DB::raw('GROUP_CONCAT(gcm_archivos_programacion.peso SEPARATOR "|") AS pesos_archivos'),
                 DB::raw('GROUP_CONCAT(gcm_archivos_programacion.url SEPARATOR "|") AS url_archivos')
-            )->where([['id_reunion', $id_reunion], ['estado', '!=', '4']])->groupBy('gcm_programacion.id_programa')->get()->toArray();
+            )->where([['id_reunion', $id_reunion], ['estado', '!=', '4']])
+            ->groupBy('gcm_programacion.id_programa')->get()->toArray();
 
             $base = array_map(function($item) {
                 $item['archivos'] = [];
@@ -960,7 +962,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             $base = DB::table('gcm_programacion AS gp')
             ->join('gcm_respuestas_convocados AS grc', 'gp.id_programa', '=', 'grc.id_programa')
             ->join('gcm_convocados_reunion AS gcr', 'gcr.id_reunion', '=', 'gp.id_reunion')
-            ->where('gcr.id_convocado_reunion', $id_convocado_reunion)
+            ->where('grc.id_convocado_reunion', $id_convocado_reunion)
             ->where('gcr.estado', 1)
             ->where('gp.estado', '!=', 4)
             ->groupBy('gp.id_programa')
@@ -1028,7 +1030,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             return response()->json(['ok' => ($store) ? true : false]);
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
-           return response()->json(['ok' => false, 'response' => $th->getMessage()]);
+            return response()->json(['ok' => false, 'response' => $th->getMessage()]);
         }
     }
 
@@ -1040,7 +1042,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             return response()->json(['ok' => ($update) ? true : false]);
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
-           return response()->json(['ok' => false, 'response' => $th->getMessage()]);
+            return response()->json(['ok' => false, 'response' => $th->getMessage()]);
         }
     }
 
