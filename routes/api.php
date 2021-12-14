@@ -221,4 +221,5 @@ Route::group([
     Route::get('/get-lista-convocados/{id_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'getListaConvocados']);
     Route::post('/guardar-acceso-reunion', [Gcm_Acceso_Reunion_Controller::class, 'guardarAccesoReunion']);
     Route::post('/actualizar-acceso-reunion', [Gcm_Acceso_Reunion_Controller::class, 'actualizarAccesoReunion']);
+    Route::get('/get-resultados-votacion/{id_programa}', [Gcm_Acceso_Reunion_Controller::class, 'getResultadosVotacion']);
 });

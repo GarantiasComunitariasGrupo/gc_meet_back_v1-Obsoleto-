@@ -774,7 +774,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             ->leftJoin('gcm_usuarios AS gu', 'grcs.identificacion', '=', 'gu.id_usuario')
             ->where('id_convocado_reunion', $idConvocadoReunion)
             ->where('gcr.estado', 1)
-            ->select(['*', DB::raw("IF(gu.id_usuario IS NULL, 'Convocado', 'Admin') tipoAcceso")])
+            ->select(['*', DB::raw("IF(gu.id_usuario IS NULL, 'Convocado', 'Admin-Convocado') tipoAcceso")])
             ->first();
 
             $response = array(
@@ -1043,6 +1043,26 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage()]);
+        }
+    }
+
+    public function getResultadosVotacion($id_programa)
+    {
+        try {
+
+            $base = Gcm_Respuesta_Convocado::where('id_programa', $id_programa)
+            ->get();
+
+            $response = array(
+                'ok' => (count($base) > 0) ? true : false,
+                'response' => (count($base) > 0) ? $base : 'No hay resultados'
+            );
+
+            return response()->json($response);
+
+        } catch (\Throwable $th) {
+           Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
+           return response()->json(['ok' => false, 'response' => $th->getMessage()]);
         }
     }
 
