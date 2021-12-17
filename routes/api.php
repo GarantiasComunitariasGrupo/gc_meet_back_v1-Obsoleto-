@@ -47,14 +47,15 @@ Route::group([
  */
 Route::group([
     'middleware' => 'jwt.verify',
-    'prefix' => 'usuario'
+    'prefix' => 'user'
 ], function ($router) {
-    Route::post('/agregar-usuario', [Gcm_Usuario_Controller::class, 'agregarUsuario']);
-    Route::get('/listar-usuarios', [Gcm_Usuario_Controller::class, 'listarUsuarios']);
+    Route::post('/save-user', [Gcm_Usuario_Controller::class, 'saveUser']);
+    Route::get('/get-users', [Gcm_Usuario_Controller::class, 'getUsers']);
     Route::post('/confirmar-contrasena', [Gcm_Usuario_Controller::class, 'confirmarContrasena']);
     Route::put('/editar-usuario/{id_usuario}', [Gcm_Usuario_Controller::class, 'editarUsuario']);
-    Route::put('/cambiar-estado', [Gcm_Usuario_Controller::class, 'cambiarEstado']);
-    Route::get('/traer-usuario/{id_usuario}', [Gcm_Usuario_Controller::class, 'traerUsuario']);
+    Route::put('/update-condition', [Gcm_Usuario_Controller::class, 'updateCondition']);
+    Route::put('/update-type', [Gcm_Usuario_Controller::class, 'updateType']);
+    Route::get('/get-user/{id_usuario}', [Gcm_Usuario_Controller::class, 'getUser']);
 });
 
 /**
