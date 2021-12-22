@@ -61,6 +61,10 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                  */
                 foreach ($base as $row) {
 
+                    $encrypt = new Encrypt();
+
+                    $idEncriptado = $encrypt->encriptar($row->id_convocado_reunion);
+
                     /**
                      * Se envía correo electrónico con invitación a las reuniones
                      */
@@ -68,7 +72,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                         'emails.formato-email',
                         'Invitación reunión GCMeet',
                         "Invitación reunión - {$row->descripcion}",
-                        'Este es el cuerpo del correo',
+                        "Este es el cuerpo del correo => http://192.168.2.85:4200/public/acceso-reunion/acceso/{$idEncriptado}",
                         $correo
                     );
 
@@ -1063,6 +1067,47 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         } catch (\Throwable $th) {
            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
            return response()->json(['ok' => false, 'response' => $th->getMessage()]);
+        }
+    }
+
+    public function getOpcionesSeleccion($id_programa)
+    {
+        try {
+            $base = Gcm_Programacion::where('relacion', $id_programa)->get();
+    
+            $response = array(
+                'ok' => (count($base) > 0) ? true : false,
+                'response' => (count($base) > 0) ? $base : 'No hay resultados'
+            );
+    
+            return response()->json($response);
+            
+        } catch (\Throwable $th) {
+           Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
+           return response()->json(['ok' => false, 'response' => $th->getMessage()]);
+        }
+    }
+
+    public function getRespuestasReunion($id_reunion)
+    {
+        try {
+            
+            $base = DB::table('gcm_programacion AS gp')
+            ->join('gcm_respuestas_convocados AS grc', 'gp.id_programa', '=', 'grc.id_programa')
+            ->where('id_reunion', $id_reunion)
+            ->select(['grc.*', DB::raw('IF(gp.relacion IS NULL, false, true) AS isChild'), 'gp.tipo'])
+            ->get();
+    
+            $response = array(
+                'ok' => (count($base) > 0) ? true : false,
+                'response' => (count($base) > 0) ? $base : 'No hay resultados'
+            );
+    
+            return response()->json($response);
+
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
+            return response()->json(['ok' => false, 'response' => $th->getMessage()]);
         }
     }
 
