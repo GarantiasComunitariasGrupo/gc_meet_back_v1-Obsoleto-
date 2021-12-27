@@ -177,7 +177,7 @@ Route::group([
     // Reuniones
     Route::get('/traer-reuniones/{id_grupo}', [Gcm_Reunion_Controller::class, 'getReuniones']);
     Route::get('/traer-reunion/{id_reunion}', [Gcm_Reunion_Controller::class, 'getReunion']);
-    Route::get('/cancelar-reunion/{id_reunion}', [Gcm_Reunion_Controller::class, 'cancelarReunion']);
+    Route::post('/cancelar-reunion', [Gcm_Reunion_Controller::class, 'cancelarReunion']);
     Route::get('/iniciar-reunion/{id_reunion}', [Gcm_Reunion_Controller::class, 'iniciarReunion']);
     Route::get('/eliminar-reunion/{id_reunion}', [Gcm_Reunion_Controller::class, 'eliminarReunion']);
     Route::post('/reprogramar-reunion', [Gcm_Reunion_Controller::class, 'reprogramarReunion']);
@@ -217,6 +217,7 @@ Route::group([
     Route::get('/traer-programas/{id_reunion}', [Gcm_Reunion_Controller::class, 'getProgramas']);
     // Recursos
     Route::get('/traer-recursos/{id_grupo}', [Gcm_Reunion_Controller::class, 'getRecursos']);
+    Route::get('/traer-recursos-gcm', [Gcm_Reunion_Controller::class, 'getRecursosGcm']);
     // Convocados
     Route::get('/traer-convocados/{id_reunion}', [Gcm_Reunion_Controller::class, 'getConvocados']);
     Route::get('/autocompletar/{identificacion}', [Gcm_Reunion_Controller::class, 'autocompletar']);

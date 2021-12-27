@@ -7,7 +7,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 
-class RegisterUser extends Mailable
+class ReunionCancelada extends Mailable
 {
     use Queueable, SerializesModels;
 
@@ -32,6 +32,7 @@ class RegisterUser extends Mailable
      */
     public function build()
     {
-        return $this->subject('Registro en plataforma de juntas y asambleas')->view('emails.registro')->with('data', $this->detalle);
+        return $this->subject('Cancelación de reunión en plataforma de juntas y asambleas')->view('emails.reunion_cancelada')->with('data', $this->detalle);;
+        // return $this->subject('Prueba de correo de Gc_Meet')->view('emails.mensaje')->with('data', $this->detalle);
     }
 }

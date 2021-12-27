@@ -69,25 +69,34 @@
             <!-- BANNER IMAGE -->
 
             <tr align="center">
-              <td style="padding: 20px; background-color:#ffffff;">
-                <h1 style="margin-bottom: 16px; font-size: 30px; color: #171717; font-family: Helvetica">¡Hola, {{$data['nombre']}}!</h1>
-                <h1 style="font-size: 15px; color: #545454; font-family: Helvetica">Has indicado que deseas recuperar la contraseña</h1>
-              </td>
+                <td style="padding: 20px; background-color:#ffffff;">
+                    <h1 style="margin-bottom: 13px; font-size: 30px; color: #171717; font-family: Helvetica">¡Hola, {{$data['nombre']}}!</h1>
+                    <h1 style="font-size: 15px; color: #545454; font-family: Helvetica">Te queremos informar que se ha reprogramado una reunión a la que estas invitado.</h1>
+                </td>
             </tr>
 
             <tr align="center">
-                <td style="padding:20px; background-color:#ffffff;">
-                    <h1 style="margin: 10px; font-size:15px; color: #545454; font-family: Helvetica">
-                      Puedes ingresar a través del siguiente enlace para continuar con el proceso de recuperación de contraseña:
-                    </h1>
-
-                    <a href="{{url('http://' . $data['url'])}}" style="margin:0; font-size:28px; text-decoration: none; padding: 15px 15px; border-radius: 4px; display: inline-block;">
-                      <span style="font-weight: bold; color: #4883BE; font-family: Helvetica">Haz click aquí</span>
-                    </a>
-
-                    <p style="margin: 12px; font-size:13px; color: #545454; font-family: Helvetica">
-                      Este enlace es único e intransferible.
-                    </p>
+                <td style="padding: 20px; background-color:#ffffff; width:100%; padding-bottom:20px;">
+                    <div class="col-lge">
+                        <h1 style="font-family: Helvetica; font-size: 15px; color: #545454;">
+                        Descripción: {{$data['descripcion']}}
+                        </h1>
+                    </div>
+                    <div class="col-lge">
+                        <h1 style="font-family: Helvetica; font-size: 15px; color: #545454;">
+                        Nueva fecha reunión: {{$data['fecha_reunion']}}
+                        </h1>
+                    </div>
+                    <div class="col-lge">
+                        <h1 style="font-family: Helvetica; font-size: 15px; color: #545454;">
+                        Nueva hora reunión: {{$data['hora']}}
+                        </h1>
+                    </div>
+                    <div class="col-lge">
+                        <h1 style="font-family: Helvetica; font-size: 15px; color: #545454;">
+                        Estado: REPROGRAMADA
+                        </h1>
+                    </div>
                 </td>
             </tr>
 

@@ -71,7 +71,7 @@
             <tr align="center">
                 <td style="padding: 20px; background-color:#ffffff;">
                     <h1 style="margin-bottom: 13px; font-size: 30px; color: #171717; font-family: Helvetica">¡Hola, {{$data['nombre']}}!</h1>
-                    <h1 style="font-size: 15px; color: #545454; font-family: Helvetica">Has quedado resgistado en la plataforma de Garantias Comuntarias.</h1>
+                    <h1 style="font-size: 15px; color: #545454; font-family: Helvetica">Has sido invitado a {{$data['titulo']}}</h1>
                 </td>
             </tr>
 
@@ -79,25 +79,64 @@
                 <td style="padding: 20px; background-color:#ffffff; width:100%; padding-bottom:20px;">
                     <div class="col-lge">
                         <h1 style="font-family: Helvetica; font-size: 15px; color: #545454;">
-                            Ahora podras crear tus propias reuniones.
+                            {{$data['descripcion']}}
                         </h1>
                     </div>
                 </td>
             </tr>
 
             <tr align="center">
+                <td style="padding: 20px; background-color:#ffffff;">
+                    <table class="col-lge" style="padding-bottom:20px; font-size:16px; color:#363636; margin-left: auto; margin-right: auto;">
+                        <tr>
+                            <td style="margin-top:0; margin-bottom: 12px; padding-right: 12px;">
+                                <img style="width:50px; height: 50px;"
+                                    src="http://burodeconexiones.com/gc_balanced/public/assets/img/test/calendar-bk.png">
+                                <div style="align-self: center; text-align: left; padding-left: 15px; display: inline-block;">
+                                    <div style="font-size: 16px; color: #545454; font-family: Helvetica">Fecha:</div>
+                                    <div style="font-size: 25px; color: #171717; font-family: Helvetica">{{$data['fecha_reunion']}}</div>
+                                </div>
+                            </td>
+    
+                            <td style="margin-top:0; margin-bottom: 12px; padding-left: 12px;">
+                                <img style="width: 50px; height: 50px;"
+                                    src="http://burodeconexiones.com/gc_balanced/public/assets/img/test/clock-bk.png">
+                                <div style="align-self: center; text-align: left; padding-left: 15px; display: inline-block;">
+                                    <div style="font-size: 16px; color: #545454; font-family: Helvetica">Hora</div>
+                                    <div style="font-size: 25px; color: #171717; font-family: Helvetica">{{$data['hora']}}</div>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+
+            <tr align="lef">
+                <td style="padding: 20px; background-color:#ffffff;">
+                    @if(count($data['programas']) > 0) {
+                      <h1 style="margin-bottom: 16px; font-size: 15px; color: #171717; font-family: Helvetica">Programación</h1>
+                    }
+                    @endif
+                    @for($i = 0; $i < count($data['programas']); $i++) <p style="font-size: 15px; color: #545454; font-family: Helvetica">
+                        {{$data['programas'][$i]['orden']}}. {{$data['programas'][$i]['titulo']}}
+                        </p>
+                    @endfor
+                </td>
+            </tr>
+
+            <tr align="center">
                 <td style="padding:20px; background-color:#ffffff;">
                     <h1 style="margin: 10px; font-size:15px; color: #545454; font-family: Helvetica">
-                        Puedes comenzar a través del siguiente enlace:
+                        Puedes ingresar a través del siguiente enlace:
                     </h1>
 
-                    <a href="gcmeet.com/public/login"
+                    <a href="gcmeet.com/public/acceso-reunion/.$valorEncriptado"
                         style="margin:0; font-size:28px; text-decoration: none; padding: 15px 15px; color: #171717; border-radius: 4px; display: inline-block;">
                         <span style="font-weight: bold; color: #4883BE; font-family: Helvetica">Haz click aquí</span>
                     </a>
 
                     <p style="margin: 12px; font-size: 14px; color: #545454; font-family: Helvetica">
-                      Este enlace es único e intransferible.
+                      Este enlace es único e intransferible y es la única manera de ingresar a la reunión
                     </p>
                 </td>
             </tr>
