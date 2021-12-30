@@ -33,6 +33,5 @@ class ReunionVencida extends Mailable
     public function build()
     {
         return $this->subject('Alerta de reunión vencida en plataforma de juntas y asambleas')->view('emails.reunion_vencida')->with('data', $this->detalle);;
-        // return $this->subject('Prueba de correo de Gc_Meet')->view('emails.mensaje')->with('data', $this->detalle);
     }
 }

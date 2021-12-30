@@ -32,7 +32,6 @@ class ReunionReprogramada extends Mailable
      */
     public function build()
     {
-        return $this->subject('Reprogramación de reunión en plataforma de juntas y asambleas')->view('emails.reunion_reprogramada')->with('data', $this->detalle);;
-        // return $this->subject('Prueba de correo de Gc_Meet')->view('emails.mensaje')->with('data', $this->detalle);
+        return $this->subject('Reprogramación de una reunión en plataforma de juntas y asambleas')->view('emails.reunion_reprogramada')->with('data', $this->detalle);;
     }
 }

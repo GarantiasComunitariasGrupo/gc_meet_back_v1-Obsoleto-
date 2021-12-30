@@ -338,10 +338,7 @@ class Gcm_Reunion_Controller extends Controller
     public function reprogramarReunion(Request $request)
     {
         try {
-            // Utilizo colletion porque no me reconoce los campos del request
-            $datos = $request->detalle;
-            $dataCollection = collect($datos);
-            $validator = Validator::make($dataCollection->all(), [
+            $validator = Validator::make($request->all(), [
                 'fecha_reunion' => 'required',
                 'hora' => 'required',
             ], [
@@ -353,31 +350,32 @@ class Gcm_Reunion_Controller extends Controller
                 Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors()), null);
                 return response()->json($validator->messages(), 422);
             }
-
-            $id_reunion = $datos['id_reunion'];
-            $convocados = $request->convocados;
-
+            
             $reunion = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
-                ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo')
-                ->where([['gcm_reuniones.id_reunion', '=', $id_reunion], ['gcm_reuniones.estado', '!=', 4]])->firstOrFail();
-
-            $reunion->fecha_reunion = $datos['fecha_reunion'];
-            $reunion->hora = $datos['hora'];
+            ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo')
+            ->where([['gcm_reuniones.id_reunion', '=', $request->id_reunion], ['gcm_reuniones.estado', '!=', 4]])->firstOrFail();
+            
+            $reunion->fecha_reunion = $request->fecha_reunion;
+            $reunion->hora = $request->hora;
             $reunion->estado = 0;
             $response = $reunion->save();
-
+            
+            $convocados = $request->convocados;
+            $encrypt = new Encrypt();
             // Aqui realizo un array_map con el objetivo de obtener solo el correo del objeto que llega y que este se almacene en un array nuevo
             $correosOrganizados = array_map(function ($row) {
                 return $row['correo'];
             }, $convocados);
 
             for ($i = 0; $i < count($convocados); $i++) {
+                $valorEncriptado = $encrypt->encriptar($convocados[$i]['id_convocado_reunion']);
                 $detalle = [
                     'nombre' => $convocados[$i]['nombre'],
                     'titulo' => $reunion['titulo'],
                     'descripcion' => $reunion['descripcion'],
-                    'fecha_reunion' => $datos['fecha_reunion'],
-                    'hora' => $datos['hora'],
+                    'fecha_reunion' => $request->fecha_reunion,
+                    'hora' => $request->hora,
+                    'url' => 'gcmeet.com/public/acceso-reunion/acceso/' . $valorEncriptado,
                 ];
                 Mail::to($convocados[$i]['correo'])->send(new ReunionReprogramada($detalle));
             }

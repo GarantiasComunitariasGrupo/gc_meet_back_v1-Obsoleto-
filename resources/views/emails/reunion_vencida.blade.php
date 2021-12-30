@@ -76,13 +76,38 @@
             </tr>
 
             <tr align="center">
+                <td style="padding: 20px; background-color:#ffffff; width:100%; padding-bottom:20px;">
+                    <div class="col-lge">
+                        <h1 style="font-family: Helvetica; font-size: 15px; color: #545454;">
+                        Descripción: {{$data['descripcion']}}
+                        </h1>
+                    </div>
+                    <div class="col-lge">
+                        <h1 style="font-family: Helvetica; font-size: 15px; color: #545454;">
+                        Fecha de la reunión: {{$data['fecha_reunion']}}
+                        </h1>
+                    </div>
+                    <div class="col-lge">
+                        <h1 style="font-family: Helvetica; font-size: 15px; color: #545454;">
+                        Hora de la reunión: {{$data['hora']}}
+                        </h1>
+                    </div>
+                    <div class="col-lge">
+                        <h1 style="font-family: Helvetica; font-size: 15px; color: #545454;">
+                        Estado: CANCELADA
+                        </h1>
+                    </div>
+                </td>
+            </tr>
+
+            <tr align="center">
                 <td style="padding:20px; background-color:#ffffff;">
                     <h1 style="margin: 10px; font-size:15px; color: #545454; font-family: Helvetica">
                       La reunión ha quedado en estado cancelada, ya que su fecha de ejecución a sobrepasado el tiempo limite de espera. 
-                      Si desea reprogramarla puede ir a la reunión y reprogramar la fecha de ejecución.
+                      Si desea reprogramarla puede ir a la reunión y programar una nueva fecha de ejecución.
                     </h1>
 
-                    <a href="" style="margin:0; font-size:28px; text-decoration: none; padding: 15px 15px; border-radius: 4px; display: inline-block;">
+                    <a href="http://192.168.2.71:4200/public/login/ingreso" style="margin:0; font-size:28px; text-decoration: none; padding: 15px 15px; border-radius: 4px; display: inline-block;">
                       <span style="font-weight: bold; color: #4883BE; font-family: Helvetica">Haz click aquí para ingresar a la plataforma</span>
                     </a>
                 </td>

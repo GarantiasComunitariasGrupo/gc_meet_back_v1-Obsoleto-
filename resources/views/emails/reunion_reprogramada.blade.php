@@ -84,12 +84,17 @@
                     </div>
                     <div class="col-lge">
                         <h1 style="font-family: Helvetica; font-size: 15px; color: #545454;">
-                        Nueva fecha reunión: {{$data['fecha_reunion']}}
+                        Nueva fecha de la reunión: {{$data['fecha_reunion']}}
                         </h1>
                     </div>
                     <div class="col-lge">
                         <h1 style="font-family: Helvetica; font-size: 15px; color: #545454;">
-                        Nueva hora reunión: {{$data['hora']}}
+                        Nueva hora de la reunión: {{$data['hora']}}
+                        </h1>
+                    </div>
+                    <div class="col-lge">
+                        <h1 style="font-family: Helvetica; font-size: 15px; color: #545454;">
+                        Link de acceso unico: {{$data['url']}}
                         </h1>
                     </div>
                     <div class="col-lge">
