@@ -224,4 +224,5 @@ Route::group([
     Route::get('/get-resultados-votacion/{id_programa}', [Gcm_Acceso_Reunion_Controller::class, 'getResultadosVotacion']);
     Route::get('/get-opciones-seleccion/{id_programa}', [Gcm_Acceso_Reunion_Controller::class, 'getOpcionesSeleccion']);
     Route::get('/get-respuestas-reunion/{id_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'getRespuestasReunion']);
+    Route::post('/finalizar-reunion', [Gcm_Acceso_Reunion_Controller::class, 'finalizarReunion']);
 });

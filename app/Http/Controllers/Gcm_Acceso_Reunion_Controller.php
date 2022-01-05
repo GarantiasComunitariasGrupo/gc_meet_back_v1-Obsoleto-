@@ -14,6 +14,7 @@ use App\Models\Gcm_Programacion;
 use App\Models\Gcm_Respuesta_Convocado;
 use App\Models\Gcm_Restriccion_Rol_Representante;
 use App\Models\Gcm_Asistencia_Reunion;
+use App\Models\Gcm_Reunion;
 use Illuminate\Support\Facades\Http;
 use App\Http\Controllers\Gcm_Log_Acciones_Sistema_Controller;
 
@@ -1103,6 +1104,26 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 'response' => (count($base) > 0) ? $base : 'No hay resultados'
             );
     
+            return response()->json($response);
+
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
+            return response()->json(['ok' => false, 'response' => $th->getMessage()]);
+        }
+    }
+
+    public function finalizarReunion(Request $request)
+    {
+        try {
+
+            $update = Gcm_Reunion::find($request->id_reunion)->update(['estado' => $request->estado]);
+            $word = (+$request->estado === 2) ? 'finalizada' : 'cancelada';
+
+            $response = array(
+                'ok' => ($update) ? true : false,
+                'response' => ($update) ? "Reunión {$word} correctamente" : 'Error actualizando estado'
+            );
+
             return response()->json($response);
 
         } catch (\Throwable $th) {
