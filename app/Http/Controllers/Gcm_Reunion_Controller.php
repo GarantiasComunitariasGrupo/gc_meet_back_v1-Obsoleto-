@@ -5,9 +5,9 @@ namespace App\Http\Controllers;
 use App;
 use App\Http\Controllers\Gcm_Mail_Controller;
 use App\Http\Temporal\Encrypt;
-use App\Mail\TestMail;
 use App\Mail\ReunionCancelada;
 use App\Mail\ReunionReprogramada;
+use App\Mail\TestMail;
 use App\Models\Gcm_Archivo_Programacion;
 use App\Models\Gcm_Convocado_Reunion;
 use App\Models\Gcm_Grupo;
@@ -21,7 +21,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
+use Mpdf\Config\ConfigVariables;
+use Mpdf\Config\FontVariables;
 use Validator;
+use \Mpdf\Mpdf as PDF;
 
 class Gcm_Reunion_Controller extends Controller
 {
@@ -278,12 +282,11 @@ class Gcm_Reunion_Controller extends Controller
             $id_reunion = $request->id_reunion;
             $convocados = $request->convocados;
             $reunion = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
-            ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo')
-            ->where([['gcm_reuniones.id_reunion', '=', $id_reunion], ['gcm_reuniones.estado', '!=', 4]])->firstOrFail();
+                ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo')
+                ->where([['gcm_reuniones.id_reunion', '=', $id_reunion], ['gcm_reuniones.estado', '!=', 4]])->firstOrFail();
             $reunion->estado = 3;
             $response = $reunion->save();
 
-            
             // Aqui realizo un array_map con el objetivo de obtener solo el correo del objeto que llega y que este se almacene en un array nuevo
             $correosOrganizados = array_map(function ($row) {
                 return $row['correo'];
@@ -299,7 +302,7 @@ class Gcm_Reunion_Controller extends Controller
                 ];
                 Mail::to($convocados[$i]['correo'])->send(new ReunionCancelada($detalle));
             }
-            
+
             Gcm_Log_Acciones_Sistema_Controller::save(4, array('Descripcion' => 'Envio de correo a los convocados por la cancelacion de una reunion', 'Correos' => $correosOrganizados), null);
             return response()->json(["response" => $response], 200);
         } catch (\Throwable $th) {
@@ -350,16 +353,16 @@ class Gcm_Reunion_Controller extends Controller
                 Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors()), null);
                 return response()->json($validator->messages(), 422);
             }
-            
+
             $reunion = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
-            ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo')
-            ->where([['gcm_reuniones.id_reunion', '=', $request->id_reunion], ['gcm_reuniones.estado', '!=', 4]])->firstOrFail();
-            
+                ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo')
+                ->where([['gcm_reuniones.id_reunion', '=', $request->id_reunion], ['gcm_reuniones.estado', '!=', 4]])->firstOrFail();
+
             $reunion->fecha_reunion = $request->fecha_reunion;
             $reunion->hora = $request->hora;
             $reunion->estado = 0;
             $response = $reunion->save();
-            
+
             $convocados = $request->convocados;
             $encrypt = new Encrypt();
             // Aqui realizo un array_map con el objetivo de obtener solo el correo del objeto que llega y que este se almacene en un array nuevo
@@ -1303,4 +1306,221 @@ class Gcm_Reunion_Controller extends Controller
             return response()->json(["error" => $th->getMessage()], 500);
         }
     }
+
+    /**
+     * Descarga documento PDF con la programacion de una reunion
+     *
+     * @param Request $aqui viene toda la programacion de la reunion
+     * @return void Retorna archivo para decargar
+     */
+    public function descargarPDFProgramacion(Request $request)
+    {
+        # Ingresa al directorio fuente
+        $defaultConfig = (new ConfigVariables())->getDefaults();
+        $fontDirs = $defaultConfig['fontDir'];
+
+        #Tomamos el array donde están todas las fuentes
+        $defaultFontConfig = (new FontVariables())->getDefaults();
+        $fontData = $defaultFontConfig['fontdata'];
+
+        // Configurar un nombre de archivo
+        $documentFileName = "fun.pdf";
+
+        // Crea el documento PDF
+        $document = new PDF([
+            # Se toma la ruta de donde estan ubicadas las nuevas fuentes
+            'fontDir' => array_merge($fontDirs, [
+                storage_path('app/public/fonts'),
+            ]),
+            # A las fuentes que ya tenemos adicione las nuevas
+            'fontdata' => $fontData + [
+                "montserratblack" => [
+                    'R' => "Montserrat-Black.ttf",
+                ],
+                "montserratbold" => [
+                    'R' => "Montserrat-Bold.ttf",
+                ],
+                "montserratextrabold" => [
+                    'R' => "Montserrat-ExtraBold.ttf",
+                ],
+                "montserratextralight" => [
+                    'R' => "Montserrat-ExtraLight.ttf",
+                ],
+                "montserratlight" => [
+                    'R' => "Montserrat-Light.ttf",
+                ],
+                "montserratmedium" => [
+                    'R' => "Montserrat-Medium.ttf",
+                ],
+                "montserratregular" => [
+                    'R' => "Montserrat-Regular.ttf",
+                ],
+                "montserratsemibold" => [
+                    'R' => "Montserrat-SemiBold.ttf",
+                ],
+                "montserratthin" => [
+                    'R' => "Montserrat-Thin.ttf",
+                ],
+            ],
+            # Fuente por defecto que tendra el PDF
+            'default_font' => 'montserratmedium',
+            'mode' => 'utf-8',
+            'format' => 'A4',
+            'margin_header' => '3',
+            'margin_top' => '20',
+            'margin_bottom' => '20',
+            'margin_footer' => '2',
+        ]);
+
+        // Establecer algunas informaciones de encabezado para la salida
+        $header = [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $documentFileName . '"',
+        ];
+
+        // Escribe un contenido simple
+        $document->WriteHTML("<style>$request->styles</style>");
+        $document->WriteHTML(str_replace("\n", "<br/>", $request->data));
+
+        // Guarde PDF en su almacenamiento público
+        Storage::disk('public')->put($documentFileName, $document->Output($documentFileName, "S"));
+
+        // Recupere el archivo del almacenamiento con la información del encabezado de dar
+        return Storage::disk('public')->download($documentFileName, 'Request', $header);
+    }
+
+    /**
+     * Descarga documento PDF con la acta de una reunion
+     *
+     * @param Request $aqui viene toda la informacion de la reunion
+     * @return void Retorna archivo para decargar
+     */
+    public function descargarPDFActa()
+    {
+        # Ingresa al directorio fuente
+        $defaultConfig = (new ConfigVariables())->getDefaults();
+        $fontDirs = $defaultConfig['fontDir'];
+
+        #Tomamos el array donde están todas las fuentes
+        $defaultFontConfig = (new FontVariables())->getDefaults();
+        $fontData = $defaultFontConfig['fontdata'];
+
+        // Configurar un nombre de archivo
+        $documentFileName = "fun.pdf";
+
+        #Creamos el PDF con las mediadas y orientacion
+        $document = new PDF([
+            # Se toma la ruta de donde estan ubicadas las nuevas fuentes
+            'fontDir' => array_merge($fontDirs, [
+                storage_path('app/public/fonts'),
+            ]),
+            # A las fuentes que ya tenemos adicione las nuevas
+            'fontdata' => $fontData + [
+                "montserratblack" => [
+                    'R' => "Montserrat-Black.ttf",
+                ],
+                "montserratbold" => [
+                    'R' => "Montserrat-Bold.ttf",
+                ],
+                "montserratextrabold" => [
+                    'R' => "Montserrat-ExtraBold.ttf",
+                ],
+                "montserratextralight" => [
+                    'R' => "Montserrat-ExtraLight.ttf",
+                ],
+                "montserratlight" => [
+                    'R' => "Montserrat-Light.ttf",
+                ],
+                "montserratmedium" => [
+                    'R' => "Montserrat-Medium.ttf",
+                ],
+                "montserratregular" => [
+                    'R' => "Montserrat-Regular.ttf",
+                ],
+                "montserratsemibold" => [
+                    'R' => "Montserrat-SemiBold.ttf",
+                ],
+                "montserratthin" => [
+                    'R' => "Montserrat-Thin.ttf",
+                ],
+            ],
+
+            # Fuente por defecto que tendra el PDF
+            'default_font' => 'montserratmedium',
+
+        ]);
+
+        #Realizamos la estructura del PDF
+        $style = "
+            <style>
+            @page{
+                mode: utf-8;
+                format: A4;
+                margin: 0;
+            }
+            .margenes{
+
+                margin_header: 3;
+                margin_footer: 2;
+                margin-top: 20;
+                margin-bottom: 20;
+            }
+            .fondoBack{
+                background-image: url('http://192.168.2.71:4200/assets/img/meets/acta2.JPG');
+                background-size: contain;
+                background-repeat: no-repeat;
+                height: 700px;
+            }
+            .pie{
+                height: 100%;
+                border-top: 6px solid;
+                border-color: #9F8C5B;
+                background-color: #16151E;
+            }
+            </style>
+        ";
+
+        // Establecer algunas informaciones de encabezado para la salida
+        $header = [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $documentFileName . '"',
+        ];
+
+        $document->WriteHTML($style);
+
+        $html = '
+            <body>
+                <div>
+                    <div align="center">
+                        <img style="margin-top: 2rem; width: 180px;" src="http://192.168.2.71:4200/assets/img/meets/garantias-comunitarias.png">
+                    </div>
+
+                    <div>
+                        <h5 align="center" style="margin-bottom: 30px; margin-top: 30px; color: #171717; font-family: montserratregular; font-size: 20px; font-weight: 500; letter-spacing: 0px;">
+                            ASAMBLEA GENERAL ORDINARIA DE ACCIONISTAS DE GARANTIAS COMUNITARIAS
+                        </h5>
+                    </div>
+
+                    <div class="fondoBack">
+                        <h1 align="center" style="margin-top: 510px; color: #9F8C5B; font-family: montserratregular; font-size: 15px; font-weight: 500; letter-spacing: 0px;">GARANTIAS COMUNITARIAS GRUPO S.A.</h1>
+                        <h1 align="center" style="margin-top: 25px; color: #FFFFFF; font-family: montserratregular; font-size: 35px; font-weight: bold; letter-spacing: 0px;">CELEBRADA EL DIA 12/01/22</h1>
+                    </div>
+
+                    <div class="pie">
+                        <h1 align="center" style="margin-top: 60px; color: #FFFFFF; font-family: montserratregular; font-size: 20px; font-weight: 500; letter-spacing: 0px;">ACTA NO. 1244</h1>
+                    </div>
+                </div>
+            </body>
+        ';
+
+        #Asignamos la estructura al PDF
+        $document->WriteHTML($html);
+
+        // Guarde PDF en su almacenamiento público
+        Storage::disk('public')->put($documentFileName, $document->Output($documentFileName, "S"));
+
+        // Recupere el archivo del almacenamiento con la información del encabezado de dar
+        return Storage::disk('public')->download($documentFileName, 'Request', $header);
+    }
+
 }

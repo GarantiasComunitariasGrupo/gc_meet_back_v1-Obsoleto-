@@ -188,7 +188,8 @@ Route::group([
     // Convocados
     Route::get('/traer-convocados/{id_reunion}', [Gcm_Reunion_Controller::class, 'getConvocados']);
     Route::post('/reenviar-correos', [Gcm_Reunion_Controller::class, 'reenviarCorreos']);
-
+    // PDF Acta
+    Route::post('/downloadPDF-document', [Gcm_Reunion_Controller::class, 'descargarPDFActa']);
 });
 
 /**
@@ -221,6 +222,9 @@ Route::group([
     // Convocados
     Route::get('/traer-convocados/{id_reunion}', [Gcm_Reunion_Controller::class, 'getConvocados']);
     Route::get('/autocompletar/{identificacion}', [Gcm_Reunion_Controller::class, 'autocompletar']);
+    // PDF Programación
+    Route::post('/downloadPDF-programacion', [Gcm_Reunion_Controller::class, 'descargarPDFProgramacion']);
+
 });
 
 Route::get('/buscar-archivos', function (Request $request) {

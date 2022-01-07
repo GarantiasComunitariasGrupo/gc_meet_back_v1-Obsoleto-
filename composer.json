@@ -10,6 +10,7 @@
         "guzzlehttp/guzzle": "^7.4",
         "laravel/framework": "^8.54",
         "laravel/tinker": "^2.5",
+        "mpdf/mpdf": "^8.0",
         "tymon/jwt-auth": "dev-develop"
     },
     "require-dev": {
