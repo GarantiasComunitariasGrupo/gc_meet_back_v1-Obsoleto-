@@ -767,6 +767,11 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
     }
 
+    /**
+     * Función encargada de obtener el tipo de acceso de un convocado: Convocado/Admin-Convocado
+     * @param $idConvocadoReunion => id_convocado_reunion
+     * @return JSON
+     */
     public function getTipoConvocado($idConvocadoReunion)
     {
         try {
@@ -795,6 +800,11 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         }
     }
 
+    /**
+     * Función encargada de obtener la programación (orden del día) de una reunión
+     * @param $id_reunion => id_reunion
+     * @return JSON
+     */
     public function getProgramacion($id_reunion)
     {
         try {
@@ -859,6 +869,11 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         }
     }
 
+    /**
+     * Función encargada de actualizar el estado de un programa
+     * @param Request $request => [id_programa, estado]
+     * @return JSON
+     */
     public function actualizarEstadoPrograma(Request $request)
     {
         try {
@@ -874,6 +889,11 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         }
     }
 
+    /**
+     * Función encargada de registrar la respuesta para el programa tipo: VOTACIÓN
+     * @param Request $request => [id_convocado_reunion, id_programa, tipo]
+     * @return JSON
+     */
     public function votacion(Request $request)
     {
         try {
@@ -895,6 +915,11 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         }
     }
 
+    /**
+     * Función encargada de registrar la respuesta para el programa tipo: ENTRADA DE TEXTO
+     * @param Request $request => [id_convocado_reunion, id_programa, texto]
+     * @return JSON
+     */
     public function entradaTexto(Request $request)
     {
         try {
@@ -916,6 +941,11 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         }
     }
 
+    /**
+     * Función encargada de registrar la respuesta para el programa tipo: SELECCIÓN ÚNICA
+     * @param Request $request => [id_convocado_reunion, id_programa, seleccion]
+     * @return JSON
+     */
     public function seleccionUnica(Request $request)
     {
         try {
@@ -937,6 +967,11 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         }
     }
 
+    /**
+     * Función encargada de registrar la respuesta para el programa tipo: SELECCIÓN MÚLTIPLE
+     * @param Request $request => [id_convocado_reunion, id_programa, seleccion]
+     * @return JSON
+     */
     public function seleccionMultiple(Request $request)
     {
         try {
@@ -958,6 +993,11 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         }
     }
 
+    /**
+     * Función encargada de obtener las respuestas registradas por un convocado
+     * @param $id_convocado_reunion => id_convocado_reunion
+     * @return JSON
+     */
     public function getRespuestasConvocado($id_convocado_reunion)
     {
         try {
@@ -987,6 +1027,11 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         }
     }
 
+    /**
+     * Función encargada de obtener la lista de convocados para una reunión
+     * @param $idReunion => id_reunion
+     * @return JSON
+     */
     public function getListaConvocados($idReunion)
     {
         $response = array();
@@ -1025,6 +1070,11 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         }
     }
 
+    /**
+     * Función encargada de registrar el acceso de un convocado a la reunión
+     * @param Request $request [id_convocado_reunion]
+     * @return JSON
+     */
     public function guardarAccesoReunion(Request $request)
     {
         $response = array();
@@ -1039,6 +1089,11 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         }
     }
 
+    /**
+     * Función encargada de actualizar el estado de un convocado en la reunión cuando este se sale de la misma
+     * @param Request $request [id_convocado_reunion]
+     * @return JSON
+     */
     public function actualizarAccesoReunion(Request $request)
     {
         try {
@@ -1051,6 +1106,11 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         }
     }
 
+    /**
+     * Función encargada de obtener las respuestas registradas para un id_programa
+     * @param $id_programa => id_programa
+     * @return JSON
+     */
     public function getResultadosVotacion($id_programa)
     {
         try {
@@ -1071,6 +1131,11 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         }
     }
 
+    /**
+     * Función encargada de obtener las opciones de respuesta de un programa con tipo: SELECIÓN ÚNICA/MÚLTIPLE
+     * @param $id_programa => id_programa
+     * @return JSON
+     */
     public function getOpcionesSeleccion($id_programa)
     {
         try {
@@ -1089,6 +1154,11 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         }
     }
 
+    /**
+     * Función encargada de obtener las respuestas registradas para una reunión
+     * @param $id_reunion => id_reunion
+     * @return JSON
+     */
     public function getRespuestasReunion($id_reunion)
     {
         try {
@@ -1112,6 +1182,11 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         }
     }
 
+    /**
+     * Función encargada de cancelar/finalizar una reunión
+     * @param Request $request => [id_reunion, estado]
+     * @return JSON
+     */
     public function finalizarReunion(Request $request)
     {
         try {
