@@ -22,8 +22,16 @@ class CrearGcmProgramacionTabla extends Migration
             $table->integer('orden')->required();
             $table->string('numeracion', 2)->required();
             $table->string('tipo', 2)->index()->required();
-            $table->unsignedBigInteger('relacion')->nullable(); 
+
+            $table->unsignedBigInteger('relacion')->nullable();
             $table->foreign('relacion')->references('id_programa')->on('gcm_programacion');
+
+            $table->unsignedBigInteger('id_rol_acta')->nullable();
+            $table->foreign('id_rol_acta')->references('id_rol_acta')->on('gcm_roles_actas');
+
+            $table->unsignedBigInteger('id_convocado_reunion')->nullable();
+            $table->foreign('id_convocado_reunion')->references('id_convocado_reunion')->on('gcm_convocados_reunion');
+
             $table->string('estado', 2)->index()->required();
         });
     }

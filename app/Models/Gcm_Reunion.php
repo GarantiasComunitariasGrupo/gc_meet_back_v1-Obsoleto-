@@ -21,6 +21,8 @@ class Gcm_Reunion extends ModelWithEvents
         'fecha_reunion',
         'hora',
         'quorum',
+        'id_acta',
+        'programacion',
         'estado',
     ];
 

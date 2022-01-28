@@ -181,6 +181,7 @@ Route::group([
     Route::get('/iniciar-reunion/{id_reunion}', [Gcm_Reunion_Controller::class, 'iniciarReunion']);
     Route::get('/eliminar-reunion/{id_reunion}', [Gcm_Reunion_Controller::class, 'eliminarReunion']);
     Route::post('/reprogramar-reunion', [Gcm_Reunion_Controller::class, 'reprogramarReunion']);
+    Route::post('/correo-cancelacion-reunion', [Gcm_Reunion_Controller::class, 'correoCancelacion']);
     // Grupos
     Route::get('/traer-grupos', [Gcm_Reunion_Controller::class, 'getGrupos']);
     // Programas

@@ -33,6 +33,5 @@ class AlertaReunion extends Mailable
     public function build()
     {
         return $this->subject('Alerta de la reunión programa para hoy en la plataforma de juntas y asambleas')->view('emails.alerta_reunion')->with('data', $this->detalle);
-        // return $this->subject('Prueba de correo de Gc_Meet')->view('emails.mensaje')->with('data', $this->detalle);
     }
 }

@@ -182,6 +182,9 @@ class Gcm_Reunion_Controller extends Controller
                     'gcr.id_relacion',
                     'gcr.fecha',
                     'gcr.soporte',
+                    'gcr.fecha_envio_invitacion',
+                    'gcr.firma',
+                    'gcr.acta'
                 ])->get();
             return response()->json($convocados);
         } catch (\Throwable $th) {
@@ -220,6 +223,11 @@ class Gcm_Reunion_Controller extends Controller
                 ->whereNull('gcm_programacion.relacion')->get();
 
             for ($i = 0; $i < count($request->correos); $i++) {
+
+                $convocado = Gcm_Convocado_Reunion::findOrFail($request->correos[$i]['id_convocado']);
+                $fecha = '2022-02-02 18:06:00';
+                $convocado->fecha_envio_invitacion = $fecha;
+                $response = $convocado->save();
 
                 $recurso = Gcm_Recurso::join('gcm_relaciones', 'gcm_relaciones.id_recurso', '=', 'gcm_recursos.id_recurso')
                     ->join('gcm_convocados_reunion', 'gcm_relaciones.id_relacion', '=', 'gcm_convocados_reunion.id_relacion')
@@ -280,12 +288,32 @@ class Gcm_Reunion_Controller extends Controller
     {
         try {
             $id_reunion = $request->id_reunion;
-            $convocados = $request->convocados;
             $reunion = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
                 ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo')
                 ->where([['gcm_reuniones.id_reunion', '=', $id_reunion], ['gcm_reuniones.estado', '!=', 4]])->firstOrFail();
             $reunion->estado = 3;
             $response = $reunion->save();
+
+            return response()->json(["response" => $response], 200);
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
+            return response()->json(["error" => $th->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Aqui se envía el correo dando informe de la cancelación de una reunión
+     *
+     * @param Request $request Aqui llegan los datos de la reunion y de los convocados
+     * @return void Retorna un mensaje donde se evidencia si envio el correo o si fallo el proceso
+     */
+    public function correoCancelacion(Request $request)
+    {
+        try {
+            $convocados = $request->convocados;
+            $reunion = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
+                ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo')
+                ->where([['gcm_reuniones.id_reunion', '=', $id_reunion], ['gcm_reuniones.estado', '!=', 4]])->firstOrFail();
 
             // Aqui realizo un array_map con el objetivo de obtener solo el correo del objeto que llega y que este se almacene en un array nuevo
             $correosOrganizados = array_map(function ($row) {
@@ -665,6 +693,8 @@ class Gcm_Reunion_Controller extends Controller
                 $reunion_nueva->fecha_reunion = $data['fecha_reunion'];
                 $reunion_nueva->hora = $data['hora'];
                 $reunion_nueva->quorum = $data['quorum'];
+                $reunion_nueva->id_acta = null;
+                $reunion_nueva->programacion = $data['programacion'];
                 $reunion_nueva->estado = $data['estado'];
 
                 $response = $reunion_nueva->save();
@@ -697,6 +727,8 @@ class Gcm_Reunion_Controller extends Controller
                 $reunion->fecha_reunion = $data['fecha_reunion'];
                 $reunion->hora = $data['hora'];
                 $reunion->quorum = $data['quorum'];
+                $reunion->id_acta = null;
+                $reunion->programacion = $data['programacion'];
                 $reunion->estado = $data['estado'];
 
                 $response = $reunion->save();
@@ -847,6 +879,9 @@ class Gcm_Reunion_Controller extends Controller
                         $convocado->razon_social = $convocados[$i]['razon_social'];
                         $convocado->participacion = null;
                         $convocado->soporte = null;
+                        $convocado->fecha_envio_invitacion = null;
+                        $convocado->firma = 0;
+                        $convocado->acta = 0;
                         $convocado->estado = 1;
 
                         $response = $convocado->save();
@@ -875,6 +910,9 @@ class Gcm_Reunion_Controller extends Controller
                         $convocado->razon_social = null;
                         $convocado->participacion = null;
                         $convocado->soporte = null;
+                        $convocado->fecha_envio_invitacion = null;
+                        $convocado->firma = 0;
+                        $convocado->acta = 0;
                         $convocado->estado = 1;
 
                         $response = $convocado->save();
@@ -1023,6 +1061,9 @@ class Gcm_Reunion_Controller extends Controller
                         $convocado->razon_social = $convocados[$i]['razon_social'];
                         $convocado->participacion = null;
                         $convocado->soporte = null;
+                        $convocado->fecha_envio_invitacion = null;
+                        $convocado->firma = 0;
+                        $convocado->acta = 0;
                         $convocado->estado = 1;
 
                         $response = $convocado->save();
@@ -1053,6 +1094,9 @@ class Gcm_Reunion_Controller extends Controller
                         $convocado->razon_social = null;
                         $convocado->participacion = null;
                         $convocado->soporte = null;
+                        $convocado->fecha_envio_invitacion = null;
+                        $convocado->firma = 0;
+                        $convocado->acta = 0;
                         $convocado->estado = 1;
 
                         $response = $convocado->save();
@@ -1107,6 +1151,8 @@ class Gcm_Reunion_Controller extends Controller
                     $programa_nuevo->numeracion = $this->stringNullToNull($request->numeracion[$i]);
                     $programa_nuevo->tipo = $this->stringNullToNull($request->tipo[$i]);
                     $programa_nuevo->relacion = null;
+                    $programa_nuevo->id_rol_acta = null;
+                    $programa_nuevo->id_convocado_reunion = null;
                     $programa_nuevo->estado = $request->estado[$i] ? $request->estado[$i] : 0;
 
                     $response = $programa_nuevo->save();
@@ -1185,6 +1231,8 @@ class Gcm_Reunion_Controller extends Controller
                             $opcion_nueva->numeracion = 1;
                             $opcion_nueva->tipo = 0;
                             $opcion_nueva->relacion = $this->stringNullToNull($programa_nuevo->id_programa);
+                            $opcion_nueva->id_rol_acta = null;
+                            $opcion_nueva->id_convocado_reunion = null;
                             $opcion_nueva->estado = $request['opcion_estado' . $i][$j] ? $request['opcion_estado' . $i][$j] : 0;
 
                             $response = $opcion_nueva->save();
@@ -1194,7 +1242,9 @@ class Gcm_Reunion_Controller extends Controller
                             if ($request->hasFile('opcion_file' . $i . '_' . $j)) {
                                 $request['opcion_file' . $i . '_' . $j] = array_values($request['opcion_file' . $i . '_' . $j]);
 
-                                $carpeta = 'storage/app/public/archivos_reunion/' . $id_reunion;
+                                $subcarpeta = 'archivos_reunion/' . $id_reunion;
+                                $carpeta = 'storage/app/public/' . $subcarpeta;
+
                                 if (!file_exists($carpeta)) {
                                     mkdir($carpeta, 0777, true);
                                 }
@@ -1208,7 +1258,7 @@ class Gcm_Reunion_Controller extends Controller
                                     $archivo_opcion_nuevo->descripcion = $opcion_file->getClientOriginalName();
                                     $archivo_opcion_nuevo->peso = filesize($opcion_file);
                                     $picture = substr(md5(microtime()), rand(0, 31 - 8), 8) . '.' . $opcion_extension;
-                                    $archivo_opcion_nuevo->url = $carpeta . '/' . $picture;
+                                    $archivo_opcion_nuevo->url = $subcarpeta  . '/' . $picture;
                                     $opcion_file->move(storage_path('app/public/archivos_reunion/' . $id_reunion), $picture);
                                     chmod(storage_path('app/public/archivos_reunion/' . $id_reunion . '/' . $picture), 0555);
 
@@ -1286,6 +1336,10 @@ class Gcm_Reunion_Controller extends Controller
             }
 
             for ($i = 0; $i < count($convocados); $i++) {
+                $convocado = Gcm_Convocado_Reunion::findOrFail($array_id_convocados[$i]);
+                $convocado->fecha_envio_invitacion = 'Hola';
+                $response = $convocado->save();
+
                 $valorEncriptado = $encrypt->encriptar($array_id_convocados[$i]);
                 $detalle = [
                     'nombre' => $convocados[$i]['nombre'],
@@ -1458,28 +1512,132 @@ class Gcm_Reunion_Controller extends Controller
                 format: A4;
                 margin: 0;
             }
-            .margenes{
 
-                margin_header: 3;
-                margin_footer: 2;
-                margin-top: 20;
-                margin-bottom: 20;
-            }
-            .fondoBack{
+            .centro1raPagina {
                 background-image: url('http://192.168.2.71:4200/assets/img/meets/acta2.JPG');
                 background-size: contain;
                 background-repeat: no-repeat;
                 height: 700px;
             }
-            .pie{
+
+            .pie1raPagina {
                 height: 100%;
                 border-top: 6px solid;
                 border-color: #9F8C5B;
                 background-color: #16151E;
             }
-            </style>
-        ";
 
+            .tabla2daPagina {
+                width: 100%;
+                text-align: left;
+                border-bottom: 1px solid black;
+            }
+
+            .thTabla2daPagina {
+                font-weight: bold;
+                background: #171717;
+                color: #FFFFFF;
+                text-align: left;
+                border: 1px solid #707070;
+                padding: 10px;
+                font-family: montserratregular;
+                font-size: 13px;
+                letter-spacing: 0px;
+            }
+
+            .tdTabla2daPagina {
+                width: 25%;
+                padding: 10px;
+                font-family: montserratregular;
+                color: #545454;
+                font-size: 13px;
+                letter-spacing: 0px;
+            }
+
+            .td-texto {
+                width: 50%;
+                padding: 10px;
+                color: #545454;
+                font-family: montserratregular;
+                font-size: 13px;
+                letter-spacing: 0px;
+                text-align: justify;
+            }
+
+            .tabla-cifras {
+                width: 100%;
+            }
+
+            .th-cifras-1raColumna {
+                font-weight: bold;
+                color: #545454;
+                padding: 10px;
+                font-family: montserratbold;
+                font-size: 13px;
+                letter-spacing: 0px;
+                font-weight: 500;
+                text-align: left;
+            }
+
+            .th-cifras-2daColumna {
+                font-weight: bold;
+                color: #545454;
+                padding: 10px;
+                font-family: montserratbold;
+                font-size: 13px;
+                letter-spacing: 0px;
+                font-weight: 500;
+                text-align: center;
+            }
+
+            .td-cifras-1raColumna {
+                width: 100%;
+                padding: 10px;
+                color: #545454;
+                font-family: montserratregular;
+                font-size: 15px;
+                letter-spacing: 0px;
+                text-align: left;
+            }
+
+            .td-cifras-2daColumna {
+                width: 30%;
+                background-color: #171717;
+                padding: 10px;
+                color: #FFFFFF;
+                font-family: montserratregular;
+                font-size: 15px;
+                letter-spacing: 0px;
+                text-align: center;
+            }
+
+            .firma {
+                border-top: 1px solid #DBDBDB;
+                text-align: center;
+            }
+
+            .textoFirma {
+                color: #545454;
+                padding: 10px;
+                font-family: montserratsemibold;
+                font-weight: 500;
+                font-size: 13px;
+                letter-spacing: 0px;
+            }
+
+            .ultimaPagina {
+                background-image: url('http://192.168.2.71:4200/assets/img/meets/back4.jpg');
+                background-position: center center;
+                background-repeat: no-repeat;
+                background-image-resize: 5;
+                height: 100%;
+                width: 100%;
+                margin: 0;
+            }
+            </style>
+            ";
+
+            // background-size: 100% 100%;
         // Establecer algunas informaciones de encabezado para la salida
         $header = [
             'Content-Type' => 'application/pdf',
@@ -1501,12 +1659,12 @@ class Gcm_Reunion_Controller extends Controller
                         </h5>
                     </div>
 
-                    <div class="fondoBack">
+                    <div class="centro1raPagina">
                         <h1 align="center" style="margin-top: 510px; color: #9F8C5B; font-family: montserratregular; font-size: 15px; font-weight: 500; letter-spacing: 0px;">GARANTIAS COMUNITARIAS GRUPO S.A.</h1>
                         <h1 align="center" style="margin-top: 25px; color: #FFFFFF; font-family: montserratregular; font-size: 35px; font-weight: bold; letter-spacing: 0px;">CELEBRADA EL DIA 12/01/22</h1>
                     </div>
 
-                    <div class="pie">
+                    <div class="pie1raPagina">
                         <h1 align="center" style="margin-top: 60px; color: #FFFFFF; font-family: montserratregular; font-size: 20px; font-weight: 500; letter-spacing: 0px;">ACTA NO. 1244</h1>
                     </div>
                 </div>
@@ -1515,6 +1673,223 @@ class Gcm_Reunion_Controller extends Controller
 
         #Asignamos la estructura al PDF
         $document->WriteHTML($html);
+        $document->AddPage();
+
+        $html2 = '
+            <body>
+                <div style="padding: 7% 11% 0% 11%;">
+                    <h1 style="color: #171717; font-size: 22px; font-family: montserratregular; font-weight: 500; letter-spacing: 0px; text-align: left; margin: 0">
+                        Titulo
+                    </h1>
+
+                    <h2 style="color: #545454; font-size: 16px; font-family: montserratregular; font-weight: 400; letter-spacing: 0px; text-align: left; margin: 0 0 6px 0;">
+                        Sub titulo
+                    </h2>
+
+                    <p style="color: #626262; font-size: 13px; font-family: montserratregular; font-weight: 400; letter-spacing: 0px; text-align: justify; margin: 0;">
+                        Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam,
+                        eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
+                        Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt.
+                        Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit,
+                        sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.
+                        Ut enim ad minima veniam, quis nostrum exercitationem ullam corporis suscipit laboriosam,
+                        nisi ut aliquid ex ea commodi consequatur? Quis autem vel eum iure reprehenderit qui in ea voluptate velit esse quam nihil molestiae consequatur,
+                        vel illum qui dolorem eum fugiat quo voluptas nulla pariatur?.
+                    </p>
+                </div>
+
+                <div style="padding: 2% 11% 0% 11%;">
+                    <h1 style="color: #171717; font-size: 22px; font-family: montserratregular; font-weight: 300; letter-spacing: 0px; text-align: left; margin: 0 0 10px 0;">
+                        Tabla
+                    </h1>
+                    <table class="tabla2daPagina">
+                        <thead>
+                            <tr>
+                                <th class="thTabla2daPagina" scope="col">Nombre</th>
+                                <th class="thTabla2daPagina" scope="col">Apellido</th>
+                                <th class="thTabla2daPagina" scope="col">Correo</th>
+                                <th class="thTabla2daPagina" scope="col">Representante</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="tdTabla2daPagina">Juan</td>
+                                <td class="tdTabla2daPagina">Mark</td>
+                                <td class="tdTabla2daPagina">Otto</td>
+                                <td class="tdTabla2daPagina">Marco</td>
+                            </tr>
+                            <tr>
+                                <td class="tdTabla2daPagina">Keila</td>
+                                <td class="tdTabla2daPagina">Jacob</td>
+                                <td class="tdTabla2daPagina">Thornton</td>
+                                <td class="tdTabla2daPagina">Fatboy</td>
+                            </tr>
+                            <tr>
+                                <td class="tdTabla2daPagina">Keila</td>
+                                <td class="tdTabla2daPagina">Jacob</td>
+                                <td class="tdTabla2daPagina">Thornton</td>
+                                <td class="tdTabla2daPagina">Fatboy</td>
+                            </tr>
+                            <tr>
+                                <td class="tdTabla2daPagina">Keila</td>
+                                <td class="tdTabla2daPagina">Jacob</td>
+                                <td class="tdTabla2daPagina">Thornton</td>
+                                <td class="tdTabla2daPagina">Fatboy</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="padding: 2% 11% 0% 11%;">
+                    <table>
+                        <tbody>
+                            <tr>
+                                <td class="td-texto">
+                                    <h1 style="float: top; color: #171717; font-size: 22px; font-family: montserratregular; font-weight: 500; letter-spacing: 0px; text-align: left; margin: 0">
+                                        Lista
+                                    </h1>
+                                    1. Lorem dolor sit amet
+                                </td>
+                                <td class="td-texto">
+                                    <h1 style="color: #171717; font-size: 22px; font-family: montserratregular; font-weight: 500; letter-spacing: 0px; text-align: left; margin: 0">Texto con campos</h1>
+                                    Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque
+                                    laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto
+                                    beatae vitae dicta sunt explicabo. Nemo enim ipsam voluptatem quia voluptas sit aspernatur
+                                    aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="padding: 2% 11% 0% 11%;">
+                    <table>
+                        <tbody>
+                            <tr>
+                                <td class="td-texto">
+                                    <h1 style="color: #171717; font-size: 22px; font-family: montserratregular; font-weight: 500; letter-spacing: 0px; text-align: left; margin: 0">
+                                        Votaciones
+                                    </h1>
+                                    Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium,
+                                    totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
+                                    sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.
+                                </td>
+                                <td style="with: 100%; border: 1px solid #DBDBDB; background-image: url(http://192.168.2.71:4200/assets/img/meets/recorte.JPG);
+                                    background-size: cover; background-repeat: no-repeat; background-position: center;">
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </body>
+        ';
+
+        #Asignamos la estructura al PDF
+        $document->WriteHTML($html2);
+        $document->AddPage();
+
+        $html3 = '
+            <body>
+                <div style="padding: 7% 11% 0% 11%;">
+                    <h1 style="color: #171717; font-size: 22px; font-family: montserratregular; font-weight: 300; letter-spacing: 0px; text-align: left; margin: 0 0 10px 0;">
+                        Cifras
+                    </h1>
+                    <table class="tabla-cifras">
+                        <thead>
+                            <tr>
+                                <th class="th-cifras-1raColumna" scope="col">Proyecto de distribución de utilidades</th>
+                                <th class="th-cifras-2daColumna" scope="col">2020</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="td-cifras-1raColumna">Quia consequuntur</td>
+                                <td class="td-cifras-2daColumna">$12.252.354</td>
+                            </tr>
+                            <tr>
+                                <td class="td-cifras-1raColumna">Quia consequuntur</td>
+                                <td class="td-cifras-2daColumna">$12.252.354</td>
+                            </tr>
+                            <tr>
+                                <td class="td-cifras-1raColumna">Quia consequuntur</td>
+                                <td class="td-cifras-2daColumna">$12.252.354</td>
+                            </tr>
+                            <tr>
+                                <td class="td-cifras-1raColumna">Quia consequuntur</td>
+                                <td class="td-cifras-2daColumna">$12.252.354</td>
+                            </tr>
+                            <tr>
+                                <td class="td-cifras-1raColumna">Quia consequuntur</td>
+                                <td class="td-cifras-2daColumna">$12.252.354</td>
+                            </tr>
+                            <tr>
+                                <td class="td-cifras-1raColumna">Quia consequuntur</td>
+                                <td class="td-cifras-2daColumna">$12.252.354</td>
+                            </tr>
+                            <tr>
+                                <td class="td-cifras-1raColumna">Quia consequuntur</td>
+                                <td class="td-cifras-2daColumna">$12.252.354</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="padding: 2% 11% 0% 11%;">
+                    <table>
+                        <tbody>
+                            <tr>
+                                <td class="td-texto">
+                                    <h1 style="color: #171717; font-size: 22px; font-family: montserratregular; font-weight: 500; letter-spacing: 0px; text-align: left; margin: 0">
+                                        Opciones
+                                    </h1>
+                                    Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium,
+                                    totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
+                                    sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.
+                                </td>
+                                <td style="with: 100%; border: 1px solid #DBDBDB; background-image: url(http://192.168.2.71:4200/assets/img/meets/recorte2.JPG);
+                                    background-size: cover; background-repeat: no-repeat; background-position: center;">
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="padding: 8% 11% 0% 11%;">
+                    <table style="width: 100%;">
+                        <tbody>
+                            <tr>
+                                <td class="firma">
+                                    <h1 class="textoFirma">non numquam eius mod</h1>
+                                </td>
+                                <td class="firma">
+                                    <h1 class="textoFirma">non numquam eius mod</h1>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </body>
+        ';
+
+        #Asignamos la estructura al PDF
+        $document->WriteHTML($html3);
+        $document->AddPage();
+
+        $html4 = '
+            <body>
+                <div class="ultimaPagina">
+                    <h1 align="center" style="padding-top: 900px; color: #FFFFFF; font-family: montserratlight; font-size: 20px; font-weight: 500; letter-spacing: 0px;">
+                        VOLUPTATEM ACCUSANTIUM DOLOREMQUE LAUDANTIUM
+                    </h1>
+                    <h1 align="center" style="color: #9F8C5B; font-family: montserratbold; font-size: 15px; font-weight: 500; letter-spacing: 0px;">
+                        NON NUMQUAM EIUS MOD
+                    </h1>
+                </div>
+            </body>
+        ';
+
+        #Asignamos la estructura al PDF
+        $document->WriteHTML($html4);
 
         // Guarde PDF en su almacenamiento público
         Storage::disk('public')->put($documentFileName, $document->Output($documentFileName, "S"));

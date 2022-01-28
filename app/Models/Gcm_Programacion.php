@@ -24,6 +24,8 @@ class Gcm_Programacion extends ModelWithEvents
         'numeracion',
         'tipo',
         'relacion',
+        'id_rol_acta',
+        'id_convocado_reunion',
         'estado',
     ];
 }

@@ -17,32 +17,32 @@ class GrupoSeeder extends Seeder
         DB::table('gcm_grupos')->insert([
             'acceso' => null,
             'descripcion' => 'Garantías Comunitarias Colombia',
-            'imagen' => '/assets/img/gc_colombia.png',
-            'logo' => null,
+            'imagen' => '/assets/img/meets/bg1.png',
+            'logo' => '/assets/img/meets/garantias-comunitarias.png',
             'estado' => 1,
         ]);
 
         DB::table('gcm_grupos')->insert([
             'acceso' => null,
             'descripcion' => 'Garantías Comunitarias Panamá',
-            'imagen' => '/assets/img/gc_panama.png',
-            'logo' => null,
+            'imagen' => '/assets/img/meets/bg2.png',
+            'logo' => '/assets/img/meets/garantias-panama.png',
             'estado' => 1,
         ]);
 
         DB::table('gcm_grupos')->insert([
             'acceso' => null,
             'descripcion' => 'GCBloomRisk',
-            'imagen' => '/assets/img/gc_bloomrisk.png',
-            'logo' => null,
+            'imagen' => '/assets/img/meets/bg3.png',
+            'logo' => '/assets/img/meets/gcbloomrisk.png',
             'estado' => 1,
         ]);
 
         DB::table('gcm_grupos')->insert([
             'acceso' => null,
             'descripcion' => 'GCMutual',
-            'imagen' => '/assets/img/gc_mutual.png',
-            'logo' => null,
+            'imagen' => '/assets/img/meets/bg4.png',
+            'logo' => '/assets/img/meets/gcmutual.png',
             'estado' => 1,
         ]);
     }

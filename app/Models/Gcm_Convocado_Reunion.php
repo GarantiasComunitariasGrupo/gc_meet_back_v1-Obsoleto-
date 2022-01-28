@@ -24,6 +24,9 @@ class Gcm_Convocado_Reunion extends ModelWithEvents
         'razon_social',
         'participacion',
         'soporte',
+        'fecha_envio_invitacion',
+        'firma',
+        'acta',
         'estado',
     ];
 
