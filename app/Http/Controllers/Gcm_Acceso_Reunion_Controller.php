@@ -358,7 +358,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 $request = Http::withOptions([
                     'curl' => array(CURLOPT_SSL_VERIFYPEER => false, CURLOPT_SSL_VERIFYHOST => false),
                     'verify' => false,
-                ])->get("https://192.168.2.85:3009/get-url-firma", [
+                ])->get(env('API_SOCKETS') . "/get-url-firma", [
                     'url_firma' => "firmas/{$reunion->id_reunion}/{$filename}",
                     'id_convocado_reunion' => $id
                 ]);
