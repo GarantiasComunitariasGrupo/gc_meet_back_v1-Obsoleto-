@@ -20,7 +20,7 @@ class TipoReunionSeeder extends Seeder
             'honorifico_participante' => 'Participantes',
             'honorifico_invitado' => 'Invitados',
             'honorifico_representante' => 'Representantes',
-            'imagen' => '/assets/img/fondo-logo2.jpg',
+            'imagen' => '/assets/img/meets/bg1.png',
             'estado' => 1,
         ]);
 
@@ -30,7 +30,7 @@ class TipoReunionSeeder extends Seeder
             'honorifico_participante' => 'Participantes',
             'honorifico_invitado' => 'Invitados',
             'honorifico_representante' => 'Representantes',
-            'imagen' => '/assets/img/fondo-logo2.jpg',
+            'imagen' => '/assets/img/meets/bg1.png',
             'estado' => 1,
         ]);
 
@@ -40,7 +40,7 @@ class TipoReunionSeeder extends Seeder
             'honorifico_participante' => 'Participantes',
             'honorifico_invitado' => 'Invitados',
             'honorifico_representante' => 'Representantes',
-            'imagen' => '/assets/img/fondo-logo2.jpg',
+            'imagen' => '/assets/img/meets/bg2.png',
             'estado' => 1,
         ]);
 
@@ -50,7 +50,7 @@ class TipoReunionSeeder extends Seeder
             'honorifico_participante' => 'Participantes',
             'honorifico_invitado' => 'Invitados',
             'honorifico_representante' => 'Representantes',
-            'imagen' => '/assets/img/fondo-logo2.jpg',
+            'imagen' => '/assets/img/meets/bg2.png',
             'estado' => 1,
         ]);
 
@@ -60,7 +60,7 @@ class TipoReunionSeeder extends Seeder
             'honorifico_participante' => 'Participantes',
             'honorifico_invitado' => 'Invitados',
             'honorifico_representante' => 'Representantes',
-            'imagen' => '/assets/img/fondo-logo2.jpg',
+            'imagen' => '/assets/img/meets/bg3.png',
             'estado' => 1,
         ]);
 
@@ -70,7 +70,7 @@ class TipoReunionSeeder extends Seeder
             'honorifico_participante' => 'Participantes',
             'honorifico_invitado' => 'Invitados',
             'honorifico_representante' => 'Representantes',
-            'imagen' => '/assets/img/fondo-logo2.jpg',
+            'imagen' => '/assets/img/meets/bg3.png',
             'estado' => 1,
         ]);
 
@@ -80,7 +80,7 @@ class TipoReunionSeeder extends Seeder
             'honorifico_participante' => 'Participantes',
             'honorifico_invitado' => 'Invitados',
             'honorifico_representante' => 'Representantes',
-            'imagen' => '/assets/img/fondo-logo2.jpg',
+            'imagen' => '/assets/img/meets/bg4.png',
             'estado' => 1,
         ]);
 
@@ -90,7 +90,7 @@ class TipoReunionSeeder extends Seeder
             'honorifico_participante' => 'Participantes',
             'honorifico_invitado' => 'Invitados',
             'honorifico_representante' => 'Representantes',
-            'imagen' => '/assets/img/fondo-logo2.jpg',
+            'imagen' => '/assets/img/meets/bg4.png',
             'estado' => 1,
         ]);
     }

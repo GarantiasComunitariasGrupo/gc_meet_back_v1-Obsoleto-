@@ -184,7 +184,7 @@ class Gcm_Reunion_Controller extends Controller
                     'gcr.soporte',
                     'gcr.fecha_envio_invitacion',
                     'gcr.firma',
-                    'gcr.acta'
+                    'gcr.acta',
                 ])->get();
             return response()->json($convocados);
         } catch (\Throwable $th) {
@@ -378,7 +378,7 @@ class Gcm_Reunion_Controller extends Controller
             ]);
 
             if ($validator->fails()) {
-                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors()), null);
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => $th->getLine()), null);
                 return response()->json($validator->messages(), 422);
             }
 
@@ -646,7 +646,8 @@ class Gcm_Reunion_Controller extends Controller
                 ]);
 
                 if ($validator->fails()) {
-                    Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors()), null);
+                    DB::rollback();
+                    Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => $th->getLine()), null);
                     return response()->json($validator->messages(), 422);
                 }
 
@@ -664,6 +665,8 @@ class Gcm_Reunion_Controller extends Controller
 
             }
 
+            // Array de extensiones que se van a permitir en la inserción del archivo de firma programacion
+            $extensionesFirmaProgramacion = array('PNG', 'JPG', 'JPEG', 'PDF');
             $id_reunion = $data['id_reunion'];
 
             // En caso de no existir la reunión, crea una nueva
@@ -683,7 +686,8 @@ class Gcm_Reunion_Controller extends Controller
                 ]);
 
                 if ($validator->fails()) {
-                    Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors()), null);
+                    DB::rollback();
+                    Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => $th->getLine()), null);
                     return response()->json($validator->messages(), 422);
                 }
 
@@ -694,11 +698,40 @@ class Gcm_Reunion_Controller extends Controller
                 $reunion_nueva->hora = $data['hora'];
                 $reunion_nueva->quorum = $data['quorum'];
                 $reunion_nueva->id_acta = null;
-                $reunion_nueva->programacion = $data['programacion'];
                 $reunion_nueva->estado = $data['estado'];
 
                 $response = $reunion_nueva->save();
                 $id_reunion = $reunion_nueva->id_reunion;
+
+                $picture = 0;
+
+                if ($request->hasFile('programacion')) {
+
+                    $subcarpeta = 'archivos_reunion/' . $id_reunion;
+                    $carpeta = 'storage/app/public/' . $subcarpeta;
+
+                    if (!file_exists($carpeta)) {
+                        mkdir($carpeta, 0777, true);
+                    }
+
+                    $file = $request['programacion'];
+                    $extension = $file->getClientOriginalExtension();
+
+                    if (in_array(strtoupper($extension), $extensionesFirmaProgramacion)) {
+                        $picture = substr(md5(microtime()), rand(0, 31 - 8), 8) . '.' . $extension;
+                        $reunion_nueva->programacion = $subcarpeta . '/' . $picture;
+                        $file->move(storage_path('app/public/archivos_reunion/' . $id_reunion), $picture);
+                        chmod(storage_path('app/public/archivos_reunion/' . $id_reunion . '/' . $picture), 0777);
+                    } else {
+                        DB::rollback();
+                        Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => 'La extensión del archivo no es permitida'), null);
+                        return response()->json(['error' => 'La extensión del archivo no es permitida'], 500);
+                    }
+
+                } else {
+                    $reunion_nueva->programacion = $data['programacion'];
+                }
+                $response = $reunion_nueva->save();
 
             } else {
 
@@ -716,7 +749,8 @@ class Gcm_Reunion_Controller extends Controller
                 ]);
 
                 if ($validator->fails()) {
-                    Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors()), null);
+                    DB::rollback();
+                    Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => $th->getLine()), null);
                     return response()->json($validator->messages(), 422);
                 }
 
@@ -728,9 +762,36 @@ class Gcm_Reunion_Controller extends Controller
                 $reunion->hora = $data['hora'];
                 $reunion->quorum = $data['quorum'];
                 $reunion->id_acta = null;
-                $reunion->programacion = $data['programacion'];
                 $reunion->estado = $data['estado'];
 
+                $picture = 0;
+
+                if ($request->hasFile('programacion')) {
+
+                    $subcarpeta = 'archivos_reunion/' . $id_reunion;
+                    $carpeta = 'storage/app/public/' . $subcarpeta;
+
+                    if (!file_exists($carpeta)) {
+                        mkdir($carpeta, 0777, true);
+                    }
+
+                    $file = $request['programacion'];
+                    $extension = $file->getClientOriginalExtension();
+
+                    if (in_array(strtoupper($extension), $extensionesFirmaProgramacion)) {
+                        $picture = substr(md5(microtime()), rand(0, 31 - 8), 8) . '.' . $extension;
+                        $reunion->programacion = $subcarpeta . '/' . $picture;
+                        $file->move(storage_path('app/public/archivos_reunion/' . $id_reunion), $picture);
+                        chmod(storage_path('app/public/archivos_reunion/' . $id_reunion . '/' . $picture), 0777);
+                    } else {
+                        DB::rollback();
+                        Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => 'La extensión del archivo no es permitida'), null);
+                        return response()->json(['error' => 'La extensión del archivo no es permitida'], 500);
+                    }
+
+                } else {
+                    $reunion->programacion = $data['programacion'];
+                }
                 $response = $reunion->save();
             }
 
@@ -769,7 +830,8 @@ class Gcm_Reunion_Controller extends Controller
                     ]);
 
                     if ($validator->fails()) {
-                        Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors()), null);
+                        DB::rollback();
+                        Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => $th->getLine()), null);
                         return response()->json($validator->messages(), 422);
                     }
 
@@ -796,7 +858,8 @@ class Gcm_Reunion_Controller extends Controller
                         ]);
 
                         if ($validator->fails()) {
-                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors()), null);
+                            DB::rollback();
+                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => $th->getLine()), null);
                             return response()->json($validator->messages(), 422);
                         }
 
@@ -828,7 +891,8 @@ class Gcm_Reunion_Controller extends Controller
                             ]);
 
                             if ($validator->fails()) {
-                                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors()), null);
+                                DB::rollback();
+                                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => $th->getLine()), null);
                                 return response()->json($validator->messages(), 422);
                             }
 
@@ -854,6 +918,7 @@ class Gcm_Reunion_Controller extends Controller
 
                     // Registra el convocado con nit y razon social
                     if ($convocados[$i]['tipo'] === '2') {
+
                         $validator = Validator::make($convocadosCollection->all(), [
                             'tipo' => 'required|max:2',
                             'nit' => 'max:20',
@@ -866,7 +931,8 @@ class Gcm_Reunion_Controller extends Controller
                         ]);
 
                         if ($validator->fails()) {
-                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors()), null);
+                            DB::rollback();
+                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => $th->getLine()), null);
                             return response()->json($validator->messages(), 422);
                         }
 
@@ -888,6 +954,7 @@ class Gcm_Reunion_Controller extends Controller
 
                         array_push($array_id_convocados, $convocado->id_convocado_reunion);
                     } else {
+
                         // Registra el convocado sin nit ni razon social
                         $validator = Validator::make($convocadosCollection->all(), [
                             'tipo' => 'required|max:2',
@@ -897,7 +964,8 @@ class Gcm_Reunion_Controller extends Controller
                         ]);
 
                         if ($validator->fails()) {
-                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors()), null);
+                            DB::rollback();
+                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => $th->getLine()), null);
                             return response()->json($validator->messages(), 422);
                         }
 
@@ -938,7 +1006,8 @@ class Gcm_Reunion_Controller extends Controller
                     ]);
 
                     if ($validator->fails()) {
-                        Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors()), null);
+                        DB::rollback();
+                        Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => $th->getLine()), null);
                         return response()->json($validator->messages(), 422);
                     }
 
@@ -965,7 +1034,8 @@ class Gcm_Reunion_Controller extends Controller
                         ]);
 
                         if ($validator->fails()) {
-                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors()), null);
+                            DB::rollback();
+                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => $th->getLine()), null);
                             return response()->json($validator->messages(), 422);
                         }
 
@@ -996,7 +1066,8 @@ class Gcm_Reunion_Controller extends Controller
                             ]);
 
                             if ($validator->fails()) {
-                                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors()), null);
+                                DB::rollback();
+                                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => $th->getLine()), null);
                                 return response()->json($validator->messages(), 422);
                             }
 
@@ -1048,7 +1119,8 @@ class Gcm_Reunion_Controller extends Controller
                         ]);
 
                         if ($validator->fails()) {
-                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors()), null);
+                            DB::rollback();
+                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => $th->getLine()), null);
                             return response()->json($validator->messages(), 422);
                         }
 
@@ -1081,7 +1153,8 @@ class Gcm_Reunion_Controller extends Controller
                         ]);
 
                         if ($validator->fails()) {
-                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors()), null);
+                            DB::rollback();
+                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => $th->getLine()), null);
                             return response()->json($validator->messages(), 422);
                         }
 
@@ -1138,7 +1211,8 @@ class Gcm_Reunion_Controller extends Controller
                     ]);
 
                     if ($validator->fails()) {
-                        Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors()), null);
+                        DB::rollback();
+                        Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => $th->getLine()), null);
                         return response()->json($validator->messages(), 422);
                     }
 
@@ -1162,7 +1236,9 @@ class Gcm_Reunion_Controller extends Controller
                     if ($request->hasFile('file' . $i)) {
                         $request['file' . $i] = array_values($request['file' . $i]);
 
-                        $carpeta = 'storage/app/public/archivos_reunion/' . $id_reunion;
+                        $subcarpeta = 'archivos_reunion/' . $id_reunion;
+                        $carpeta = 'storage/app/public/' . $subcarpeta;
+
                         if (!file_exists($carpeta)) {
                             mkdir($carpeta, 0777, true);
                         }
@@ -1178,13 +1254,14 @@ class Gcm_Reunion_Controller extends Controller
                                 $archivo_nuevo->descripcion = $file->getClientOriginalName();
                                 $archivo_nuevo->peso = filesize($file);
                                 $picture = substr(md5(microtime()), rand(0, 31 - 8), 8) . '.' . $extension;
-                                $archivo_nuevo->url = $carpeta . '/' . $picture;
+                                $archivo_nuevo->url = $subcarpeta . '/' . $picture;
                                 $file->move(storage_path('app/public/archivos_reunion/' . $id_reunion), $picture);
-                                chmod(storage_path('app/public/archivos_reunion/' . $id_reunion . '/' . $picture), 0555);
+                                chmod(storage_path('app/public/archivos_reunion/' . $id_reunion . '/' . $picture), 0777);
 
                                 $response = $archivo_nuevo->save();
                             } else {
-                                // DB::rollback();
+                                DB::rollback();
+                                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => 'La extensión del archivo no es permitida'), null);
                                 return response()->json(['error' => 'La extensión del archivo no es permitida'], 500);
                             }
                         }
@@ -1218,7 +1295,8 @@ class Gcm_Reunion_Controller extends Controller
                             ]);
 
                             if ($validator->fails()) {
-                                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors()), null);
+                                DB::rollback();
+                                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => $th->getLine()), null);
                                 return response()->json($validator->messages(), 422);
                             }
 
@@ -1254,15 +1332,22 @@ class Gcm_Reunion_Controller extends Controller
                                     $archivo_opcion_nuevo = new Gcm_Archivo_Programacion;
                                     $opcion_file = $request['opcion_file' . $i . '_' . $j][$k];
                                     $opcion_extension = $opcion_file->getClientOriginalExtension();
-                                    $archivo_opcion_nuevo->id_programa = $opcion_nueva->id_programa;
-                                    $archivo_opcion_nuevo->descripcion = $opcion_file->getClientOriginalName();
-                                    $archivo_opcion_nuevo->peso = filesize($opcion_file);
-                                    $picture = substr(md5(microtime()), rand(0, 31 - 8), 8) . '.' . $opcion_extension;
-                                    $archivo_opcion_nuevo->url = $subcarpeta  . '/' . $picture;
-                                    $opcion_file->move(storage_path('app/public/archivos_reunion/' . $id_reunion), $picture);
-                                    chmod(storage_path('app/public/archivos_reunion/' . $id_reunion . '/' . $picture), 0555);
 
-                                    $response = $archivo_opcion_nuevo->save();
+                                    if (in_array(strtoupper($opcion_extension), $extensiones)) {
+                                        $archivo_opcion_nuevo->id_programa = $opcion_nueva->id_programa;
+                                        $archivo_opcion_nuevo->descripcion = $opcion_file->getClientOriginalName();
+                                        $archivo_opcion_nuevo->peso = filesize($opcion_file);
+                                        $picture = substr(md5(microtime()), rand(0, 31 - 8), 8) . '.' . $opcion_extension;
+                                        $archivo_opcion_nuevo->url = $subcarpeta . '/' . $picture;
+                                        $opcion_file->move(storage_path('app/public/archivos_reunion/' . $id_reunion), $picture);
+                                        chmod(storage_path('app/public/archivos_reunion/' . $id_reunion . '/' . $picture), 0777);
+
+                                        $response = $archivo_opcion_nuevo->save();
+                                    } else {
+                                        DB::rollback();
+                                        Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => 'La extensión del archivo no es permitida'), null);
+                                        return response()->json(['error' => 'La extensión del archivo no es permitida'], 500);
+                                    }
                                 }
                             }
 
@@ -1286,9 +1371,9 @@ class Gcm_Reunion_Controller extends Controller
             DB::commit();
             return response()->json(["response" => $response, 'data' => $array_id_convocados, 'id_reunion' => $id_reunion], 200);
         } catch (\Throwable $th) {
-            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
             DB::rollback();
-            return response()->json(["error" => $th->getMessage()], 500);
+            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
+            return response()->json(["error" => $th->getMessage() . $th->getLine()], 500);
         }
     }
 
@@ -1637,7 +1722,7 @@ class Gcm_Reunion_Controller extends Controller
             </style>
             ";
 
-            // background-size: 100% 100%;
+        // background-size: 100% 100%;
         // Establecer algunas informaciones de encabezado para la salida
         $header = [
             'Content-Type' => 'application/pdf',
