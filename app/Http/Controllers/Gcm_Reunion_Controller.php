@@ -1599,7 +1599,7 @@ class Gcm_Reunion_Controller extends Controller
             }
 
             .centro1raPagina {
-                background-image: url('http://192.168.2.71:4200/assets/img/meets/acta2.JPG');
+                background-image: url('http://192.168.2.89:4200/assets/img/meets/acta2.JPG');
                 background-size: contain;
                 background-repeat: no-repeat;
                 height: 700px;
@@ -1711,7 +1711,7 @@ class Gcm_Reunion_Controller extends Controller
             }
 
             .ultimaPagina {
-                background-image: url('http://192.168.2.71:4200/assets/img/meets/back4.jpg');
+                background-image: url('http://192.168.2.89:4200/assets/img/meets/back4.jpg');
                 background-position: center center;
                 background-repeat: no-repeat;
                 background-image-resize: 5;
@@ -1735,7 +1735,7 @@ class Gcm_Reunion_Controller extends Controller
             <body>
                 <div>
                     <div align="center">
-                        <img style="margin-top: 2rem; width: 180px;" src="http://192.168.2.71:4200/assets/img/meets/garantias-comunitarias.png">
+                        <img style="margin-top: 2rem; width: 180px;" src="http://192.168.2.89:4200/assets/img/meets/garantias-comunitarias.png">
                     </div>
 
                     <div>
@@ -1859,7 +1859,7 @@ class Gcm_Reunion_Controller extends Controller
                                     totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
                                     sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.
                                 </td>
-                                <td style="with: 100%; border: 1px solid #DBDBDB; background-image: url(http://192.168.2.71:4200/assets/img/meets/recorte.JPG);
+                                <td style="with: 100%; border: 1px solid #DBDBDB; background-image: url(http://192.168.2.89:4200/assets/img/meets/recorte.JPG);
                                     background-size: cover; background-repeat: no-repeat; background-position: center;">
                                 </td>
                             </tr>
@@ -1931,7 +1931,7 @@ class Gcm_Reunion_Controller extends Controller
                                     totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
                                     sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.
                                 </td>
-                                <td style="with: 100%; border: 1px solid #DBDBDB; background-image: url(http://192.168.2.71:4200/assets/img/meets/recorte2.JPG);
+                                <td style="with: 100%; border: 1px solid #DBDBDB; background-image: url(http://192.168.2.89:4200/assets/img/meets/recorte2.JPG);
                                     background-size: cover; background-repeat: no-repeat; background-position: center;">
                                 </td>
                             </tr>

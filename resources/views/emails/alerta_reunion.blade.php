@@ -107,7 +107,7 @@
                       entonces esta pasara a estado cancelada y debera reprogramarla.
                     </h1>
 
-                    <a href="http://192.168.2.71:4200/public/login/ingreso" style="margin:0; font-size:28px; text-decoration: none; padding: 15px 15px; border-radius: 4px; display: inline-block;">
+                    <a href="http://192.168.2.89:4200/public/login/ingreso" style="margin:0; font-size:28px; text-decoration: none; padding: 15px 15px; border-radius: 4px; display: inline-block;">
                       <span style="font-weight: bold; color: #4883BE; font-family: Helvetica">Haz click aquí para ingresar a la plataforma</span>
                     </a>
                 </td>
