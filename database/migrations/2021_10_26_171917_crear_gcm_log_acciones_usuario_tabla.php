@@ -19,9 +19,9 @@ class CrearGcmLogAccionesUsuarioTabla extends Migration
             $table->foreign('id_usuario')->references('id_usuario')->on('gcm_usuarios');
             $table->string('accion', 3)->index()->required();
             $table->string('tabla', 100)->index()->required();
-            $table->dateTime('fecha')->required();
+            $table->timestampTz('fecha', $precision = 0)->required();
             $table->string('lugar', 100)->required();
-            $table->string('detalle')->required();
+            $table->longText('detalle')->required();
         });
     }
 

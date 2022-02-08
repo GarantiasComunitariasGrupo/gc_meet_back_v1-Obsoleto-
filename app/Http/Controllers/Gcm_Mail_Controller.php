@@ -2,10 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
-use App\Mail\TestMail;
 use App\Mail\GestorCorreos;
+use App\Mail\TestMail;
+use Illuminate\Support\Facades\Mail;
 
 class Gcm_Mail_Controller extends Controller
 {
@@ -19,17 +18,22 @@ class Gcm_Mail_Controller extends Controller
                 'view' => $view,
                 'subject' => $subject,
                 'title' => $title,
-                'body' => $body
+                'body' => $body,
             );
 
             Mail::to($destinatario)->send(new GestorCorreos($data));
-            
+
             $response = array('ok' => true);
             return $response;
         } catch (\Throwable $th) {
-            $response = array('ok' => false,' error' => $th->getMessage());
+            $response = array('ok' => false, ' error' => $th->getMessage());
             return $response;
         }
+    }
 
+    public function sendEmail($title, $detalle, $destinatarios)
+    {
+        Mail::to($destinatarios)->send(new TestMail($detalle));
+        return true;
     }
 }

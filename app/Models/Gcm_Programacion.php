@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use App\Utilities\ModelWithEvents;
 
-class Gcm_Programacion extends Model
+
+
+class Gcm_Programacion extends ModelWithEvents
 {
     use HasFactory;
 
@@ -22,6 +24,8 @@ class Gcm_Programacion extends Model
         'numeracion',
         'tipo',
         'relacion',
+        'id_rol_acta',
+        'id_convocado_reunion',
         'estado',
     ];
 }

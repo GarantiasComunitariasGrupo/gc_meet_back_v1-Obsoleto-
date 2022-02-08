@@ -20,7 +20,77 @@ class TipoReunionSeeder extends Seeder
             'honorifico_participante' => 'Participantes',
             'honorifico_invitado' => 'Invitados',
             'honorifico_representante' => 'Representantes',
-            'imagen' => null,
+            'imagen' => '/assets/img/meets/bg1.png',
+            'estado' => 1,
+        ]);
+
+        DB::table('gcm_tipo_reuniones')->insert([
+            'id_grupo' => 1,
+            'titulo' => 'Junta directiva',
+            'honorifico_participante' => 'Participantes',
+            'honorifico_invitado' => 'Invitados',
+            'honorifico_representante' => 'Representantes',
+            'imagen' => '/assets/img/meets/bg1.png',
+            'estado' => 1,
+        ]);
+
+        DB::table('gcm_tipo_reuniones')->insert([
+            'id_grupo' => 2,
+            'titulo' => 'Asamblea de accionistas',
+            'honorifico_participante' => 'Participantes',
+            'honorifico_invitado' => 'Invitados',
+            'honorifico_representante' => 'Representantes',
+            'imagen' => '/assets/img/meets/bg2.png',
+            'estado' => 1,
+        ]);
+
+        DB::table('gcm_tipo_reuniones')->insert([
+            'id_grupo' => 2,
+            'titulo' => 'Junta directiva',
+            'honorifico_participante' => 'Participantes',
+            'honorifico_invitado' => 'Invitados',
+            'honorifico_representante' => 'Representantes',
+            'imagen' => '/assets/img/meets/bg2.png',
+            'estado' => 1,
+        ]);
+
+        DB::table('gcm_tipo_reuniones')->insert([
+            'id_grupo' => 3,
+            'titulo' => 'Asamblea de accionistas',
+            'honorifico_participante' => 'Participantes',
+            'honorifico_invitado' => 'Invitados',
+            'honorifico_representante' => 'Representantes',
+            'imagen' => '/assets/img/meets/bg3.png',
+            'estado' => 1,
+        ]);
+
+        DB::table('gcm_tipo_reuniones')->insert([
+            'id_grupo' => 3,
+            'titulo' => 'Junta directiva',
+            'honorifico_participante' => 'Participantes',
+            'honorifico_invitado' => 'Invitados',
+            'honorifico_representante' => 'Representantes',
+            'imagen' => '/assets/img/meets/bg3.png',
+            'estado' => 1,
+        ]);
+
+        DB::table('gcm_tipo_reuniones')->insert([
+            'id_grupo' => 4,
+            'titulo' => 'Asamblea de accionistas',
+            'honorifico_participante' => 'Participantes',
+            'honorifico_invitado' => 'Invitados',
+            'honorifico_representante' => 'Representantes',
+            'imagen' => '/assets/img/meets/bg4.png',
+            'estado' => 1,
+        ]);
+
+        DB::table('gcm_tipo_reuniones')->insert([
+            'id_grupo' => 4,
+            'titulo' => 'Junta directiva',
+            'honorifico_participante' => 'Participantes',
+            'honorifico_invitado' => 'Invitados',
+            'honorifico_representante' => 'Representantes',
+            'imagen' => '/assets/img/meets/bg4.png',
             'estado' => 1,
         ]);
     }

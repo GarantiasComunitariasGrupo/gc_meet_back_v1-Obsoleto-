@@ -17,10 +17,11 @@ class CrearGcmGruposTabla extends Migration
             $table->bigIncrements('id_grupo');
             $table->string('acceso', 20)->nullable();
             $table->foreign('acceso')->references('id_usuario')->on('gcm_usuarios');
-            $table->string('descripcion', 255)->unique()->required();
+            $table->string('descripcion', 255)->required();
             $table->string('imagen', 255)->nullable();
             $table->string('logo', 255)->nullable();
             $table->string('estado', 2)->index()->required();
+            $table->unique(['acceso', 'descripcion']);
         });
     }
 

@@ -17,7 +17,7 @@ class CrearGcmUsuariosTabla extends Migration
             $table->string('id_usuario', 20)->primary();
             $table->string('nombre', 255)->required();
             $table->string('correo', 255)->unique()->nullable();
-            $table->string('contrasena', 255);
+            $table->string('contrasena', 255)->required();
             $table->string('estado', 2)->index()->required();
             $table->string('tipo', 2)->index()->required();
         });

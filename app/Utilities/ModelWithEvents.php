@@ -71,4 +71,23 @@ class ModelWithEvents extends Model
         }
     }
 
+    /**
+     * Recibe una colección de valores y les cambia el estado
+     *
+     * @param [type] $collection Colección generada por consulta de eloquent
+     * @return void
+     */
+    public static function changeStatus($collection, $status)
+    {
+        if ($collection instanceof Collection) {
+            // Elimina uno por uno todos los valores recibidos
+            foreach ($collection as $item) {
+                isset($item->estado) && ($item->estado = $status);
+                $item->save();
+            }
+        } else {
+            throw new Exception('La modificación de estado grupal recibe una colección', 1);
+        }
+    }
+
 }

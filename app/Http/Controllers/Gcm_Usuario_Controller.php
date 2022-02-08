@@ -3,173 +3,185 @@
 namespace App\Http\Controllers;
 
 use App;
-use Illuminate\Http\Request;
 use App\Models\Gcm_Usuario;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
-use App\Http\Controllers\Gcm_Mail_Controller;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\TestMail;
+
+
 use Validator;
 
 class Gcm_Usuario_Controller extends Controller
-
 {
     /**
-     * Trae todos los usuarios registrados en la bd
+     * Consulta todos los usuarios registrados
+     *
+     * @return void Retorna la correcta ejecución o el posible fallo de la función 
      */
-    public function listarUsuarios() {
-        $usuarios = Gcm_Usuario::all();
-        return $usuarios;
-    }
-
-    /**
-     * Registra un usuario nuevo en la bd
-     */
-    public function agregarUsuario(Request $request) {
-
-        $validator = Validator::make($request->all(), [
-            'nombre'=>'required|regex:/^[\pL\s\-]+$/u|max:50',
-            'correo'=>'required|email|max:255',
-            'estado'=>'required|max:2',
-            'tipo'=>'required|max:2',
-        ],
-
-        [
-            'nombre.required' => '*Rellena este campo',
-            'nombre.max' => '*Máximo 50 caracteres',
-            'nombre.regex' => '*Ingresa sólo letras',
-            'correo.required' => '*Rellena este campo',
-            'correo.email' => '*Ingresa un e-mail válido',
-            'estado.required' => '*Rellena este campo',
-            'tipo.required' => '*Rellena este campo',
-        ]
-
-        );
-
-        if ($validator->fails()) {
-            return response()->json($validator->messages(), 422);
-        }
-
-        $mc = new Gcm_Mail_Controller();
-
+    public function getUsers()
+    {
         try {
-            $usuarioNuevo = new Gcm_Usuario;
-            $usuarioNuevo->nombre = $request->nombre;
-            $usuarioNuevo->correo = $request->correo;
-            $aquita = 'GCM' . Str::random(8);
-            $usuarioNuevo->contrasena = Hash::make($aquita);
-            $usuarioNuevo->estado = $request->estado;
-            $usuarioNuevo->tipo = $request->tipo;
-
-            $response = $usuarioNuevo->save();
-
-            // print_r($aquita); // imprime el valor, tipo, longitud
-            // var_dump($aquita); //imprime valor en tipo string
-            // echo($aquita); // imprime valor
-            // print($aquita); // imprime valor
-
-            $mc->sendEmail('Este es el título', $aquita, $request->correo);
-
-            return response()->json(["response" => $response], 200);
+            $usuarios = Gcm_Usuario::all();
+            return response()->json($usuarios);
         } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
             return response()->json(["error" => $th->getMessage()], 500);
         }
     }
 
     /**
-     * Trae los datos de un usuario en especifico
+     * Guarda o actualiza un usuario
+     *
+     * @param Request Aqui van todos los datos del usuario
+     * @return void Retorna la correcta ejecución o el posible fallo de la función
      */
-    public function traerUsuario($id_usuario) {
-        $usuario = Gcm_Usuario::where('id_usuario', $id_usuario)->get();
-        return $usuario;
+    public function saveUser(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'id_usuario' => 'required',
+                'nombre' => 'required',
+                'correo' => 'required|email',
+                'contrasena' => 'required',
+                'estado' => 'required',
+                'tipo' => 'required',
+            ],
+
+                [
+                    'id_usuario.required' => '*Rellena este campo',
+                    'nombre.required' => '*Rellena este campo',
+                    'correo.required' => '*Rellena este campo',
+                    'correo.email' => '*Ingresa un e-mail válido',
+                    'estado.required' => '*Rellena este campo',
+                    'tipo.required' => '*Rellena este campo',
+                ]
+
+            );
+
+            if ($validator->fails()) {
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors()), null);
+                return response()->json($validator->messages(), 422);
+            }
+
+            $user_exist = DB::table('gcm_usuarios')->where('id_usuario', '=', $request->id_usuario)->first();
+
+            if (!$user_exist) {
+                $userNew = new Gcm_Usuario;
+                $userNew->id_usuario = $request->id_usuario;
+                $userNew->nombre = $request->nombre;
+                $userNew->correo = $request->correo;
+                $userNew->contrasena = Hash::make($request->contrasena);
+                $userNew->estado = $request->estado;
+                $userNew->tipo = $request->tipo;
+                $response = $userNew->save();
+
+                Mail::to($request->correos[$i]['correo'])->send(new RegisterUser($detalle));
+
+            } else {
+                $user = Gcm_Usuario::findOrFail($user_exist->id_usuario);
+                $user->nombre = $request->nombre;
+                $user->correo = $request->correo;
+                $user->contrasena = Hash::make($request->contrasena);
+                $user->estado = $request->estado;
+                $user->tipo = $request->tipo;
+                $response = $user->save();
+            }
+
+            DB::commit();
+            return response()->json(["response" => $response], 200);
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
+            DB::rollback();
+            return response()->json(["error" => $th->getMessage()], 500);
+        }
     }
 
     /**
-     * Confirma si una contraseña enviada coincide con la contraseña actual de la bd
+     * Undocumented function
+     *
+     * @param [type] $id_usuario
+     * @return void
      */
-    public function confirmarContrasena(Request $request) {
+    public function getUser($id_usuario)
+    {
+        try {
+            $usuario = Gcm_Usuario::where('id_usuario', $id_usuario)->get();
+            return response()->json($usuario);
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
+            return response()->json(["error" => $th->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Actualiza el estado de un usuario
+     *
+     * @param Request Aqui van los dos datos para la actualizacion del estado, id_usuario y el estado
+     * @return void Retorna la correcta ejecución o el posible fallo de la función
+     */
+    public function updateCondition(Request $request)
+    {
+        try {
+            $user = Gcm_Usuario::findOrFail($request->id_usuario);
+            $user->estado = $request->estado;
+            $response = $user->save();
+            
+            DB::commit();
+            return response()->json(["response" => $response], 200);
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
+            DB::rollback();
+            return response()->json(["error" => $th->getMessage()], 500);
+        }
+
+    }
+
+    /**
+     * Actualiza el tipo de un usuario
+     *
+     * @param Request Aqui van los dos datos para la actualizacion del tipo, id_usuario y el tipo
+     * @return void Retorna la correcta ejecución o el posible fallo de la función
+     */
+    public function updateType(Request $request)
+    {
+        try {
+            $user = Gcm_Usuario::findOrFail($request->id_usuario);
+            $user->tipo = $request->tipo;
+            $response = $user->save();
+            
+            DB::commit();
+            return response()->json(["response" => $response], 200);
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
+            DB::rollback();
+            return response()->json(["error" => $th->getMessage()], 500);
+        }
+    }
+
+    public function confirmarContrasena(Request $request)
+    {
 
         $usuario = Gcm_Usuario::findOrFail($request->id);
         $res;
 
-        if($request->accion === 'editar'){
+        if ($request->accion === 'editar') {
             try {
                 $usuario->contrasena = Hash::make($request->clave);
                 $response = $usuario->save();
-                $res =  response()->json(["response" => 'se cambio'], 200);
+                $res = response()->json(["response" => 'se cambio'], 200);
             } catch (\Throwable $th) {
                 return response()->json(["error" => $th->getMessage()], 500);
             }
         } else {
-            if(Hash::check($request->clave, $usuario->contrasena)){
+            if (Hash::check($request->clave, $usuario->contrasena)) {
                 $res = response()->json(["response" => 'Contraseña correcta'], 200);
-            }else{
+            } else {
                 $res = response()->json(["error" => 'Contraseña incorrecta'], 422);
             }
         }
         return $res;
     }
-
-    /**
-     * Actualiza los datos de un usuario ya registrado
-     */
-    public function editarUsuario($id_usuario, Request $request) {
-
-        $validator = Validator::make($request->all(), [
-            
-            'nombre'=>'required|regex:/^[\pL\s\-]+$/u|max:50',
-            'correo'=>'required|email|max:255',
-            'estado'=>'required|max:2',
-            'tipo'=>'required|max:2',
-        ],
-
-        [
-            'nombre.required' => '*Rellena este campo',
-            'nombre.max' => '*Máximo 50 caracteres',
-            'nombre.regex' => '*Ingresa sólo letras',
-            'correo.required' => '*Rellena este campo',
-            'correo.email' => '*Ingresa un e-mail válido',
-            'estado.required' => '*Rellena este campo',
-            'tipo.required' => '*Rellena este campo',
-        ]
-
-        );
-
-        if ($validator->fails()) {
-            return response()->json($validator->messages(), 422);
-        }
-
-        try {
-            $usuario = Gcm_Usuario::findOrFail($id_usuario);
-            $usuario->nombre = $request->nombre;
-            $usuario->correo = $request->correo;
-            $usuario->estado = $request->estado;
-            $usuario->tipo = $request->tipo;
-    
-            $response = $usuario->save();
-            
-            return response()->json(["response" => $response], 200);
-        } catch (\Throwable $th) {
-            return response()->json(["error" => $th->getMessage()], 500);
-        }
-    }
-
-    /**
-     * Actualiza el campo estado de un usuario en especifico
-     */
-    public function cambiarEstado(Request $request) {
-
-        $usuario = Gcm_Usuario::findOrFail($request->id_usuario);
-        $res;
-        try {
-            $usuario->estado = $request->estado;
-            $usuario->save();
-
-            $res = response()->json(["response" => 'se cambio'], 200);
-        } catch (\Throwable $th) {
-            $res = response()->json(["error" => $th->getMessage()], 500);
-        }
-        return $res;
-    }
 }
-
-

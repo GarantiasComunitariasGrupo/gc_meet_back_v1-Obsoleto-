@@ -2,6 +2,7 @@
     "private": true,
     "scripts": {
         "aospina": "php artisan serve --host 192.168.2.106 --port 8802",
+        "serve": "php artisan serve --host=192.168.2.71 --port=8800",
         "dev": "npm run development",
         "development": "mix",
         "watch": "mix watch",

@@ -22,7 +22,7 @@ class Gcm_Log_Acciones_Usuario_Controller extends Controller
         if ($tableName === null && $item instanceof Model) {$tableName = $item->getTable();}
         if ($place === null) {$place = Gcm_Log_Acciones_Usuario_Controller::getIp();}
         $log_accion_usuario_new = new Gcm_Log_Accion_Usuario();
-        $log_accion_usuario_new->id_usuario = 'gcm_danilo';
+        $log_accion_usuario_new->id_usuario = 'gc_meet';
         $log_accion_usuario_new->accion = $action;
         $log_accion_usuario_new->tabla = $tableName;
         $log_accion_usuario_new->lugar = $place;

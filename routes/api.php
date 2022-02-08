@@ -1,14 +1,16 @@
 <?php
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Gcm_Usuario_Controller;
-use App\Http\Controllers\Gcm_Grupo_Controller;
-use App\Http\Controllers\Gcm_Rol_Controller;
-use App\Http\Controllers\Gcm_Recurso_Controller;
-use App\Http\Controllers\Gcm_TipoReunion_Controller;
-use App\Http\Controllers\Gcm_Reunion_Controller;
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Gcm_Acceso_Reunion_Controller;
+use App\Http\Controllers\Gcm_Grupo_Controller;
+use App\Http\Controllers\Gcm_Recurso_Controller;
+use App\Http\Controllers\Gcm_Reunion_Controller;
+use App\Http\Controllers\Gcm_Rol_Controller;
+use App\Http\Controllers\Gcm_TipoReunion_Controller;
+use App\Http\Controllers\Gcm_Usuario_Controller;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -19,32 +21,50 @@ use App\Http\Controllers\Gcm_Acceso_Reunion_Controller;
 | routes are loaded by the RouteServiceProvider within a group which
 | is assigned the "api" middleware group. Enjoy building your API!
 |
-*/
+ */
 
 // Route::middleware('auth:api')->get('/user', function (Request $request) {
 //     return $request->user();
 // });
 
+/**
+ * Rutas del componente de login
+ */
+Route::group([
+    'middleware' => 'api',
+    'prefix' => 'auth',
+], function ($router) {
+    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/recuperar', [AuthController::class, 'recuperarContrasena']);
+    Route::post('/restablecer', [AuthController::class, 'restablecerContrasena']);
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/refresh', [AuthController::class, 'refresh']);
+    Route::get('/user-profile', [AuthController::class, 'userProfile']);
+});
 
 /**
  * Rutas del componente de usuario
  */
 Route::group([
-    'prefix' => 'usuario'
+    'middleware' => 'jwt.verify',
+    'prefix' => 'user',
 ], function ($router) {
-    Route::post('/agregar-usuario', [Gcm_Usuario_Controller::class, 'agregarUsuario']);
-    Route::get('/listar-usuarios', [Gcm_Usuario_Controller::class, 'listarUsuarios']);
+    Route::post('/save-user', [Gcm_Usuario_Controller::class, 'saveUser']);
+    Route::get('/get-users', [Gcm_Usuario_Controller::class, 'getUsers']);
     Route::post('/confirmar-contrasena', [Gcm_Usuario_Controller::class, 'confirmarContrasena']);
     Route::put('/editar-usuario/{id_usuario}', [Gcm_Usuario_Controller::class, 'editarUsuario']);
-    Route::put('/cambiar-estado', [Gcm_Usuario_Controller::class, 'cambiarEstado']);
-    Route::get('/traer-usuario/{id_usuario}', [Gcm_Usuario_Controller::class, 'traerUsuario']);
+    Route::put('/update-condition', [Gcm_Usuario_Controller::class, 'updateCondition']);
+    Route::put('/update-type', [Gcm_Usuario_Controller::class, 'updateType']);
+    Route::get('/get-user/{id_usuario}', [Gcm_Usuario_Controller::class, 'getUser']);
 });
 
 /**
  * Rutas del componente de grupo
  */
 Route::group([
-    'prefix' => 'grupo'
+    'middleware' => 'jwt.verify',
+    'prefix' => 'grupo',
 ], function ($router) {
     Route::post('/agregar-grupo', [Gcm_Grupo_Controller::class, 'agregarGrupo']);
     Route::get('/listar-grupos/{id}', [Gcm_Grupo_Controller::class, 'listarGrupos']);
@@ -58,7 +78,8 @@ Route::group([
  * Rutas del componente de rol
  */
 Route::group([
-    'prefix' => 'rol'
+    'middleware' => 'jwt.verify',
+    'prefix' => 'rol',
 ], function ($router) {
     Route::post('/agregar-rol', [Gcm_Rol_Controller::class, 'agregarRol']);
     Route::get('/listar-roles/{id}', [Gcm_Rol_Controller::class, 'listarRoles']);
@@ -73,7 +94,8 @@ Route::group([
  * Rutas del componente de recurso y relación
  */
 Route::group([
-    'prefix' => 'recurso'
+    'middleware' => 'jwt.verify',
+    'prefix' => 'recurso',
 ], function ($router) {
     // Recurso
     Route::post('/agregar-recurso', [Gcm_Recurso_Controller::class, 'agregarRecurso']);
@@ -98,7 +120,8 @@ Route::group([
  * Rutas del componente de tipoReunion y restriccion
  */
 Route::group([
-    'prefix' => 'tipoReunion'
+    'middleware' => 'jwt.verify',
+    'prefix' => 'tipoReunion',
 ], function ($router) {
     // Tipo reunión
     Route::post('/agregar-tipoReunion', [Gcm_TipoReunion_Controller::class, 'agregarTipoReunion']);
@@ -121,11 +144,11 @@ Route::group([
  * Rutas del componente de reunion y convocado
  */
 Route::group([
-    'prefix' => 'reunion'
+    'middleware' => 'jwt.verify',
+    'prefix' => 'reunion',
 ], function ($router) {
     // Reunión
     Route::post('/agregar-reunion', [Gcm_Reunion_Controller::class, 'agregarReunion']);
-    Route::get('/listar-reuniones/{id_usuario}', [Gcm_Reunion_Controller::class, 'listarReuniones']);
     Route::get('/listar-reuniones-select', [Gcm_Reunion_Controller::class, 'listarReunionesSelect']);
     Route::put('/editar-reunion/{id_reunion}', [Gcm_Reunion_Controller::class, 'editarReunion']);
     Route::put('/cambiar-estado', [Gcm_Reunion_Controller::class, 'cambiarEstado']);
@@ -149,40 +172,55 @@ Route::group([
  * Rutas del componente de meets
  */
 Route::group([
-    'prefix' => 'meets'
+    'middleware' => 'jwt.verify',
+    'prefix' => 'meets',
 ], function ($router) {
     // Reuniones
     Route::get('/traer-reuniones/{id_grupo}', [Gcm_Reunion_Controller::class, 'getReuniones']);
     Route::get('/traer-reunion/{id_reunion}', [Gcm_Reunion_Controller::class, 'getReunion']);
+    Route::post('/cancelar-reunion', [Gcm_Reunion_Controller::class, 'cancelarReunion']);
+    Route::get('/iniciar-reunion/{id_reunion}', [Gcm_Reunion_Controller::class, 'iniciarReunion']);
+    Route::get('/eliminar-reunion/{id_reunion}', [Gcm_Reunion_Controller::class, 'eliminarReunion']);
+    Route::post('/reprogramar-reunion', [Gcm_Reunion_Controller::class, 'reprogramarReunion']);
+    Route::post('/correo-cancelacion-reunion', [Gcm_Reunion_Controller::class, 'correoCancelacion']);
     // Grupos
-    Route::get('/traer-grupos/{id_usuario}', [Gcm_Reunion_Controller::class, 'getGrupos']);
+    Route::get('/traer-grupos', [Gcm_Reunion_Controller::class, 'getGrupos']);
     // Programas
     Route::get('/traer-programas/{id_reunion}', [Gcm_Reunion_Controller::class, 'getProgramas']);
     // Convocados
     Route::get('/traer-convocados/{id_reunion}', [Gcm_Reunion_Controller::class, 'getConvocados']);
+    Route::post('/reenviar-correos', [Gcm_Reunion_Controller::class, 'reenviarCorreos']);
+    // PDF Acta
+    Route::post('/downloadPDF-document', [Gcm_Reunion_Controller::class, 'descargarPDFActa']);
 });
 
 /**
  * Rutas del componente de meet-management
  */
 Route::group([
-    'prefix' => 'meet-management'
+    'middleware' => 'jwt.verify',
+    'prefix' => 'meet-management',
 ], function ($router) {
     // Reuniones
     Route::get('/traer-reuniones/{id_grupo}', [Gcm_Reunion_Controller::class, 'getReuniones']);
     Route::get('/traer-reunion/{id_reunion}', [Gcm_Reunion_Controller::class, 'getReunion']);
-    Route::get('/traer-reunion-registrar/{id_grupo}', [Gcm_Reunion_Controller::class, 'getReunionRegistrar']);
+    Route::get('/traer-ultima-reunion/{id_tipo_reunion}', [Gcm_Reunion_Controller::class, 'traerReunion']);
     Route::post('/editar-reunion', [Gcm_Reunion_Controller::class, 'editarReunionCompleta']);
+    Route::post('/enviar-correos', [Gcm_Reunion_Controller::class, 'enviarCorreos']);
     // Grupos
     Route::get('/traer-grupos/{id_usuario}', [Gcm_Reunion_Controller::class, 'getGrupos']);
+    Route::get('/traer-grupo/{id_grupo}', [Gcm_Reunion_Controller::class, 'getGrupo']);
     // Roles
     Route::get('/traer-roles/{id_reunion}', [Gcm_Reunion_Controller::class, 'getRoles']);
+    Route::get('/traer-roles-registrar/{id_grupo}', [Gcm_Reunion_Controller::class, 'getRolesRegistrar']);
     // Tipos de reuniones
     Route::get('/traer-tiposReuniones/{id_reunion}', [Gcm_Reunion_Controller::class, 'getTiposReuniones']);
+    Route::get('/traer-tipo-reunion/{id_tipo_reunion}', [Gcm_Reunion_Controller::class, 'getTipoReunion']);
     // Programas
     Route::get('/traer-programas/{id_reunion}', [Gcm_Reunion_Controller::class, 'getProgramas']);
     // Recursos
-    Route::get('/traer-recursos', [Gcm_Reunion_Controller::class, 'getRecursos']);
+    Route::get('/traer-recursos/{id_grupo}', [Gcm_Reunion_Controller::class, 'getRecursos']);
+    Route::get('/traer-recursos-gcm', [Gcm_Reunion_Controller::class, 'getRecursosGcm']);
     // Convocados
     Route::get('/traer-convocados/{id_reunion}', [Gcm_Reunion_Controller::class, 'getConvocados']);
     Route::get('/autocompletar/{identificacion}', [Gcm_Reunion_Controller::class, 'autocompletar']);
@@ -192,7 +230,7 @@ Route::group([
  * Rutas para acceso a una reunión
  */
 Route::group([
-    'prefix' => 'acceso-reunion'
+    'prefix' => 'acceso-reunion',
 ], function ($router) {
     Route::get('/validacion-convocado/{identificacion}/{id_convocado_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'validacionConvocado']);
     Route::get('/buscar-invitacion/{identificacion}', [Gcm_Acceso_Reunion_Controller::class, 'buscarInvitacion']);
@@ -225,4 +263,26 @@ Route::group([
     Route::get('/get-opciones-seleccion/{id_programa}', [Gcm_Acceso_Reunion_Controller::class, 'getOpcionesSeleccion']);
     Route::get('/get-respuestas-reunion/{id_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'getRespuestasReunion']);
     Route::post('/finalizar-reunion', [Gcm_Acceso_Reunion_Controller::class, 'finalizarReunion']);
+    // PDF Programación
+    Route::post('/downloadPDF-programacion', [Gcm_Reunion_Controller::class, 'descargarPDFProgramacion']);
+
+});
+
+Route::get('/buscar-archivos', function (Request $request) {
+    $params = (object) $request->all();
+
+    if (isset($params->name)) {
+
+        $path = storage_path("app/public/{$params->name}");
+        $exists = File::exists($path);
+
+        if ($exists) {
+            return response()->file($path);
+        } else {
+            return response()->json(["message" => "File doesn't exist" . $path]);
+        }
+
+    } else {
+        return response()->json(['response' => 'Archivo no existe']);
+    }
 });

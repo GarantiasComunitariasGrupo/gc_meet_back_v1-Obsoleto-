@@ -6,13 +6,23 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-class Gcm_Usuario extends Authenticatable
+//Añadimos la clase JWTSubject
+use Tymon\JWTAuth\Contracts\JWTSubject;
+
+class Gcm_Usuario extends Authenticatable implements JWTSubject
 {
     use HasFactory, Notifiable;
 
     protected $table = 'gcm_usuarios';
     protected $primaryKey = 'id_usuario';
     public $timestamps = false;
+
+    /**
+     * The "type" of the non auto-incrementing ID.
+     *
+     * @var string
+     */
+    protected $keyType = 'string';
 
     /**
      * The attributes that are mass assignable.
@@ -34,16 +44,41 @@ class Gcm_Usuario extends Authenticatable
      * @var array
      */
     protected $hidden = [
-        'password',
-        'remember_token',
+        'contrasena',
     ];
 
     /**
-     * The attributes that should be cast to native types.
+     * Get the identifier that will be stored in the subject claim of the JWT.
      *
-     * @var array
+     * @return mixed
      */
-    protected $casts = [
-        'email_verified_at' => 'datetime',
-    ];
+    public function getJWTIdentifier()
+    {
+        return $this->getKey();
+    }
+
+    /**
+     * Get the identifier that will be stored in the subject claim of the JWT.
+     *
+     * @return mixed
+     */
+
+    public function getAuthPassword()
+    {
+        return $this->contrasena;
+    }
+
+    /**
+     * Return a key value array, containing any custom claims to be added to the JWT.
+     * Devuelve una matriz de valor clave, que contiene cualquier reclamo personalizado que se agregará al JWT.
+     * @return array
+     */
+    public function getJWTCustomClaims()
+    {
+        return[
+                'id_usuario' => $this->id_usuario,
+                'correo'     => $this->correo,
+                'nombre'     => $this->nombre,
+            ];
+    }
 }
