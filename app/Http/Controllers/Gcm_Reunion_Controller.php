@@ -22,10 +22,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Mpdf\Config\ConfigVariables;
 use Mpdf\Config\FontVariables;
-use Validator;
-use \Mpdf\Mpdf as PDF;
+use Mpdf\Mpdf;
 
 class Gcm_Reunion_Controller extends Controller
 {
@@ -309,6 +309,8 @@ class Gcm_Reunion_Controller extends Controller
      */
     public function correoCancelacion(Request $request)
     {
+        $id_reunion = $request->id_reunion;
+
         try {
             $convocados = $request->convocados;
             $reunion = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
@@ -332,7 +334,7 @@ class Gcm_Reunion_Controller extends Controller
             }
 
             Gcm_Log_Acciones_Sistema_Controller::save(4, array('Descripcion' => 'Envio de correo a los convocados por la cancelacion de una reunion', 'Correos' => $correosOrganizados), null);
-            return response()->json(["response" => $response], 200);
+            return response()->json(["response" => 'Correo enviado correctamente'], 200);
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
             return response()->json(["error" => $th->getMessage()], 500);
@@ -378,8 +380,8 @@ class Gcm_Reunion_Controller extends Controller
             ]);
 
             if ($validator->fails()) {
-                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => $th->getLine()), null);
-                return response()->json($validator->messages(), 422);
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 378), null);
+                return response()->json($validator->errors(), 422);
             }
 
             $reunion = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
@@ -516,7 +518,7 @@ class Gcm_Reunion_Controller extends Controller
                 return $row->identificacion;
             }, json_decode($recursos));
 
-            $recursos_gcm = Http::post('http://192.168.2.25:8801/api/gccrm/get-employees', ['password' => 'RTTyQyFRBUT01832', 'excluded_identifications' => json_encode($data)]);
+            $recursos_gcm = Http::post(env('GCAPI_BASE') . '/api/gccrm/get-employees', ['password' => env('GCAPI_PASS'), 'excluded_identifications' => json_encode($data)]);
             return response()->json($recursos_gcm->json());
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
@@ -647,8 +649,8 @@ class Gcm_Reunion_Controller extends Controller
 
                 if ($validator->fails()) {
                     DB::rollback();
-                    Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => $th->getLine()), null);
-                    return response()->json($validator->messages(), 422);
+                    Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 647), null);
+                    return response()->json($validator->errors(), 422);
                 }
 
                 $tipo_reunion_nueva = new Gcm_Tipo_Reunion;
@@ -687,8 +689,8 @@ class Gcm_Reunion_Controller extends Controller
 
                 if ($validator->fails()) {
                     DB::rollback();
-                    Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => $th->getLine()), null);
-                    return response()->json($validator->messages(), 422);
+                    Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 687), null);
+                    return response()->json($validator->errors(), 422);
                 }
 
                 $reunion_nueva = new Gcm_Reunion;
@@ -750,8 +752,8 @@ class Gcm_Reunion_Controller extends Controller
 
                 if ($validator->fails()) {
                     DB::rollback();
-                    Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => $th->getLine()), null);
-                    return response()->json($validator->messages(), 422);
+                    Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 750), null);
+                    return response()->json($validator->errors(), 422);
                 }
 
                 // Actualiza los datos de la reunión
@@ -831,8 +833,8 @@ class Gcm_Reunion_Controller extends Controller
 
                     if ($validator->fails()) {
                         DB::rollback();
-                        Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => $th->getLine()), null);
-                        return response()->json($validator->messages(), 422);
+                        Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 831), null);
+                        return response()->json($validator->errors(), 422);
                     }
 
                     $recurso_nuevo = new Gcm_Recurso;
@@ -859,8 +861,8 @@ class Gcm_Reunion_Controller extends Controller
 
                         if ($validator->fails()) {
                             DB::rollback();
-                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => $th->getLine()), null);
-                            return response()->json($validator->messages(), 422);
+                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 859), null);
+                            return response()->json($validator->errors(), 422);
                         }
 
                         $rol_nuevo = new Gcm_Rol;
@@ -892,8 +894,8 @@ class Gcm_Reunion_Controller extends Controller
 
                             if ($validator->fails()) {
                                 DB::rollback();
-                                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => $th->getLine()), null);
-                                return response()->json($validator->messages(), 422);
+                                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 892), null);
+                                return response()->json($validator->errors(), 422);
                             }
 
                             $rol = Gcm_Rol::findOrFail($rol_existe->id_rol);
@@ -932,8 +934,8 @@ class Gcm_Reunion_Controller extends Controller
 
                         if ($validator->fails()) {
                             DB::rollback();
-                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => $th->getLine()), null);
-                            return response()->json($validator->messages(), 422);
+                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 932), null);
+                            return response()->json($validator->errors(), 422);
                         }
 
                         $convocado = new Gcm_Convocado_Reunion;
@@ -965,8 +967,8 @@ class Gcm_Reunion_Controller extends Controller
 
                         if ($validator->fails()) {
                             DB::rollback();
-                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => $th->getLine()), null);
-                            return response()->json($validator->messages(), 422);
+                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 965), null);
+                            return response()->json($validator->errors(), 422);
                         }
 
                         $convocado = new Gcm_Convocado_Reunion;
@@ -1007,8 +1009,8 @@ class Gcm_Reunion_Controller extends Controller
 
                     if ($validator->fails()) {
                         DB::rollback();
-                        Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => $th->getLine()), null);
-                        return response()->json($validator->messages(), 422);
+                        Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1007), null);
+                        return response()->json($validator->errors(), 422);
                     }
 
                     $recurso = Gcm_Recurso::findOrFail($recurso_existe->id_recurso);
@@ -1035,8 +1037,8 @@ class Gcm_Reunion_Controller extends Controller
 
                         if ($validator->fails()) {
                             DB::rollback();
-                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => $th->getLine()), null);
-                            return response()->json($validator->messages(), 422);
+                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1035), null);
+                            return response()->json($validator->errors(), 422);
                         }
 
                         $rol_nuevo = new Gcm_Rol;
@@ -1067,8 +1069,8 @@ class Gcm_Reunion_Controller extends Controller
 
                             if ($validator->fails()) {
                                 DB::rollback();
-                                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => $th->getLine()), null);
-                                return response()->json($validator->messages(), 422);
+                                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1067), null);
+                                return response()->json($validator->errors(), 422);
                             }
 
                             $rol = Gcm_Rol::findOrFail($rol_existe->id_rol);
@@ -1120,8 +1122,8 @@ class Gcm_Reunion_Controller extends Controller
 
                         if ($validator->fails()) {
                             DB::rollback();
-                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => $th->getLine()), null);
-                            return response()->json($validator->messages(), 422);
+                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1120), null);
+                            return response()->json($validator->errors(), 422);
                         }
 
                         $convocado = new Gcm_Convocado_Reunion;
@@ -1154,8 +1156,8 @@ class Gcm_Reunion_Controller extends Controller
 
                         if ($validator->fails()) {
                             DB::rollback();
-                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => $th->getLine()), null);
-                            return response()->json($validator->messages(), 422);
+                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1154), null);
+                            return response()->json($validator->errors(), 422);
                         }
 
                         $convocado = new Gcm_Convocado_Reunion;
@@ -1212,8 +1214,8 @@ class Gcm_Reunion_Controller extends Controller
 
                     if ($validator->fails()) {
                         DB::rollback();
-                        Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => $th->getLine()), null);
-                        return response()->json($validator->messages(), 422);
+                        Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1212), null);
+                        return response()->json($validator->errors(), 422);
                     }
 
                     // Registra la programación de una reunion
@@ -1296,8 +1298,8 @@ class Gcm_Reunion_Controller extends Controller
 
                             if ($validator->fails()) {
                                 DB::rollback();
-                                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => $th->getLine()), null);
-                                return response()->json($validator->messages(), 422);
+                                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1296), null);
+                                return response()->json($validator->errors(), 422);
                             }
 
                             // Registra las opciones
@@ -1433,7 +1435,7 @@ class Gcm_Reunion_Controller extends Controller
                     'fecha_reunion' => $reunion['fecha_reunion'],
                     'hora' => $reunion['hora'],
                     'programas' => $programas,
-                    'url' => 'gcmeet.com/public/acceso-reunion/acceso/' . $valorEncriptado,
+                    'url' => env('VIEW_BASE') . '/public/acceso-reunion/acceso/' . $valorEncriptado,
                 ];
                 Mail::to($convocados[$i]['correo'])->send(new TestMail($detalle));
                 // $mc->sendEmail('Este es el título', $detalle, $convocados[$i]['correo']);
@@ -1454,78 +1456,84 @@ class Gcm_Reunion_Controller extends Controller
      */
     public function descargarPDFProgramacion(Request $request)
     {
-        # Ingresa al directorio fuente
-        $defaultConfig = (new ConfigVariables())->getDefaults();
-        $fontDirs = $defaultConfig['fontDir'];
+        try {
+            //code...
+            # Ingresa al directorio fuente
+            $defaultConfig = (new ConfigVariables())->getDefaults();
+            $fontDirs = $defaultConfig['fontDir'];
 
-        #Tomamos el array donde están todas las fuentes
-        $defaultFontConfig = (new FontVariables())->getDefaults();
-        $fontData = $defaultFontConfig['fontdata'];
+            #Tomamos el array donde están todas las fuentes
+            $defaultFontConfig = (new FontVariables())->getDefaults();
+            $fontData = $defaultFontConfig['fontdata'];
 
-        // Configurar un nombre de archivo
-        $documentFileName = "fun.pdf";
+            // Configurar un nombre de archivo
+            $documentFileName = "fun.pdf";
 
-        // Crea el documento PDF
-        $document = new PDF([
-            # Se toma la ruta de donde estan ubicadas las nuevas fuentes
-            'fontDir' => array_merge($fontDirs, [
-                storage_path('app/public/fonts'),
-            ]),
-            # A las fuentes que ya tenemos adicione las nuevas
-            'fontdata' => $fontData + [
-                "montserratblack" => [
-                    'R' => "Montserrat-Black.ttf",
+            // Crea el documento PDF
+            $document = new Mpdf([
+                # Se toma la ruta de donde estan ubicadas las nuevas fuentes
+                'fontDir' => array_merge($fontDirs, [
+                    storage_path('app/public/fonts'),
+                ]),
+                # A las fuentes que ya tenemos adicione las nuevas
+                'fontdata' => $fontData + [
+                    "montserratblack" => [
+                        'R' => "Montserrat-Black.ttf",
+                    ],
+                    "montserratbold" => [
+                        'R' => "Montserrat-Bold.ttf",
+                    ],
+                    "montserratextrabold" => [
+                        'R' => "Montserrat-ExtraBold.ttf",
+                    ],
+                    "montserratextralight" => [
+                        'R' => "Montserrat-ExtraLight.ttf",
+                    ],
+                    "montserratlight" => [
+                        'R' => "Montserrat-Light.ttf",
+                    ],
+                    "montserratmedium" => [
+                        'R' => "Montserrat-Medium.ttf",
+                    ],
+                    "montserratregular" => [
+                        'R' => "Montserrat-Regular.ttf",
+                    ],
+                    "montserratsemibold" => [
+                        'R' => "Montserrat-SemiBold.ttf",
+                    ],
+                    "montserratthin" => [
+                        'R' => "Montserrat-Thin.ttf",
+                    ],
                 ],
-                "montserratbold" => [
-                    'R' => "Montserrat-Bold.ttf",
-                ],
-                "montserratextrabold" => [
-                    'R' => "Montserrat-ExtraBold.ttf",
-                ],
-                "montserratextralight" => [
-                    'R' => "Montserrat-ExtraLight.ttf",
-                ],
-                "montserratlight" => [
-                    'R' => "Montserrat-Light.ttf",
-                ],
-                "montserratmedium" => [
-                    'R' => "Montserrat-Medium.ttf",
-                ],
-                "montserratregular" => [
-                    'R' => "Montserrat-Regular.ttf",
-                ],
-                "montserratsemibold" => [
-                    'R' => "Montserrat-SemiBold.ttf",
-                ],
-                "montserratthin" => [
-                    'R' => "Montserrat-Thin.ttf",
-                ],
-            ],
-            # Fuente por defecto que tendra el PDF
-            'default_font' => 'montserratmedium',
-            'mode' => 'utf-8',
-            'format' => 'A4',
-            'margin_header' => '3',
-            'margin_top' => '20',
-            'margin_bottom' => '20',
-            'margin_footer' => '2',
-        ]);
+                # Fuente por defecto que tendra el PDF
+                'default_font' => 'montserratmedium',
+                'mode' => 'utf-8',
+                'format' => 'A4',
+                'margin_header' => '3',
+                'margin_top' => '20',
+                'margin_bottom' => '20',
+                'margin_footer' => '2',
+            ]);
 
-        // Establecer algunas informaciones de encabezado para la salida
-        $header = [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="' . $documentFileName . '"',
-        ];
+            // Establecer algunas informaciones de encabezado para la salida
+            $header = [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="' . $documentFileName . '"',
+            ];
 
-        // Escribe un contenido simple
-        $document->WriteHTML("<style>$request->styles</style>");
-        $document->WriteHTML(str_replace("\n", "<br/>", $request->data));
+            // Escribe un contenido simple
+            $document->WriteHTML("<style>$request->styles</style>");
+            $document->WriteHTML(str_replace("\n", "<br/>", $request->data));
 
-        // Guarde PDF en su almacenamiento público
-        Storage::disk('public')->put($documentFileName, $document->Output($documentFileName, "S"));
+            // Guarde PDF en su almacenamiento público
+            Storage::put($documentFileName, $document->Output($documentFileName, "S"));
 
-        // Recupere el archivo del almacenamiento con la información del encabezado de dar
-        return Storage::disk('public')->download($documentFileName, 'Request', $header);
+            // Recupere el archivo del almacenamiento con la información del encabezado de dar
+            return Storage::download($documentFileName, 'Request', $header);
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
+            return response()->json(["error" => $th->getMessage(), "line" => $th->getLine()], 500);
+        }
     }
 
     /**
@@ -1548,7 +1556,7 @@ class Gcm_Reunion_Controller extends Controller
         $documentFileName = "fun.pdf";
 
         #Creamos el PDF con las mediadas y orientacion
-        $document = new PDF([
+        $document = new MPDF([
             # Se toma la ruta de donde estan ubicadas las nuevas fuentes
             'fontDir' => array_merge($fontDirs, [
                 storage_path('app/public/fonts'),
@@ -1599,7 +1607,7 @@ class Gcm_Reunion_Controller extends Controller
             }
 
             .centro1raPagina {
-                background-image: url('http://192.168.2.71:4200/assets/img/meets/acta2.JPG');
+                background-image: url('" . env('VIEW_BASE') . "/assets/img/meets/acta2.JPG');
                 background-size: contain;
                 background-repeat: no-repeat;
                 height: 700px;
@@ -1711,7 +1719,7 @@ class Gcm_Reunion_Controller extends Controller
             }
 
             .ultimaPagina {
-                background-image: url('http://192.168.2.71:4200/assets/img/meets/back4.jpg');
+                background-image: url('" . env('VIEW_BASE') . "/assets/img/meets/back4.jpg');
                 background-position: center center;
                 background-repeat: no-repeat;
                 background-image-resize: 5;
@@ -1735,7 +1743,7 @@ class Gcm_Reunion_Controller extends Controller
             <body>
                 <div>
                     <div align="center">
-                        <img style="margin-top: 2rem; width: 180px;" src="http://192.168.2.71:4200/assets/img/meets/garantias-comunitarias.png">
+                        <img style="margin-top: 2rem; width: 180px;" src="' . env('VIEW_BASE') . '/assets/img/meets/garantias-comunitarias.png">
                     </div>
 
                     <div>
@@ -1859,7 +1867,7 @@ class Gcm_Reunion_Controller extends Controller
                                     totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
                                     sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.
                                 </td>
-                                <td style="with: 100%; border: 1px solid #DBDBDB; background-image: url(http://192.168.2.71:4200/assets/img/meets/recorte.JPG);
+                                <td style="with: 100%; border: 1px solid #DBDBDB; background-image: url(' . env('VIEW_BASE') . '/assets/img/meets/recorte.JPG);
                                     background-size: cover; background-repeat: no-repeat; background-position: center;">
                                 </td>
                             </tr>
@@ -1931,7 +1939,7 @@ class Gcm_Reunion_Controller extends Controller
                                     totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
                                     sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.
                                 </td>
-                                <td style="with: 100%; border: 1px solid #DBDBDB; background-image: url(http://192.168.2.71:4200/assets/img/meets/recorte2.JPG);
+                                <td style="with: 100%; border: 1px solid #DBDBDB; background-image: url(' . env('VIEW_BASE') . '/assets/img/meets/recorte2.JPG);
                                     background-size: cover; background-repeat: no-repeat; background-position: center;">
                                 </td>
                             </tr>
@@ -1977,10 +1985,10 @@ class Gcm_Reunion_Controller extends Controller
         $document->WriteHTML($html4);
 
         // Guarde PDF en su almacenamiento público
-        Storage::disk('public')->put($documentFileName, $document->Output($documentFileName, "S"));
+        Storage::put($documentFileName, $document->Output($documentFileName, "S"));
 
         // Recupere el archivo del almacenamiento con la información del encabezado de dar
-        return Storage::disk('public')->download($documentFileName, 'Request', $header);
+        return Storage::download($documentFileName, 'Request', $header);
     }
 
 }

@@ -759,10 +759,22 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 ->select(['gcr.*', 'grns.*', 'grc.*', 'ggps.descripcion AS descripcion_grupo'])
                 ->get();
 
-            $response = array(
-                'ok' => (count($base) > 0) ? true : false,
-                'response' => (count($base) > 0) ? $base : 'No hay resultados',
-            );
+            $response;
+
+            if (count($base) > 0) {
+                $response = [
+                    'ok' => true,
+                    'response' => $base->map(function ($item) {
+                        $item->token = (new Encrypt())->encriptar($item->id_convocado_reunion);
+                        return $item;
+                    }),
+                ];
+            } else {
+                $response = [
+                    'ok' => false,
+                    'response' => 'No hay resultados',
+                ];
+            }
 
             return response()->json($response, 200);
 

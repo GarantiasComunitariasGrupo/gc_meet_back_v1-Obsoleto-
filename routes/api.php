@@ -168,6 +168,12 @@ Route::group([
     Route::get('/traer-grupos/{id_usuario}', [Gcm_Reunion_Controller::class, 'getGrupos']);
 });
 
+Route::group([
+    'prefix' => 'meets',
+], function ($router) {
+    Route::get('/traer-reunion/{id_reunion}', [Gcm_Reunion_Controller::class, 'getReunion']);
+});
+
 /**
  * Rutas del componente de meets
  */
@@ -177,7 +183,6 @@ Route::group([
 ], function ($router) {
     // Reuniones
     Route::get('/traer-reuniones/{id_grupo}', [Gcm_Reunion_Controller::class, 'getReuniones']);
-    Route::get('/traer-reunion/{id_reunion}', [Gcm_Reunion_Controller::class, 'getReunion']);
     Route::post('/cancelar-reunion', [Gcm_Reunion_Controller::class, 'cancelarReunion']);
     Route::get('/iniciar-reunion/{id_reunion}', [Gcm_Reunion_Controller::class, 'iniciarReunion']);
     Route::get('/eliminar-reunion/{id_reunion}', [Gcm_Reunion_Controller::class, 'eliminarReunion']);
@@ -224,6 +229,8 @@ Route::group([
     // Convocados
     Route::get('/traer-convocados/{id_reunion}', [Gcm_Reunion_Controller::class, 'getConvocados']);
     Route::get('/autocompletar/{identificacion}', [Gcm_Reunion_Controller::class, 'autocompletar']);
+    // PDF Programación
+    Route::post('/downloadPDF-programacion', [Gcm_Reunion_Controller::class, 'descargarPDFProgramacion']);
 });
 
 /**
@@ -263,8 +270,6 @@ Route::group([
     Route::get('/get-opciones-seleccion/{id_programa}', [Gcm_Acceso_Reunion_Controller::class, 'getOpcionesSeleccion']);
     Route::get('/get-respuestas-reunion/{id_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'getRespuestasReunion']);
     Route::post('/finalizar-reunion', [Gcm_Acceso_Reunion_Controller::class, 'finalizarReunion']);
-    // PDF Programación
-    Route::post('/downloadPDF-programacion', [Gcm_Reunion_Controller::class, 'descargarPDFProgramacion']);
 
 });
 

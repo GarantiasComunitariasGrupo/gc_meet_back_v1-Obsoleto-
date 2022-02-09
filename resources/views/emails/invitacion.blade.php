@@ -97,7 +97,7 @@
                                     <div style="font-size: 25px; color: #171717; font-family: Helvetica">{{$data['fecha_reunion']}}</div>
                                 </div>
                             </td>
-    
+
                             <td style="margin-top:0; margin-bottom: 12px; padding-left: 12px;">
                                 <img style="width: 50px; height: 50px;"
                                     src="http://burodeconexiones.com/gc_balanced/public/assets/img/test/clock-bk.png">
@@ -113,12 +113,12 @@
 
             <tr align="lef">
                 <td style="padding: 20px; background-color:#ffffff;">
-                    @if(count($data['programas']) > 0) {
+                    @if(count($data['programas']) > 0)
                       <h1 style="margin-bottom: 16px; font-size: 15px; color: #171717; font-family: Helvetica">Programación</h1>
-                    }
                     @endif
-                    @for($i = 0; $i < count($data['programas']); $i++) <p style="font-size: 15px; color: #545454; font-family: Helvetica">
-                        {{$data['programas'][$i]['orden']}}. {{$data['programas'][$i]['titulo']}}
+                    @for($i = 0; $i < count($data['programas']); $i++)
+                        <p style="font-size: 15px; color: #545454; font-family: Helvetica">
+                            {{$data['programas'][$i]['orden']}}. {{$data['programas'][$i]['titulo']}}
                         </p>
                     @endfor
                 </td>
@@ -130,7 +130,7 @@
                         Puedes ingresar a través del siguiente enlace:
                     </h1>
 
-                    <a href="gcmeet.com/public/acceso-reunion/.$valorEncriptado"
+                    <a href="{{$data['url']}}"
                         style="margin:0; font-size:28px; text-decoration: none; padding: 15px 15px; color: #171717; border-radius: 4px; display: inline-block;">
                         <span style="font-weight: bold; color: #4883BE; font-family: Helvetica">Haz click aquí</span>
                     </a>

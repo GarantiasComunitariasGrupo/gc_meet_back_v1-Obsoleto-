@@ -81,7 +81,7 @@
                       Puedes ingresar a través del siguiente enlace para continuar con el proceso de recuperación de contraseña:
                     </h1>
 
-                    <a href="{{url('http://' . $data['url'])}}" style="margin:0; font-size:28px; text-decoration: none; padding: 15px 15px; border-radius: 4px; display: inline-block;">
+                    <a href="{{url($data['url'])}}" style="margin:0; font-size:28px; text-decoration: none; padding: 15px 15px; border-radius: 4px; display: inline-block;">
                       <span style="font-weight: bold; color: #4883BE; font-family: Helvetica">Haz click aquí</span>
                     </a>
 

@@ -29,7 +29,7 @@ class AuthController extends Controller
             'contrasena' => 'required',
         ], [
             'id_usuario.required' => 'El campo usuario es obligatorio',
-            'contrasena.required' => 'El campo contraseña es obligatorio',
+            'contrasena.required' => 'El campo contrasena es obligatorio',
         ]);
 
         if ($validator->fails()) {
@@ -50,8 +50,8 @@ class AuthController extends Controller
         try {
             $token = JWTAuth::attempt($credenciales);
             if (!$token) {
-                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => 'Contraseña incorrecta'), null);
-                $res = response()->json(['message' => 'Contraseña incorrecta', 'status' => false], 200);
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => 'Contrasena incorrecta'), null);
+                $res = response()->json(['message' => 'Contrasena incorrecta', 'status' => false], 200);
             } else {
                 $res = $this->createNewToken($token);
             }
@@ -168,7 +168,7 @@ class AuthController extends Controller
 
                 $detalle = [
                     'nombre' => $usuario_existe->nombre,
-                    'url' => '192.168.2.71:4200/public/login/restablecer/' . $valorEncriptado,
+                    'url' => env('VIEW_BASE') . '/public/login/restablecer/' . $valorEncriptado,
                 ];
 
                 Mail::to($usuario_existe->correo)->send(new Recuperar($detalle));
