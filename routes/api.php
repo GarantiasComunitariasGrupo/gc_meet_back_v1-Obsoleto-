@@ -255,7 +255,7 @@ Route::group([
     Route::post('/cancelar-representaciones', [Gcm_Acceso_Reunion_Controller::class, 'cancelarRepresentaciones']);
     Route::get('/get-avance-reunion/{id_convocado_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'getAvanceReunion']);
     Route::get('/get-listado-reuniones/{id_reunion}/{identificacion}', [Gcm_Acceso_Reunion_Controller::class, 'getListadoReuniones']);
-    Route::get('/get-tipo-convocado/{id_convocado_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'getTipoConvocado']);
+    // Route::get('/get-tipo-convocado/{id_convocado_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'getTipoConvocado']);
     Route::get('/get-programacion/{id_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'getProgramacion']);
     Route::post('/avanzar-paso', [Gcm_Acceso_Reunion_Controller::class, 'avanzarPrograma']);
     Route::post('/actualizar-estado-programa', [Gcm_Acceso_Reunion_Controller::class, 'actualizarEstadoPrograma']);
@@ -271,7 +271,7 @@ Route::group([
     Route::get('/get-opciones-seleccion/{id_programa}', [Gcm_Acceso_Reunion_Controller::class, 'getOpcionesSeleccion']);
     Route::get('/get-respuestas-reunion/{id_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'getRespuestasReunion']);
     Route::post('/finalizar-reunion', [Gcm_Acceso_Reunion_Controller::class, 'finalizarReunion']);
-
+    Route::get('/get-data-admin/{token}', [Gcm_Acceso_Reunion_Controller::class, 'getDataAdmin']);
 });
 
 Route::get('/buscar-archivos', function (Request $request) {

@@ -2,11 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Temporal\Encrypt;
+use App\Http\Classes\Encrypt;
 use App\Mail\Recuperar;
 use App\Models\Gcm_Usuario;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;

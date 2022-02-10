@@ -91,7 +91,7 @@
                         Puedes comenzar a través del siguiente enlace:
                     </h1>
 
-                    <a href="gcmeet.com/public/login"
+                    <a href="{{env('VIEW_BASE')}}/public/login"
                         style="margin:0; font-size:28px; text-decoration: none; padding: 15px 15px; color: #171717; border-radius: 4px; display: inline-block;">
                         <span style="font-weight: bold; color: #4883BE; font-family: Helvetica">Haz click aquí</span>
                     </a>

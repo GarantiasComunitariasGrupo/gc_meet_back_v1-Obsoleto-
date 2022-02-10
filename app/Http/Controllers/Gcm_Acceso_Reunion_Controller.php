@@ -810,33 +810,33 @@ class Gcm_Acceso_Reunion_Controller extends Controller
      * @param $idConvocadoReunion => id_convocado_reunion
      * @return JSON
      */
-    public function getTipoConvocado($idConvocadoReunion)
-    {
-        try {
+    // public function getTipoConvocado($idConvocadoReunion)
+    // {
+    //     try {
 
-            $response = array();
+    //         $response = array();
 
-            $base = DB::table('gcm_convocados_reunion AS gcr')
-                ->join('gcm_relaciones AS grc', 'gcr.id_relacion', '=', 'grc.id_relacion')
-                ->join('gcm_recursos AS grcs', 'grc.id_recurso', '=', 'grcs.id_recurso')
-                ->leftJoin('gcm_usuarios AS gu', 'grcs.identificacion', '=', 'gu.id_usuario')
-                ->where('id_convocado_reunion', $idConvocadoReunion)
-                ->where('gcr.estado', 1)
-                ->select(['*', DB::raw("IF(gu.id_usuario IS NULL, 'Convocado', 'Admin-Convocado') tipoAcceso")])
-                ->first();
+    //         $base = DB::table('gcm_convocados_reunion AS gcr')
+    //             ->join('gcm_relaciones AS grc', 'gcr.id_relacion', '=', 'grc.id_relacion')
+    //             ->join('gcm_recursos AS grcs', 'grc.id_recurso', '=', 'grcs.id_recurso')
+    //             ->leftJoin('gcm_usuarios AS gu', 'grcs.identificacion', '=', 'gu.id_usuario')
+    //             ->where('id_convocado_reunion', $idConvocadoReunion)
+    //             ->where('gcr.estado', 1)
+    //             ->select(['*', DB::raw("IF(gu.id_usuario IS NULL, 'Convocado', 'Admin-Convocado') tipoAcceso")])
+    //             ->first();
 
-            $response = array(
-                'ok' => ($base) ? true : false,
-                'response' => ($base) ? $base : 'No hay resultados',
-            );
+    //         $response = array(
+    //             'ok' => ($base) ? true : false,
+    //             'response' => ($base) ? $base : 'No hay resultados',
+    //         );
 
-            return response()->json($response, 200);
+    //         return response()->json($response, 200);
 
-        } catch (\Throwable $th) {
-            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
-            return response()->json(['ok' => false, 'response' => $th->getMessage()], 500);
-        }
-    }
+    //     } catch (\Throwable $th) {
+    //         Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
+    //         return response()->json(['ok' => false, 'response' => $th->getMessage()], 500);
+    //     }
+    // }
 
     /**
      * Función encargada de obtener la programación (orden del día) de una reunión
@@ -1238,6 +1238,21 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
             return response()->json($response, 200);
 
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
+            return response()->json(['ok' => false, 'response' => $th->getMessage()], 500);
+        }
+    }
+
+    public function getDataAdmin($token)
+    {
+        try {
+            $data = (new encrypt())->desencriptar($token);
+            $data = explode('|', $data);
+
+            if (count($data) !== 2) {return response()->json(['ok' => false, 'response' => 'Token incorrecto', "data" => $data], 200);}
+
+            return ["ok" => true, "response" => ["id_usuario" => $data[0], "id_reunion" => $data[1]]];
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage()], 500);

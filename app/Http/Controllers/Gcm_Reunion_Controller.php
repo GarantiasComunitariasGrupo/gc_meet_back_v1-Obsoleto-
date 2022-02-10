@@ -2,9 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App;
+use App\Http\Classes\Encrypt;
 use App\Http\Controllers\Gcm_Mail_Controller;
-use App\Http\Temporal\Encrypt;
 use App\Mail\ReunionCancelada;
 use App\Mail\ReunionReprogramada;
 use App\Mail\TestMail;
@@ -26,6 +25,7 @@ use Illuminate\Support\Facades\Validator;
 use Mpdf\Config\ConfigVariables;
 use Mpdf\Config\FontVariables;
 use Mpdf\Mpdf;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
 class Gcm_Reunion_Controller extends Controller
 {
@@ -72,6 +72,12 @@ class Gcm_Reunion_Controller extends Controller
                 ->orderBy('gcm_reuniones.estado', 'asc')
                 ->orderBy('gcm_reuniones.fecha_actualizacion', 'desc')
                 ->get();
+
+            $reuniones->map(function ($item) {
+                $item->token = (new Encrypt())->encriptar(JWTAuth::user()->id_usuario . '|' . $item->id_reunion); // Genera un token para el acceso del admin a la reunión
+                return $item;
+            });
+
             return response()->json($reuniones);
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
@@ -89,6 +95,15 @@ class Gcm_Reunion_Controller extends Controller
                 ->join('gcm_grupos', 'gcm_tipo_reuniones.id_grupo', '=', 'gcm_grupos.id_grupo')
                 ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo', 'gcm_tipo_reuniones.id_grupo', 'gcm_grupos.logo')
                 ->where([['id_reunion', $id_reunion], ['gcm_reuniones.estado', '!=', '4']])->get();
+
+            try {
+                JWTAuth::parseToken()->authenticate();
+                $reunion->map(function ($item) {
+                    $item->token = (new Encrypt())->encriptar(JWTAuth::user()->id_usuario . '|' . $item->id_reunion); // Genera un token para el acceso del admin a la reunión
+                    return $item;
+                });
+            } catch (\Throwable $th) {} // Cuando entra al catch es por que qien consulta es un convocado sin sesión iniciada
+
             return response()->json($reunion);
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
@@ -247,7 +262,7 @@ class Gcm_Reunion_Controller extends Controller
                     'fecha_reunion' => $reunion['fecha_reunion'],
                     'hora' => $reunion['hora'],
                     'programas' => $programas,
-                    'url' => 'gcmeet.com/public/acceso-reunion/acceso/' . $valorEncriptado,
+                    'url' => env('VIEW_BASE') . '/public/acceso-reunion/acceso/' . $valorEncriptado,
                 ];
                 Mail::to($request->correos[$i]['correo'])->send(new TestMail($detalle));
             }
@@ -408,7 +423,7 @@ class Gcm_Reunion_Controller extends Controller
                     'descripcion' => $reunion['descripcion'],
                     'fecha_reunion' => $request->fecha_reunion,
                     'hora' => $request->hora,
-                    'url' => 'gcmeet.com/public/acceso-reunion/acceso/' . $valorEncriptado,
+                    'url' => env('VIEW_BASE') . '/public/acceso-reunion/acceso/' . $valorEncriptado,
                 ];
                 Mail::to($convocados[$i]['correo'])->send(new ReunionReprogramada($detalle));
             }
