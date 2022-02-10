@@ -249,6 +249,25 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
     }
 
+    /** Si la persona que se elige como representante ha elegido otro representante significa se añade restricción */
+    public function getOtrasRestricciones($idConvocadoReunion, $identificacion)
+    {
+        $restricciones = DB::table('gcm_convocados_reunion AS gcr')
+            ->join('gcm_convocados_reunion AS gcr2', 'gcr.representacion', 'gcr2.id_convocado_reunion')
+            ->join('gcm_relaciones AS grl', 'grl.id_relacion', 'gcr2.id_relacion')
+            ->join('gcm_recursos AS grc', 'grc.id_recurso', 'grl.id_recurso')
+            ->where([['gcr.estado', 1], ['grc.identificacion', $identificacion], ['gcr.id_reunion', '=', function ($query) use ($idConvocadoReunion) {
+                $query->from('gcm_convocados_reunion')->where('id_convocado_reunion', $idConvocadoReunion)->select('id_reunion');
+            }]])->whereNotNull('gcr.representacion')->select('grc.identificacion');
+
+        $response = array(
+            'ok' => (count($restricciones->get()) > 0) ? true : false,
+            'response' => (count($restricciones->get()) > 0) ? [['descripcion' => 'No es posible designar a un representante que ha notificado la no asistencia a la reunión']] : ('No hay resultados' . $restricciones->toSql()),
+        );
+
+        return response()->json($response, 200);
+    }
+
     /**
      * Función encargada de enviar SMS con link para que el convocado pueda firmar
      * @param Request $request
@@ -294,7 +313,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
-            return response()->json(['ok' => false, 'response' => $th->getMessage()], 500);
+            return response()->json(['ok' => false, 'response' => $th->getMessage(), 'linea' => $th->getLine()], 500);
         }
 
     }
@@ -714,7 +733,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
             $reunion = DB::table('gcm_convocados_reunion AS gcr')
                 ->join('gcm_programacion AS gp', 'gcr.id_reunion', '=', 'gp.id_reunion')
-                ->where('id_convocado_reunion', $idConvocadoReunion)
+                ->where('gcr.id_convocado_reunion', $idConvocadoReunion)
                 ->where('gcr.estado', 1)
                 ->where('gp.estado', '!=', 4)
                 ->get();
@@ -748,6 +767,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
             $base = DB::table('gcm_convocados_reunion AS gcr')
                 ->join('gcm_reuniones AS grns', 'gcr.id_reunion', '=', 'grns.id_reunion')
+                ->join('gcm_tipo_reuniones AS gtr', 'gtr.id_tipo_reunion', '=', 'grns.id_tipo_reunion')
                 ->join('gcm_relaciones AS grc', 'gcr.id_relacion', '=', 'grc.id_relacion')
                 ->join('gcm_recursos AS grs', 'grc.id_recurso', '=', 'grs.id_recurso')
                 ->join('gcm_grupos AS ggps', 'grc.id_grupo', '=', 'ggps.id_grupo')
@@ -756,7 +776,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 ->where('gcr.estado', 1)
                 ->whereIn('grns.estado', [0, 1])
                 ->groupBy('grns.id_reunion')
-                ->select(['gcr.*', 'grns.*', 'grc.*', 'ggps.descripcion AS descripcion_grupo'])
+                ->select(['grns.descripcion', 'ggps.id_grupo', 'ggps.descripcion AS descripcion_grupo', 'grns.estado', 'grns.fecha_reunion', 'grns.hora', 'gcr.id_convocado_reunion', 'gtr.imagen', 'gtr.titulo'])
                 ->get();
 
             $response;
@@ -882,7 +902,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
-            return response()->json(["error" => $e->getMessage()], 500);
+            return response()->json(["error" => $th->getMessage(), "line" => $th->getLine()], 500);
         }
     }
 

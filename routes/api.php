@@ -243,6 +243,7 @@ Route::group([
     Route::get('/buscar-invitacion/{identificacion}', [Gcm_Acceso_Reunion_Controller::class, 'buscarInvitacion']);
     Route::get('/get-id-convocado/{identificacion}/{id_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'getIdConvocado']);
     Route::get('/get-restricciones/{id_convocado_reunion}/{identificacion}', [Gcm_Acceso_Reunion_Controller::class, 'getRestricciones']);
+    Route::get('/get-otras-restricciones/{id_convocado_reunion}/{identificacion}', [Gcm_Acceso_Reunion_Controller::class, 'getOtrasRestricciones']);
     Route::post('/enviar-sms', [Gcm_Acceso_Reunion_Controller::class, 'enviarSMS']);
     Route::post('/enviar-firma', [Gcm_Acceso_Reunion_Controller::class, 'enviarFirma']);
     Route::get('/permitir-firma/{id_convocado_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'permitirFirma']);
