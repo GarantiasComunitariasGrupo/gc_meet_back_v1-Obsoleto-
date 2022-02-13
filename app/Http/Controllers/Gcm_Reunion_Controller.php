@@ -960,9 +960,8 @@ class Gcm_Reunion_Controller extends Controller
                         $convocado->tipo = $convocados[$i]['tipo'];
                         $convocado->nit = $convocados[$i]['nit'];
                         $convocado->razon_social = $convocados[$i]['razon_social'];
-                        $convocado->participacion = null;
+                        $convocado->participacion = isset($convocados[$i]['participacion']) ? $convocados[$i]['participacion'] : null;
                         $convocado->soporte = null;
-                        $convocado->fecha_envio_invitacion = null;
                         $convocado->firma = 0;
                         $convocado->acta = 0;
                         $convocado->estado = 1;
@@ -991,11 +990,10 @@ class Gcm_Reunion_Controller extends Controller
                         $convocado->representacion = null;
                         $convocado->id_relacion = $relacion_nueva->id_relacion;
                         $convocado->tipo = $convocados[$i]['tipo'];
+                        $convocado->participacion = $convocados[$i]['tipo'] == 0 ? (isset($convocados[$i]['participacion']) ? $convocados[$i]['participacion'] : null) : null;
                         $convocado->nit = null;
                         $convocado->razon_social = null;
-                        $convocado->participacion = null;
                         $convocado->soporte = null;
-                        $convocado->fecha_envio_invitacion = null;
                         $convocado->firma = 0;
                         $convocado->acta = 0;
                         $convocado->estado = 1;
@@ -1148,9 +1146,8 @@ class Gcm_Reunion_Controller extends Controller
                         $convocado->tipo = $convocados[$i]['tipo'];
                         $convocado->nit = $convocados[$i]['nit'];
                         $convocado->razon_social = $convocados[$i]['razon_social'];
-                        $convocado->participacion = null;
+                        $convocado->participacion = isset($convocados[$i]['participacion']) ? $convocados[$i]['participacion'] : null;
                         $convocado->soporte = null;
-                        $convocado->fecha_envio_invitacion = null;
                         $convocado->firma = 0;
                         $convocado->acta = 0;
                         $convocado->estado = 1;
@@ -1182,9 +1179,8 @@ class Gcm_Reunion_Controller extends Controller
                         $convocado->tipo = $convocados[$i]['tipo'];
                         $convocado->nit = null;
                         $convocado->razon_social = null;
-                        $convocado->participacion = null;
+                        $convocado->participacion =  $convocados[$i]['tipo'] == 0 ? (isset($convocados[$i]['participacion']) ? $convocados[$i]['participacion'] : null) : null;
                         $convocado->soporte = null;
-                        $convocado->fecha_envio_invitacion = null;
                         $convocado->firma = 0;
                         $convocado->acta = 0;
                         $convocado->estado = 1;
