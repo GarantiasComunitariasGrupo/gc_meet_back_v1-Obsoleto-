@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Classes\Encrypt;
 use App\Http\Controllers\Gcm_Log_Acciones_Sistema_Controller;
 use App\Http\Controllers\Gcm_Mail_Controller;
+use App\Models\Gcm_Archivo_Programacion;
 use App\Models\Gcm_Asistencia_Reunion;
 use App\Models\Gcm_Convocado_Reunion;
 use App\Models\Gcm_Log_Accion_Sistema;
@@ -17,6 +18,7 @@ use App\Models\Gcm_Reunion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Validator;
 
 class Gcm_Acceso_Reunion_Controller extends Controller
 {
@@ -1194,6 +1196,217 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage()], 500);
         }
+    }
+
+    public function saveProgram(Request $request)
+    {
+        DB::beginTransaction();
+        try {
+            // Array de extensiones que se van a permitir en la inserción de archivos de la programación
+            $extensiones = array('PNG', 'JPG', 'JPEG', 'GIF', 'XLSX', 'CSV', 'PDF', 'DOCX', 'TXT', 'PPTX', 'SVG', 'PDF');
+
+            $validator = Validator::make($request->all(), [
+                'id_reunion' => 'required',
+                'titulo' => 'required|max:500',
+                'descripcion' => 'max:500',
+            ], [
+                'id_reunion.required' => '*Rellena este campo',
+                'titulo.required' => '*Rellena este campo',
+                'titulo.max' => '*Máximo 500 caracteres',
+                'descripcion.max' => '*Maximo 500 caracteres',
+            ]);
+
+            if ($validator->fails()) {
+                DB::rollback();
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1212), null);
+                return response()->json($validator->errors(), 422);
+            }
+
+            $this->liberarOrden($request->id_reunion, $request->orden);
+
+            // Registra la programación de una reunion
+            $programa_nuevo = new Gcm_Programacion;
+            $programa_nuevo->id_reunion = $this->stringNullToNull($request->id_reunion);
+            $programa_nuevo->titulo = $this->stringNullToNull($request->titulo);
+            $programa_nuevo->descripcion = $this->stringNullToNull($request->descripcion);
+            $programa_nuevo->orden = $request->orden;
+            $programa_nuevo->numeracion = $this->stringNullToNull($request->numeracion);
+            $programa_nuevo->tipo = $this->stringNullToNull($request->tipo);
+            $programa_nuevo->relacion = null;
+            $programa_nuevo->id_rol_acta = null;
+            $programa_nuevo->id_convocado_reunion = null;
+            $programa_nuevo->estado = $request->estado ? $request->estado : 0;
+
+            $programa_nuevo->save();
+
+            $picture = 0;
+
+            if ($request->hasFile('file')) {
+                $request['file'] = array_values($request['file']);
+
+                $subcarpeta = 'archivos_reunion/' . $request->id_reunion;
+                $carpeta = 'storage/app/public/' . $subcarpeta;
+
+                if (!file_exists($carpeta)) {
+                    mkdir($carpeta, 0777, true);
+                }
+
+                for ($j = 0; $j < count($request['file']); $j++) {
+
+                    $archivo_nuevo = new Gcm_Archivo_Programacion();
+                    $file = $request['file'][$j];
+                    $extension = $file->getClientOriginalExtension();
+
+                    if (in_array(strtoupper($extension), $extensiones)) {
+                        $archivo_nuevo->id_programa = $programa_nuevo->id_programa;
+                        $archivo_nuevo->descripcion = $file->getClientOriginalName();
+                        $archivo_nuevo->peso = filesize($file);
+                        $picture = substr(md5(microtime()), rand(0, 31 - 8), 8) . '.' . $extension;
+                        $archivo_nuevo->url = $subcarpeta . '/' . $picture;
+                        $file->move(storage_path('app/public/archivos_reunion/' . $request->id_reunion), $picture);
+                        chmod(storage_path('app/public/archivos_reunion/' . $request->id_reunion . '/' . $picture), 0777);
+
+                        $archivo_nuevo->save();
+                    } else {
+                        DB::rollback();
+                        Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => 'La extensión del archivo no es permitida'), null);
+                        return response()->json(['error' => 'La extensión del archivo no es permitida'], 500);
+                    }
+                }
+
+            }
+
+            if (isset($request['file_viejo'])) {
+                $request['file_viejo'] = array_values($request['file_viejo']);
+                for ($j = 0; $j < count($request['file_viejo']); $j++) {
+                    $archivo_nuevo = new Gcm_Archivo_Programacion;
+                    $file = json_decode($request['file_viejo'][$j]);
+                    $archivo_nuevo->id_programa = $programa_nuevo->id_programa;
+                    $archivo_nuevo->descripcion = $file->name;
+                    $archivo_nuevo->peso = $file->size;
+                    $archivo_nuevo->url = $file->url;
+                    $archivo_nuevo->save();
+                }
+            }
+
+            // Valida que si vengan opciones para registrar
+            if (isset($request['opcion_titulo'])) {
+
+                for ($j = 0; $j < count($request['opcion_titulo']); $j++) {
+
+                    $validator = Validator::make($request->all(), [
+                        'titulo' => 'required|max:500',
+                        'descripcion' => 'max:500',
+                    ], [
+                        'titulo.required' => '*Rellena este campo',
+                        'titulo.max' => '*Máximo 500 caracteres',
+                        'descripcion.max' => '*Maximo 500 caracteres',
+                    ]);
+
+                    if ($validator->fails()) {
+                        DB::rollback();
+                        Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1296), null);
+                        return response()->json($validator->errors(), 422);
+                    }
+
+                    // Registra las opciones
+                    $opcion_nueva = new Gcm_Programacion;
+                    $opcion_nueva->id_reunion = $this->stringNullToNull($request->id_reunion);
+                    $opcion_nueva->titulo = $this->stringNullToNull($request['opcion_titulo'][$j]);
+                    $opcion_nueva->descripcion = $this->stringNullToNull($request['opcion_descripcion'][$j]);
+                    $opcion_nueva->orden = $j + 1;
+                    $opcion_nueva->numeracion = 1;
+                    $opcion_nueva->tipo = 0;
+                    $opcion_nueva->relacion = $this->stringNullToNull($programa_nuevo->id_programa);
+                    $opcion_nueva->id_rol_acta = null;
+                    $opcion_nueva->id_convocado_reunion = null;
+                    $opcion_nueva->estado = $request['opcion_estado'][$j] ? $request['opcion_estado'][$j] : 0;
+
+                    $opcion_nueva->save();
+
+                    $picture = 0;
+
+                    if ($request->hasFile('opcion_file_' . $j)) {
+                        $request['opcion_file_' . $j] = array_values($request['opcion_file_' . $j]);
+
+                        $subcarpeta = 'archivos_reunion/' . $programa_nuevo->id_reunion;
+                        $carpeta = 'storage/app/public/' . $subcarpeta;
+
+                        if (!file_exists($carpeta)) {
+                            mkdir($carpeta, 0777, true);
+                        }
+
+                        for ($k = 0; $k < count($request['opcion_file_' . $j]); $k++) {
+
+                            $archivo_opcion_nuevo = new Gcm_Archivo_Programacion;
+                            $opcion_file = $request['opcion_file_' . $j][$k];
+                            $opcion_extension = $opcion_file->getClientOriginalExtension();
+
+                            if (in_array(strtoupper($opcion_extension), $extensiones)) {
+                                $archivo_opcion_nuevo->id_programa = $opcion_nueva->id_programa;
+                                $archivo_opcion_nuevo->descripcion = $opcion_file->getClientOriginalName();
+                                $archivo_opcion_nuevo->peso = filesize($opcion_file);
+                                $picture = substr(md5(microtime()), rand(0, 31 - 8), 8) . '.' . $opcion_extension;
+                                $archivo_opcion_nuevo->url = $subcarpeta . '/' . $picture;
+                                $opcion_file->move(storage_path('app/public/archivos_reunion/' . $programa_nuevo->id_reunion), $picture);
+                                chmod(storage_path('app/public/archivos_reunion/' . $programa_nuevo->id_reunion . '/' . $picture), 0777);
+
+                                $archivo_opcion_nuevo->save();
+                            } else {
+                                DB::rollback();
+                                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => 'La extensión del archivo no es permitida'), null);
+                                return response()->json(['error' => 'La extensión del archivo no es permitida'], 500);
+                            }
+                        }
+                    }
+
+                    if (isset($request['opcion_file_viejo_' . $j])) {
+                        $request['opcion_file_viejo_' . $j] = array_values($request['opcion_file_viejo_' . $j]);
+                        for ($k = 0; $k < count($request['opcion_file_viejo_' . $j]); $k++) {
+                            $archivo_opcion_nuevo = new Gcm_Archivo_Programacion;
+                            $opcion_file = json_decode($request['opcion_file_viejo_' . $j][$k]);
+                            $archivo_opcion_nuevo->id_programa = $opcion_nueva->id_programa;
+                            $archivo_opcion_nuevo->descripcion = $opcion_file->name;
+                            $archivo_opcion_nuevo->peso = $opcion_file->size;
+                            $archivo_opcion_nuevo->url = $opcion_file->url;
+                            $archivo_opcion_nuevo->save();
+                        }
+                    }
+                }
+            }
+
+            return response()->json(['status' => true, 'message' => 'Programa agregado correctamente'], 200);
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
+            return response()->json(['status' => false, 'message' => $th->getMessage() . ' - ' . $th->getLine()], 200);
+        }
+    }
+
+    public function liberarOrden($id_reunion, $ordenTarget)
+    {
+        try {
+            $program = Gcm_Programacion::where([['estado', '!=', 3], ['orden', $ordenTarget], ['id_reunion', $id_reunion]])
+                ->whereNull('relacion')->first();
+            if ($program) {
+                $this->liberarOrden($id_reunion, $ordenTarget + 1);
+                $program->orden = $ordenTarget + 1;
+                $program->save();
+            }
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
+            return response()->json(['status' => false, 'message' => $th->getMessage() . ' - ' . $th->getLine()], 200);
+        }
+    }
+
+    /**
+     * Valida si un valor es 'null' o 'undefined' y lo convierte a null, de lo contrario devuelve el valor original
+     *
+     * @param [type] $val Valor a revisar
+     * @return void Valor null o el original
+     */
+    public function stringNullToNull($val)
+    {
+        return in_array($val, ['null', 'undefined']) ? null : $val;
     }
 
 }
