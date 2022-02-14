@@ -11,7 +11,7 @@ class Gcm_Respuesta_Convocado extends ModelWithEvents
     use HasFactory;
 
     protected $table = 'gcm_respuestas_convocados';
-    protected $primaryKey = ['id_convocado_reunion', 'id_programa'];
+    protected $primaryKey = 'id_programa';
     public $timestamps = false;
     public $incrementing = false;
 

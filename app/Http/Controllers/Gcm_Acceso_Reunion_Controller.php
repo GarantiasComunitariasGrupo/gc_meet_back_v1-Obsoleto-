@@ -806,54 +806,27 @@ class Gcm_Acceso_Reunion_Controller extends Controller
     }
 
     /**
-     * Función encargada de obtener el tipo de acceso de un convocado: Convocado/Admin-Convocado
-     * @param $idConvocadoReunion => id_convocado_reunion
-     * @return JSON
-     */
-    // public function getTipoConvocado($idConvocadoReunion)
-    // {
-    //     try {
-
-    //         $response = array();
-
-    //         $base = DB::table('gcm_convocados_reunion AS gcr')
-    //             ->join('gcm_relaciones AS grc', 'gcr.id_relacion', '=', 'grc.id_relacion')
-    //             ->join('gcm_recursos AS grcs', 'grc.id_recurso', '=', 'grcs.id_recurso')
-    //             ->leftJoin('gcm_usuarios AS gu', 'grcs.identificacion', '=', 'gu.id_usuario')
-    //             ->where('id_convocado_reunion', $idConvocadoReunion)
-    //             ->where('gcr.estado', 1)
-    //             ->select(['*', DB::raw("IF(gu.id_usuario IS NULL, 'Convocado', 'Admin-Convocado') tipoAcceso")])
-    //             ->first();
-
-    //         $response = array(
-    //             'ok' => ($base) ? true : false,
-    //             'response' => ($base) ? $base : 'No hay resultados',
-    //         );
-
-    //         return response()->json($response, 200);
-
-    //     } catch (\Throwable $th) {
-    //         Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
-    //         return response()->json(['ok' => false, 'response' => $th->getMessage()], 500);
-    //     }
-    // }
-
-    /**
      * Función encargada de obtener la programación (orden del día) de una reunión
      * @param $id_reunion => id_reunion
      * @return JSON
      */
-    public function getProgramacion($id_reunion)
+    public function getProgramacion($id_reunion, $id_convocado_reunion)
     {
         try {
+
+            $respose = Gcm_Respuesta_Convocado::where('id_convocado_reunion', $id_convocado_reunion)->select();
+
             //toma todos los datos de programacion sin importar si tiene o no archivos
             $base = Gcm_Programacion::leftJoin('gcm_archivos_programacion', 'gcm_archivos_programacion.id_programa', '=', 'gcm_programacion.id_programa')
-                ->select(
-                    'gcm_programacion.*',
-                    DB::raw('GROUP_CONCAT(gcm_archivos_programacion.descripcion SEPARATOR "|") AS descripciones_archivos'),
-                    DB::raw('GROUP_CONCAT(gcm_archivos_programacion.peso SEPARATOR "|") AS pesos_archivos'),
-                    DB::raw('GROUP_CONCAT(gcm_archivos_programacion.url SEPARATOR "|") AS url_archivos')
-                )->where([['id_reunion', $id_reunion], ['estado', '!=', '4']])
+                ->leftJoinSub($respose, 'rsc', function ($join) {
+                    $join->on('rsc.id_programa', '=', 'gcm_programacion.id_programa');
+                })->select(
+                'gcm_programacion.*',
+                DB::raw('GROUP_CONCAT(gcm_archivos_programacion.descripcion SEPARATOR "|") AS descripciones_archivos'),
+                DB::raw('GROUP_CONCAT(gcm_archivos_programacion.peso SEPARATOR "|") AS pesos_archivos'),
+                DB::raw('GROUP_CONCAT(gcm_archivos_programacion.url SEPARATOR "|") AS url_archivos'),
+                'rsc.descripcion as response')
+                ->where([['id_reunion', $id_reunion], ['estado', '!=', '4']])
                 ->groupBy('gcm_programacion.id_programa')->get()->toArray();
 
             $base = array_map(function ($item) {
@@ -927,110 +900,6 @@ class Gcm_Acceso_Reunion_Controller extends Controller
     }
 
     /**
-     * Función encargada de registrar la respuesta para el programa tipo: VOTACIÓN
-     * @param Request $request => [id_convocado_reunion, id_programa, tipo]
-     * @return JSON
-     */
-    public function votacion(Request $request)
-    {
-        try {
-
-            $store = DB::table('gcm_respuestas_convocados')->insert([
-                'id_convocado_reunion' => $request->id_convocado_reunion,
-                'id_programa' => $request->id_programa,
-                'descripcion' => json_encode(['votacion' => (+$request->tipo === 1) ? 'true' : 'false']),
-            ]);
-
-            return response()->json([
-                'ok' => ($store) ? true : false,
-                'response' => ($store) ? 'Voto registrado correctamente' : 'Error guardando voto',
-            ]);
-
-        } catch (\Throwable $th) {
-            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
-            return response()->json(['ok' => false, 'response' => $th->getMessage()], 500);
-        }
-    }
-
-    /**
-     * Función encargada de registrar la respuesta para el programa tipo: ENTRADA DE TEXTO
-     * @param Request $request => [id_convocado_reunion, id_programa, texto]
-     * @return JSON
-     */
-    public function entradaTexto(Request $request)
-    {
-        try {
-
-            $store = DB::table('gcm_respuestas_convocados')->insert([
-                'id_convocado_reunion' => $request->id_convocado_reunion,
-                'id_programa' => $request->id_programa,
-                'descripcion' => json_encode(['texto' => $request->texto]),
-            ]);
-
-            return response()->json([
-                'ok' => ($store) ? true : false,
-                'response' => ($store) ? 'Voto registrado correctamente' : 'Error guardando voto',
-            ]);
-
-        } catch (\Throwable $th) {
-            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
-            return response()->json(['ok' => false, 'response' => $th->getMessage()], 500);
-        }
-    }
-
-    /**
-     * Función encargada de registrar la respuesta para el programa tipo: SELECCIÓN ÚNICA
-     * @param Request $request => [id_convocado_reunion, id_programa, seleccion]
-     * @return JSON
-     */
-    public function seleccionUnica(Request $request)
-    {
-        try {
-
-            $store = DB::table('gcm_respuestas_convocados')->insert([
-                'id_convocado_reunion' => $request->id_convocado_reunion,
-                'id_programa' => $request->id_programa,
-                'descripcion' => json_encode(['seleccion' => $request->seleccion]),
-            ]);
-
-            return response()->json([
-                'ok' => ($store) ? true : false,
-                'response' => ($store) ? 'Voto registrado correctamente' : 'Error guardando voto',
-            ]);
-
-        } catch (\Throwable $th) {
-            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
-            return response()->json(['ok' => false, 'response' => $th->getMessage()], 500);
-        }
-    }
-
-    /**
-     * Función encargada de registrar la respuesta para el programa tipo: SELECCIÓN MÚLTIPLE
-     * @param Request $request => [id_convocado_reunion, id_programa, seleccion]
-     * @return JSON
-     */
-    public function seleccionMultiple(Request $request)
-    {
-        try {
-
-            $store = DB::table('gcm_respuestas_convocados')->insert([
-                'id_convocado_reunion' => $request->id_convocado_reunion,
-                'id_programa' => $request->id_programa,
-                'descripcion' => json_encode(['seleccion' => $request->seleccion]),
-            ]);
-
-            return response()->json([
-                'ok' => ($store) ? true : false,
-                'response' => ($store) ? 'Voto registrado correctamente' : 'Error guardando voto',
-            ]);
-
-        } catch (\Throwable $th) {
-            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
-            return response()->json(['ok' => false, 'response' => $th->getMessage()], 500);
-        }
-    }
-
-    /**
      * Función encargada de obtener las respuestas registradas por un convocado
      * @param $id_convocado_reunion => id_convocado_reunion
      * @return JSON
@@ -1088,6 +957,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                     DB::raw('grl.descripcion AS rol'),
                     'grc.id_grupo',
                     'gcr.id_convocado_reunion',
+                    'gcr.tipo',
                     'gcr.nit',
                     'gcr.razon_social',
                     'gcr.participacion',
@@ -1203,19 +1073,14 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             $base = DB::table('gcm_programacion AS gp')
                 ->join('gcm_respuestas_convocados AS grc', 'gp.id_programa', '=', 'grc.id_programa')
                 ->where('id_reunion', $id_reunion)
-                ->select(['grc.*', DB::raw('IF(gp.relacion IS NULL, false, true) AS isChild'), 'gp.tipo'])
+                ->select(['grc.*', 'gp.tipo'])
                 ->get();
 
-            $response = array(
-                'ok' => (count($base) > 0) ? true : false,
-                'response' => (count($base) > 0) ? $base : 'No hay resultados',
-            );
-
-            return response()->json($response, 200);
+            return response()->json(['status' => true, 'message' => $base], 200);
 
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
-            return response()->json(['ok' => false, 'response' => $th->getMessage()], 500);
+            return response()->json(['status' => false, 'message' => $th->getMessage() . ' - ' . $th->getLine()], 500);
         }
     }
 
@@ -1256,6 +1121,41 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage()], 500);
+        }
+    }
+
+    public function answerQuestion(Request $request)
+    {
+        DB::beginTransaction();
+        try {
+
+            if (!isset($request->convocatoria)) {throw new \Error("answerQuestion: {convocatoria} es requerido", 1);}
+            if (!isset($request->id_programa)) {throw new \Error("answerQuestion: {id_programa} es requerido", 1);}
+            if (!isset($request->response)) {throw new \Error("answerQuestion: {response} es requerido", 1);}
+
+            foreach ($request->convocatoria as $id_convocado_reunion) {
+                $summoned = Gcm_Convocado_Reunion::where('id_convocado_reunion', $id_convocado_reunion)->first();
+
+                if ($summoned && +$summoned->tipo !== 1) {
+                    $hasAnswered = Gcm_Respuesta_Convocado::where([['id_convocado_reunion', $id_convocado_reunion], ['id_programa', $request->id_programa]])->first();
+                    if ($hasAnswered) {throw new \Error("answerQuestion: No es posible responder de nuevo a la misma pregunta", 1);}
+
+                    $response = new Gcm_Respuesta_Convocado();
+                    $response->id_convocado_reunion = $id_convocado_reunion;
+                    $response->id_programa = $request->id_programa;
+                    $response->descripcion = $request->response;
+
+                    $response->save(); # code...
+                }
+
+            }
+            DB::commit();
+
+            return response()->json(['status' => true, 'message' => 'Guardado correctamente'], 200);
+        } catch (\Throwable $th) {
+            DB::rollback();
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
+            return response()->json(['status' => false, 'message' => $th->getMessage() . ' - ' . $th->getLine()], 200);
         }
     }
 
