@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 class CrearGcmReunionesTabla extends Migration
 {
@@ -18,7 +19,7 @@ class CrearGcmReunionesTabla extends Migration
             $table->unsignedBigInteger('id_tipo_reunion');
             $table->foreign('id_tipo_reunion')->references('id_tipo_reunion')->on('gcm_tipo_reuniones');
             $table->string('descripcion', 5000)->nullable();
-            $table->timestampTz('fecha_actualizacion', $precision = 0);
+            $table->timestamp('fecha_actualizacion', $precision = 0)->default(DB::raw('CURRENT_TIMESTAMP'));
             $table->date('fecha_reunion')->required();
             $table->time('hora')->required();
             $table->string('quorum', 2)->index()->required();
