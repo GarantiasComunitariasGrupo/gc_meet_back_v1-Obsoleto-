@@ -824,6 +824,8 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                     $join->on('rsc.id_programa', '=', 'gcm_programacion.id_programa');
                 })->select(
                 'gcm_programacion.*',
+                DB::raw('GROUP_CONCAT(gcm_archivos_programacion.id_archivo_programacion SEPARATOR "|") AS id_archivo_programacion_archivos'),
+                DB::raw('GROUP_CONCAT(gcm_archivos_programacion.id_programa SEPARATOR "|") AS id_programas_archivos'),
                 DB::raw('GROUP_CONCAT(gcm_archivos_programacion.descripcion SEPARATOR "|") AS descripciones_archivos'),
                 DB::raw('GROUP_CONCAT(gcm_archivos_programacion.peso SEPARATOR "|") AS pesos_archivos'),
                 DB::raw('GROUP_CONCAT(gcm_archivos_programacion.url SEPARATOR "|") AS url_archivos'),
@@ -835,19 +837,25 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 $item['archivos'] = [];
                 if (!empty($item['descripciones_archivos'])) {
                     $descripcionesArchivo = explode('|', $item['descripciones_archivos']);
+                    $idArchivo = explode('|', $item['id_archivo_programacion_archivos']);
+                    $idPrograma = explode('|', $item['id_programas_archivos']);
                     $pesosArchivo = explode('|', $item['pesos_archivos']);
                     $urlArchivo = explode('|', $item['url_archivos']);
 
                     for ($i = 0; $i < count($descripcionesArchivo); $i++) {
                         array_push($item['archivos'], [
+                            "id_archivo_programacion" => $idArchivo[$i],
                             "descripcion" => $descripcionesArchivo[$i],
+                            "id_programa" => $idPrograma[$i],
                             "peso" => $pesosArchivo[$i],
                             "url" => $urlArchivo[$i],
                         ]);
                     }
                 }
 
+                unset($item['id_archivo_programacion_archivos']);
                 unset($item['descripciones_archivos']);
+                unset($item['id_programas_archivos']);
                 unset($item['pesos_archivos']);
                 unset($item['url_archivos']);
 
@@ -1200,6 +1208,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
     public function saveProgram(Request $request)
     {
+
         DB::beginTransaction();
         try {
             // Array de extensiones que se van a permitir en la inserción de archivos de la programación
@@ -1222,10 +1231,16 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 return response()->json($validator->errors(), 422);
             }
 
-            $this->liberarOrden($request->id_reunion, $request->orden);
+            if (!$request->id_programa) {
+                $this->liberarOrden($request->id_reunion, $request->orden);
+            }
 
             // Registra la programación de una reunion
             $programa_nuevo = new Gcm_Programacion;
+            if ($this->stringNullToNull($request->id_programa) !== null) {
+                $programa_nuevo = Gcm_Programacion::find($request->id_programa);
+                if (!$programa_nuevo) {throw new \Error("El programa no existe", 1);}
+            }
             $programa_nuevo->id_reunion = $this->stringNullToNull($request->id_reunion);
             $programa_nuevo->titulo = $this->stringNullToNull($request->titulo);
             $programa_nuevo->descripcion = $this->stringNullToNull($request->descripcion);
@@ -1240,6 +1255,17 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             $programa_nuevo->save();
 
             $picture = 0;
+
+            $fileList = isset($request['file_viejo']) ? array_map(function ($data) {
+                return json_decode($data)->id_archivo_programacion;
+            }, $request['file_viejo']) : [];
+
+            $removedFileList = Gcm_Archivo_Programacion::where('id_programa', $programa_nuevo->id_programa)
+                ->whereNotIn('id_archivo_programacion', $fileList)->get();
+
+            $removedFileList->each(function ($fileToRemove) {
+                $fileToRemove->delete();
+            });
 
             if ($request->hasFile('file')) {
                 $request['file'] = array_values($request['file']);
@@ -1279,8 +1305,14 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             if (isset($request['file_viejo'])) {
                 $request['file_viejo'] = array_values($request['file_viejo']);
                 for ($j = 0; $j < count($request['file_viejo']); $j++) {
-                    $archivo_nuevo = new Gcm_Archivo_Programacion;
                     $file = json_decode($request['file_viejo'][$j]);
+
+                    $archivo_nuevo = new Gcm_Archivo_Programacion;
+                    if ($this->stringNullToNull($file->id_archivo_programacion) !== null) {
+                        $archivo_nuevo = Gcm_Archivo_Programacion::find($file->id_archivo_programacion);
+                        if (!$archivo_nuevo) {throw new \Error("El archivo no existe", 1);}
+                    }
+
                     $archivo_nuevo->id_programa = $programa_nuevo->id_programa;
                     $archivo_nuevo->descripcion = $file->name;
                     $archivo_nuevo->peso = $file->size;
@@ -1288,6 +1320,17 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                     $archivo_nuevo->save();
                 }
             }
+
+            $optionList = isset($request['opcion_id_programa']) ? array_values(
+                array_filter($request['opcion_id_programa'], function ($data) {return $this->stringNullToNull($data) !== null;})
+            ) : [];
+
+            $removedOptionList = Gcm_Programacion::where('relacion', $programa_nuevo->id_programa)
+                ->whereNotIn('id_programa', $optionList)->get();
+
+            $removedOptionList->each(function ($optionToRemove) {
+                $optionToRemove->delete();
+            });
 
             // Valida que si vengan opciones para registrar
             if (isset($request['opcion_titulo'])) {
@@ -1311,6 +1354,11 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
                     // Registra las opciones
                     $opcion_nueva = new Gcm_Programacion;
+                    if ($this->stringNullToNull($request['opcion_id_programa'][$j]) !== null) {
+                        $opcion_nueva = Gcm_Programacion::find($request['opcion_id_programa'][$j]);
+                        if (!$opcion_nueva) {throw new \Error("La opción no existe", 1);}
+                    }
+
                     $opcion_nueva->id_reunion = $this->stringNullToNull($request->id_reunion);
                     $opcion_nueva->titulo = $this->stringNullToNull($request['opcion_titulo'][$j]);
                     $opcion_nueva->descripcion = $this->stringNullToNull($request['opcion_descripcion'][$j]);
@@ -1325,6 +1373,17 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                     $opcion_nueva->save();
 
                     $picture = 0;
+
+                    $optionFileList = isset($request['opcion_file_viejo_' . $j]) ? array_map(function ($data) {
+                        return json_decode($data)->id_archivo_programacion;
+                    }, $request['opcion_file_viejo_' . $j]) : [];
+
+                    $removedOptionFileList = Gcm_Archivo_Programacion::where('id_programa', $opcion_nueva->id_programa)
+                        ->whereNotIn('id_archivo_programacion', $optionFileList)->get();
+
+                    $removedOptionFileList->each(function ($optionFileToRemove) {
+                        $optionFileToRemove->delete();
+                    });
 
                     if ($request->hasFile('opcion_file_' . $j)) {
                         $request['opcion_file_' . $j] = array_values($request['opcion_file_' . $j]);
@@ -1363,8 +1422,14 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                     if (isset($request['opcion_file_viejo_' . $j])) {
                         $request['opcion_file_viejo_' . $j] = array_values($request['opcion_file_viejo_' . $j]);
                         for ($k = 0; $k < count($request['opcion_file_viejo_' . $j]); $k++) {
-                            $archivo_opcion_nuevo = new Gcm_Archivo_Programacion;
                             $opcion_file = json_decode($request['opcion_file_viejo_' . $j][$k]);
+
+                            $archivo_opcion_nuevo = new Gcm_Archivo_Programacion;
+                            if ($this->stringNullToNull($opcion_file->id_archivo_programacion) !== null) {
+                                $archivo_opcion_nuevo = Gcm_Archivo_Programacion::find($opcion_file->id_archivo_programacion);
+                                if (!$archivo_opcion_nuevo) {throw new \Error("El archivo de la opción no existe", 1);}
+                            }
+
                             $archivo_opcion_nuevo->id_programa = $opcion_nueva->id_programa;
                             $archivo_opcion_nuevo->descripcion = $opcion_file->name;
                             $archivo_opcion_nuevo->peso = $opcion_file->size;
@@ -1375,8 +1440,11 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 }
             }
 
+            DB::commit();
+
             return response()->json(['status' => true, 'message' => 'Programa agregado correctamente'], 200);
         } catch (\Throwable $th) {
+            DB::rollBack();
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['status' => false, 'message' => $th->getMessage() . ' - ' . $th->getLine()], 200);
         }
