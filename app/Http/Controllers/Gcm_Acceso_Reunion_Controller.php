@@ -1605,8 +1605,9 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             $convocado->razon_social = $request->tipo == '2' ? $request->razon_social : null;
             $convocado->participacion = ($request->tipo == '2' || $request->tipo == 0) ? (isset($request->participacion) ? $request->participacion : null) : null;
             $convocado->soporte = null;
-            $convocado->firma = 0;
-            $convocado->acta = 0;
+            $convocado->fecha_envio_invitacion = null;
+            $convocado->firma = $request->firma;
+            $convocado->acta = $request->acta;
             $convocado->estado = 1;
 
             $convocado->save();

@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App;
 use App\Http\Classes\Encrypt;
-use App\Http\Controllers\Gcm_Mail_Controller;
 use App\Mail\ReunionCancelada;
 use App\Mail\ReunionReprogramada;
 use App\Mail\TestMail;
@@ -14,6 +14,7 @@ use App\Models\Gcm_Programacion;
 use App\Models\Gcm_Recurso;
 use App\Models\Gcm_Relacion;
 use App\Models\Gcm_Reunion;
+use App\Models\Gcm_Rol_Acta;
 use App\Models\Gcm_Rol;
 use App\Models\Gcm_Tipo_Reunion;
 use Illuminate\Http\Request;
@@ -105,6 +106,20 @@ class Gcm_Reunion_Controller extends Controller
             } catch (\Throwable $th) {} // Cuando entra al catch es por que qien consulta es un convocado sin sesión iniciada
 
             return response()->json($reunion);
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
+            return response()->json(["error" => $th->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Trae todos los roles actas registrados
+     */
+    public function getRolesActas()
+    {
+        try {
+            $rolesActas = Gcm_Rol_Acta::where('estado', '1')->get();
+            return response()->json($rolesActas);
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
             return response()->json(["error" => $th->getMessage()], 500);
@@ -327,6 +342,7 @@ class Gcm_Reunion_Controller extends Controller
         $id_reunion = $request->id_reunion;
 
         try {
+            $id_reunion = $request->id_reunion;
             $convocados = $request->convocados;
             $reunion = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
                 ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo')
@@ -953,17 +969,21 @@ class Gcm_Reunion_Controller extends Controller
                             return response()->json($validator->errors(), 422);
                         }
 
+                        $fechaActual = date('Y-m-d H:i:s');
+
                         $convocado = new Gcm_Convocado_Reunion;
                         $convocado->id_reunion = $id_reunion;
                         $convocado->representacion = null;
                         $convocado->id_relacion = $relacion_nueva->id_relacion;
+                        $convocado->fecha = $fechaActual;
                         $convocado->tipo = $convocados[$i]['tipo'];
                         $convocado->nit = $convocados[$i]['nit'];
                         $convocado->razon_social = $convocados[$i]['razon_social'];
                         $convocado->participacion = isset($convocados[$i]['participacion']) ? $convocados[$i]['participacion'] : null;
                         $convocado->soporte = null;
-                        $convocado->firma = 0;
-                        $convocado->acta = 0;
+                        $convocado->fecha_envio_invitacion = null;
+                        $convocado->firma = $convocados[$i]['firma'];
+                        $convocado->acta = $convocados[$i]['acta'];
                         $convocado->estado = 1;
 
                         $response = $convocado->save();
@@ -981,21 +1001,25 @@ class Gcm_Reunion_Controller extends Controller
 
                         if ($validator->fails()) {
                             DB::rollback();
-                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 965), null);
+                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 969), null);
                             return response()->json($validator->errors(), 422);
                         }
+
+                        $fechaActual = date('Y-m-d H:i:s');
 
                         $convocado = new Gcm_Convocado_Reunion;
                         $convocado->id_reunion = $id_reunion;
                         $convocado->representacion = null;
                         $convocado->id_relacion = $relacion_nueva->id_relacion;
+                        $convocado->fecha = $fechaActual;
                         $convocado->tipo = $convocados[$i]['tipo'];
                         $convocado->participacion = $convocados[$i]['tipo'] == 0 ? (isset($convocados[$i]['participacion']) ? $convocados[$i]['participacion'] : null) : null;
                         $convocado->nit = null;
                         $convocado->razon_social = null;
                         $convocado->soporte = null;
-                        $convocado->firma = 0;
-                        $convocado->acta = 0;
+                        $convocado->fecha_envio_invitacion = null;
+                        $convocado->firma = $convocados[$i]['firma'];
+                        $convocado->acta = $convocados[$i]['acta'];
                         $convocado->estado = 1;
 
                         $response = $convocado->save();
@@ -1022,7 +1046,7 @@ class Gcm_Reunion_Controller extends Controller
 
                     if ($validator->fails()) {
                         DB::rollback();
-                        Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1007), null);
+                        Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1011), null);
                         return response()->json($validator->errors(), 422);
                     }
 
@@ -1050,7 +1074,7 @@ class Gcm_Reunion_Controller extends Controller
 
                         if ($validator->fails()) {
                             DB::rollback();
-                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1035), null);
+                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1039), null);
                             return response()->json($validator->errors(), 422);
                         }
 
@@ -1082,7 +1106,7 @@ class Gcm_Reunion_Controller extends Controller
 
                             if ($validator->fails()) {
                                 DB::rollback();
-                                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1067), null);
+                                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1071), null);
                                 return response()->json($validator->errors(), 422);
                             }
 
@@ -1135,21 +1159,25 @@ class Gcm_Reunion_Controller extends Controller
 
                         if ($validator->fails()) {
                             DB::rollback();
-                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1120), null);
+                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1124), null);
                             return response()->json($validator->errors(), 422);
                         }
+
+                        $fechaActual = date('Y-m-d H:i:s');
 
                         $convocado = new Gcm_Convocado_Reunion;
                         $convocado->id_reunion = $id_reunion;
                         $convocado->representacion = null;
                         $convocado->id_relacion = $relacion_nueva->id_relacion;
+                        $convocado->fecha = $fechaActual;
                         $convocado->tipo = $convocados[$i]['tipo'];
                         $convocado->nit = $convocados[$i]['nit'];
                         $convocado->razon_social = $convocados[$i]['razon_social'];
                         $convocado->participacion = isset($convocados[$i]['participacion']) ? $convocados[$i]['participacion'] : null;
                         $convocado->soporte = null;
-                        $convocado->firma = 0;
-                        $convocado->acta = 0;
+                        $convocado->fecha_envio_invitacion = null;
+                        $convocado->firma = $convocados[$i]['firma'];
+                        $convocado->acta = $convocados[$i]['acta'];
                         $convocado->estado = 1;
 
                         $response = $convocado->save();
@@ -1168,21 +1196,25 @@ class Gcm_Reunion_Controller extends Controller
 
                         if ($validator->fails()) {
                             DB::rollback();
-                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1154), null);
+                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1158), null);
                             return response()->json($validator->errors(), 422);
                         }
+
+                        $fechaActual = date('Y-m-d H:i:s');
 
                         $convocado = new Gcm_Convocado_Reunion;
                         $convocado->id_reunion = $id_reunion;
                         $convocado->representacion = null;
                         $convocado->id_relacion = $relacion_nueva->id_relacion;
+                        $convocado->fecha = $fechaActual;
                         $convocado->tipo = $convocados[$i]['tipo'];
                         $convocado->nit = null;
                         $convocado->razon_social = null;
                         $convocado->participacion =  $convocados[$i]['tipo'] == 0 ? (isset($convocados[$i]['participacion']) ? $convocados[$i]['participacion'] : null) : null;
                         $convocado->soporte = null;
-                        $convocado->firma = 0;
-                        $convocado->acta = 0;
+                        $convocado->fecha_envio_invitacion = null;
+                        $convocado->firma = $convocados[$i]['firma'];
+                        $convocado->acta = $convocados[$i]['acta'];
                         $convocado->estado = 1;
 
                         $response = $convocado->save();
@@ -1225,7 +1257,7 @@ class Gcm_Reunion_Controller extends Controller
 
                     if ($validator->fails()) {
                         DB::rollback();
-                        Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1212), null);
+                        Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1216), null);
                         return response()->json($validator->errors(), 422);
                     }
 
@@ -1309,7 +1341,7 @@ class Gcm_Reunion_Controller extends Controller
 
                             if ($validator->fails()) {
                                 DB::rollback();
-                                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1296), null);
+                                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1300), null);
                                 return response()->json($validator->errors(), 422);
                             }
 
@@ -1413,7 +1445,6 @@ class Gcm_Reunion_Controller extends Controller
         try {
             $programas = [];
             $encrypt = new Encrypt();
-            $mc = new Gcm_Mail_Controller();
 
             $reunion = json_decode($request->reunion, true);
             $convocados = json_decode($request->convocados, true);
@@ -1435,7 +1466,8 @@ class Gcm_Reunion_Controller extends Controller
 
             for ($i = 0; $i < count($convocados); $i++) {
                 $convocado = Gcm_Convocado_Reunion::findOrFail($array_id_convocados[$i]);
-                $convocado->fecha_envio_invitacion = 'Hola';
+                $fechaActual = date('Y-m-d H:i:s');
+                $convocado->fecha_envio_invitacion = $fechaActual;
                 $response = $convocado->save();
 
                 $valorEncriptado = $encrypt->encriptar($array_id_convocados[$i]);
@@ -1449,10 +1481,9 @@ class Gcm_Reunion_Controller extends Controller
                     'url' => env('VIEW_BASE') . '/public/acceso-reunion/acceso/' . $valorEncriptado,
                 ];
                 Mail::to($convocados[$i]['correo'])->send(new TestMail($detalle));
-                // $mc->sendEmail('Este es el título', $detalle, $convocados[$i]['correo']);
             }
             Gcm_Log_Acciones_Sistema_Controller::save(4, array('Descripcion' => 'Envio del primer correo a los convocados de una reunion', 'Correos' => $correosOrganizados), null);
-            return response()->json(["response" => 'exitoso'], 200);
+            return response()->json(["response" => $response], 200);
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
             return response()->json(["error" => $th->getMessage()], 500);
@@ -1468,20 +1499,19 @@ class Gcm_Reunion_Controller extends Controller
     public function descargarPDFProgramacion(Request $request)
     {
         try {
-            //code...
             # Ingresa al directorio fuente
             $defaultConfig = (new ConfigVariables())->getDefaults();
             $fontDirs = $defaultConfig['fontDir'];
-
+    
             #Tomamos el array donde están todas las fuentes
             $defaultFontConfig = (new FontVariables())->getDefaults();
             $fontData = $defaultFontConfig['fontdata'];
-
+    
             // Configurar un nombre de archivo
             $documentFileName = "fun.pdf";
-
+    
             // Crea el documento PDF
-            $document = new Mpdf([
+            $document = new MPDF([
                 # Se toma la ruta de donde estan ubicadas las nuevas fuentes
                 'fontDir' => array_merge($fontDirs, [
                     storage_path('app/public/fonts'),
@@ -1525,25 +1555,27 @@ class Gcm_Reunion_Controller extends Controller
                 'margin_bottom' => '20',
                 'margin_footer' => '2',
             ]);
-
+    
             // Establecer algunas informaciones de encabezado para la salida
             $header = [
                 'Content-Type' => 'application/pdf',
                 'Content-Disposition' => 'inline; filename="' . $documentFileName . '"',
             ];
-
+    
             // Escribe un contenido simple
             $document->WriteHTML("<style>$request->styles</style>");
             $document->WriteHTML(str_replace("\n", "<br/>", $request->data));
-
+    
             // Guarde PDF en su almacenamiento público
-            Storage::put($documentFileName, $document->Output($documentFileName, "S"));
-
+            Storage::disk('public')->put($documentFileName, $document->Output($documentFileName, "S"));
+    
             // Recupere el archivo del almacenamiento con la información del encabezado de dar
+            Gcm_Log_Acciones_Sistema_Controller::save(4, array('Descripcion' => 'Descarga del pdf con la programacion de una reunion'), null);
             return Storage::download($documentFileName, 'Request', $header);
+
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
-            return response()->json(["error" => $th->getMessage(), "line" => $th->getLine()], 500);
+            return response()->json(["error" => $th->getMessage()], 500);
         }
     }
 
@@ -1555,451 +1587,458 @@ class Gcm_Reunion_Controller extends Controller
      */
     public function descargarPDFActa()
     {
-        # Ingresa al directorio fuente
-        $defaultConfig = (new ConfigVariables())->getDefaults();
-        $fontDirs = $defaultConfig['fontDir'];
-
-        #Tomamos el array donde están todas las fuentes
-        $defaultFontConfig = (new FontVariables())->getDefaults();
-        $fontData = $defaultFontConfig['fontdata'];
-
-        // Configurar un nombre de archivo
-        $documentFileName = "fun.pdf";
-
-        #Creamos el PDF con las mediadas y orientacion
-        $document = new MPDF([
-            # Se toma la ruta de donde estan ubicadas las nuevas fuentes
-            'fontDir' => array_merge($fontDirs, [
-                storage_path('app/public/fonts'),
-            ]),
-            # A las fuentes que ya tenemos adicione las nuevas
-            'fontdata' => $fontData + [
-                "montserratblack" => [
-                    'R' => "Montserrat-Black.ttf",
+        try {
+            # Ingresa al directorio fuente
+            $defaultConfig = (new ConfigVariables())->getDefaults();
+            $fontDirs = $defaultConfig['fontDir'];
+    
+            #Tomamos el array donde están todas las fuentes
+            $defaultFontConfig = (new FontVariables())->getDefaults();
+            $fontData = $defaultFontConfig['fontdata'];
+    
+            // Configurar un nombre de archivo
+            $documentFileName = "fun.pdf";
+    
+            #Creamos el PDF con las mediadas y orientacion
+            $document = new MPDF([
+                # Se toma la ruta de donde estan ubicadas las nuevas fuentes
+                'fontDir' => array_merge($fontDirs, [
+                    storage_path('app/public/fonts'),
+                ]),
+                # A las fuentes que ya tenemos adicione las nuevas
+                'fontdata' => $fontData + [
+                    "montserratblack" => [
+                        'R' => "Montserrat-Black.ttf",
+                    ],
+                    "montserratbold" => [
+                        'R' => "Montserrat-Bold.ttf",
+                    ],
+                    "montserratextrabold" => [
+                        'R' => "Montserrat-ExtraBold.ttf",
+                    ],
+                    "montserratextralight" => [
+                        'R' => "Montserrat-ExtraLight.ttf",
+                    ],
+                    "montserratlight" => [
+                        'R' => "Montserrat-Light.ttf",
+                    ],
+                    "montserratmedium" => [
+                        'R' => "Montserrat-Medium.ttf",
+                    ],
+                    "montserratregular" => [
+                        'R' => "Montserrat-Regular.ttf",
+                    ],
+                    "montserratsemibold" => [
+                        'R' => "Montserrat-SemiBold.ttf",
+                    ],
+                    "montserratthin" => [
+                        'R' => "Montserrat-Thin.ttf",
+                    ],
                 ],
-                "montserratbold" => [
-                    'R' => "Montserrat-Bold.ttf",
-                ],
-                "montserratextrabold" => [
-                    'R' => "Montserrat-ExtraBold.ttf",
-                ],
-                "montserratextralight" => [
-                    'R' => "Montserrat-ExtraLight.ttf",
-                ],
-                "montserratlight" => [
-                    'R' => "Montserrat-Light.ttf",
-                ],
-                "montserratmedium" => [
-                    'R' => "Montserrat-Medium.ttf",
-                ],
-                "montserratregular" => [
-                    'R' => "Montserrat-Regular.ttf",
-                ],
-                "montserratsemibold" => [
-                    'R' => "Montserrat-SemiBold.ttf",
-                ],
-                "montserratthin" => [
-                    'R' => "Montserrat-Thin.ttf",
-                ],
-            ],
-
-            # Fuente por defecto que tendra el PDF
-            'default_font' => 'montserratmedium',
-
-        ]);
-
-        #Realizamos la estructura del PDF
-        $style = "
-            <style>
-            @page{
-                mode: utf-8;
-                format: A4;
-                margin: 0;
-            }
-
-            .centro1raPagina {
-                background-image: url('" . env('VIEW_BASE') . "/assets/img/meets/acta2.JPG');
-                background-size: contain;
-                background-repeat: no-repeat;
-                height: 700px;
-            }
-
-            .pie1raPagina {
-                height: 100%;
-                border-top: 6px solid;
-                border-color: #9F8C5B;
-                background-color: #16151E;
-            }
-
-            .tabla2daPagina {
-                width: 100%;
-                text-align: left;
-                border-bottom: 1px solid black;
-            }
-
-            .thTabla2daPagina {
-                font-weight: bold;
-                background: #171717;
-                color: #FFFFFF;
-                text-align: left;
-                border: 1px solid #707070;
-                padding: 10px;
-                font-family: montserratregular;
-                font-size: 13px;
-                letter-spacing: 0px;
-            }
-
-            .tdTabla2daPagina {
-                width: 25%;
-                padding: 10px;
-                font-family: montserratregular;
-                color: #545454;
-                font-size: 13px;
-                letter-spacing: 0px;
-            }
-
-            .td-texto {
-                width: 50%;
-                padding: 10px;
-                color: #545454;
-                font-family: montserratregular;
-                font-size: 13px;
-                letter-spacing: 0px;
-                text-align: justify;
-            }
-
-            .tabla-cifras {
-                width: 100%;
-            }
-
-            .th-cifras-1raColumna {
-                font-weight: bold;
-                color: #545454;
-                padding: 10px;
-                font-family: montserratbold;
-                font-size: 13px;
-                letter-spacing: 0px;
-                font-weight: 500;
-                text-align: left;
-            }
-
-            .th-cifras-2daColumna {
-                font-weight: bold;
-                color: #545454;
-                padding: 10px;
-                font-family: montserratbold;
-                font-size: 13px;
-                letter-spacing: 0px;
-                font-weight: 500;
-                text-align: center;
-            }
-
-            .td-cifras-1raColumna {
-                width: 100%;
-                padding: 10px;
-                color: #545454;
-                font-family: montserratregular;
-                font-size: 15px;
-                letter-spacing: 0px;
-                text-align: left;
-            }
-
-            .td-cifras-2daColumna {
-                width: 30%;
-                background-color: #171717;
-                padding: 10px;
-                color: #FFFFFF;
-                font-family: montserratregular;
-                font-size: 15px;
-                letter-spacing: 0px;
-                text-align: center;
-            }
-
-            .firma {
-                border-top: 1px solid #DBDBDB;
-                text-align: center;
-            }
-
-            .textoFirma {
-                color: #545454;
-                padding: 10px;
-                font-family: montserratsemibold;
-                font-weight: 500;
-                font-size: 13px;
-                letter-spacing: 0px;
-            }
-
-            .ultimaPagina {
-                background-image: url('" . env('VIEW_BASE') . "/assets/img/meets/back4.jpg');
-                background-position: center center;
-                background-repeat: no-repeat;
-                background-image-resize: 5;
-                height: 100%;
-                width: 100%;
-                margin: 0;
-            }
-            </style>
-            ";
-
-        // background-size: 100% 100%;
-        // Establecer algunas informaciones de encabezado para la salida
-        $header = [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="' . $documentFileName . '"',
-        ];
-
-        $document->WriteHTML($style);
-
-        $html = '
-            <body>
-                <div>
-                    <div align="center">
-                        <img style="margin-top: 2rem; width: 180px;" src="' . env('VIEW_BASE') . '/assets/img/meets/garantias-comunitarias.png">
-                    </div>
-
+    
+                # Fuente por defecto que tendra el PDF
+                'default_font' => 'montserratmedium',
+    
+            ]);
+    
+            #Realizamos la estructura del PDF
+            $style = "
+                <style>
+                @page{
+                    mode: utf-8;
+                    format: A4;
+                    margin: 0;
+                }
+    
+                .centro1raPagina {
+                    background-image: url('http://192.168.2.89:4200/assets/img/meets/acta2.JPG');
+                    background-size: contain;
+                    background-repeat: no-repeat;
+                    height: 700px;
+                }
+    
+                .pie1raPagina {
+                    height: 100%;
+                    border-top: 6px solid;
+                    border-color: #9F8C5B;
+                    background-color: #16151E;
+                }
+    
+                .tabla2daPagina {
+                    width: 100%;
+                    text-align: left;
+                    border-bottom: 1px solid black;
+                }
+    
+                .thTabla2daPagina {
+                    font-weight: bold;
+                    background: #171717;
+                    color: #FFFFFF;
+                    text-align: left;
+                    border: 1px solid #707070;
+                    padding: 10px;
+                    font-family: montserratregular;
+                    font-size: 13px;
+                    letter-spacing: 0px;
+                }
+    
+                .tdTabla2daPagina {
+                    width: 25%;
+                    padding: 10px;
+                    font-family: montserratregular;
+                    color: #545454;
+                    font-size: 13px;
+                    letter-spacing: 0px;
+                }
+    
+                .td-texto {
+                    width: 50%;
+                    padding: 10px;
+                    color: #545454;
+                    font-family: montserratregular;
+                    font-size: 13px;
+                    letter-spacing: 0px;
+                    text-align: justify;
+                }
+    
+                .tabla-cifras {
+                    width: 100%;
+                }
+    
+                .th-cifras-1raColumna {
+                    font-weight: bold;
+                    color: #545454;
+                    padding: 10px;
+                    font-family: montserratbold;
+                    font-size: 13px;
+                    letter-spacing: 0px;
+                    font-weight: 500;
+                    text-align: left;
+                }
+    
+                .th-cifras-2daColumna {
+                    font-weight: bold;
+                    color: #545454;
+                    padding: 10px;
+                    font-family: montserratbold;
+                    font-size: 13px;
+                    letter-spacing: 0px;
+                    font-weight: 500;
+                    text-align: center;
+                }
+    
+                .td-cifras-1raColumna {
+                    width: 100%;
+                    padding: 10px;
+                    color: #545454;
+                    font-family: montserratregular;
+                    font-size: 15px;
+                    letter-spacing: 0px;
+                    text-align: left;
+                }
+    
+                .td-cifras-2daColumna {
+                    width: 30%;
+                    background-color: #171717;
+                    padding: 10px;
+                    color: #FFFFFF;
+                    font-family: montserratregular;
+                    font-size: 15px;
+                    letter-spacing: 0px;
+                    text-align: center;
+                }
+    
+                .firma {
+                    border-top: 1px solid #DBDBDB;
+                    text-align: center;
+                }
+    
+                .textoFirma {
+                    color: #545454;
+                    padding: 10px;
+                    font-family: montserratsemibold;
+                    font-weight: 500;
+                    font-size: 13px;
+                    letter-spacing: 0px;
+                }
+    
+                .ultimaPagina {
+                    background-image: url('http://192.168.2.89:4200/assets/img/meets/back4.jpg');
+                    background-position: center center;
+                    background-repeat: no-repeat;
+                    background-image-resize: 5;
+                    height: 100%;
+                    width: 100%;
+                    margin: 0;
+                }
+                </style>
+                ";
+    
+            // background-size: 100% 100%;
+            // Establecer algunas informaciones de encabezado para la salida
+            $header = [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="' . $documentFileName . '"',
+            ];
+    
+            $document->WriteHTML($style);
+    
+            $html = '
+                <body>
                     <div>
-                        <h5 align="center" style="margin-bottom: 30px; margin-top: 30px; color: #171717; font-family: montserratregular; font-size: 20px; font-weight: 500; letter-spacing: 0px;">
-                            ASAMBLEA GENERAL ORDINARIA DE ACCIONISTAS DE GARANTIAS COMUNITARIAS
-                        </h5>
+                        <div align="center">
+                            <img style="margin-top: 2rem; width: 180px;" src="http://192.168.2.89:4200/assets/img/meets/garantias-comunitarias.png">
+                        </div>
+    
+                        <div>
+                            <h5 align="center" style="margin-bottom: 30px; margin-top: 30px; color: #171717; font-family: montserratregular; font-size: 20px; font-weight: 500; letter-spacing: 0px;">
+                                ASAMBLEA GENERAL ORDINARIA DE ACCIONISTAS DE GARANTIAS COMUNITARIAS
+                            </h5>
+                        </div>
+    
+                        <div class="centro1raPagina">
+                            <h1 align="center" style="margin-top: 510px; color: #9F8C5B; font-family: montserratregular; font-size: 15px; font-weight: 500; letter-spacing: 0px;">GARANTIAS COMUNITARIAS GRUPO S.A.</h1>
+                            <h1 align="center" style="margin-top: 25px; color: #FFFFFF; font-family: montserratregular; font-size: 35px; font-weight: bold; letter-spacing: 0px;">CELEBRADA EL DIA 12/01/22</h1>
+                        </div>
+    
+                        <div class="pie1raPagina">
+                            <h1 align="center" style="margin-top: 60px; color: #FFFFFF; font-family: montserratregular; font-size: 20px; font-weight: 500; letter-spacing: 0px;">ACTA NO. 1244</h1>
+                        </div>
                     </div>
-
-                    <div class="centro1raPagina">
-                        <h1 align="center" style="margin-top: 510px; color: #9F8C5B; font-family: montserratregular; font-size: 15px; font-weight: 500; letter-spacing: 0px;">GARANTIAS COMUNITARIAS GRUPO S.A.</h1>
-                        <h1 align="center" style="margin-top: 25px; color: #FFFFFF; font-family: montserratregular; font-size: 35px; font-weight: bold; letter-spacing: 0px;">CELEBRADA EL DIA 12/01/22</h1>
+                </body>
+            ';
+    
+            #Asignamos la estructura al PDF
+            $document->WriteHTML($html);
+            $document->AddPage();
+    
+            $html2 = '
+                <body>
+                    <div style="padding: 7% 11% 0% 11%;">
+                        <h1 style="color: #171717; font-size: 22px; font-family: montserratregular; font-weight: 500; letter-spacing: 0px; text-align: left; margin: 0">
+                            Titulo
+                        </h1>
+    
+                        <h2 style="color: #545454; font-size: 16px; font-family: montserratregular; font-weight: 400; letter-spacing: 0px; text-align: left; margin: 0 0 6px 0;">
+                            Sub titulo
+                        </h2>
+    
+                        <p style="color: #626262; font-size: 13px; font-family: montserratregular; font-weight: 400; letter-spacing: 0px; text-align: justify; margin: 0;">
+                            Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam,
+                            eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
+                            Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt.
+                            Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit,
+                            sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.
+                            Ut enim ad minima veniam, quis nostrum exercitationem ullam corporis suscipit laboriosam,
+                            nisi ut aliquid ex ea commodi consequatur? Quis autem vel eum iure reprehenderit qui in ea voluptate velit esse quam nihil molestiae consequatur,
+                            vel illum qui dolorem eum fugiat quo voluptas nulla pariatur?.
+                        </p>
                     </div>
-
-                    <div class="pie1raPagina">
-                        <h1 align="center" style="margin-top: 60px; color: #FFFFFF; font-family: montserratregular; font-size: 20px; font-weight: 500; letter-spacing: 0px;">ACTA NO. 1244</h1>
+    
+                    <div style="padding: 2% 11% 0% 11%;">
+                        <h1 style="color: #171717; font-size: 22px; font-family: montserratregular; font-weight: 300; letter-spacing: 0px; text-align: left; margin: 0 0 10px 0;">
+                            Tabla
+                        </h1>
+                        <table class="tabla2daPagina">
+                            <thead>
+                                <tr>
+                                    <th class="thTabla2daPagina" scope="col">Nombre</th>
+                                    <th class="thTabla2daPagina" scope="col">Apellido</th>
+                                    <th class="thTabla2daPagina" scope="col">Correo</th>
+                                    <th class="thTabla2daPagina" scope="col">Representante</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="tdTabla2daPagina">Juan</td>
+                                    <td class="tdTabla2daPagina">Mark</td>
+                                    <td class="tdTabla2daPagina">Otto</td>
+                                    <td class="tdTabla2daPagina">Marco</td>
+                                </tr>
+                                <tr>
+                                    <td class="tdTabla2daPagina">Keila</td>
+                                    <td class="tdTabla2daPagina">Jacob</td>
+                                    <td class="tdTabla2daPagina">Thornton</td>
+                                    <td class="tdTabla2daPagina">Fatboy</td>
+                                </tr>
+                                <tr>
+                                    <td class="tdTabla2daPagina">Keila</td>
+                                    <td class="tdTabla2daPagina">Jacob</td>
+                                    <td class="tdTabla2daPagina">Thornton</td>
+                                    <td class="tdTabla2daPagina">Fatboy</td>
+                                </tr>
+                                <tr>
+                                    <td class="tdTabla2daPagina">Keila</td>
+                                    <td class="tdTabla2daPagina">Jacob</td>
+                                    <td class="tdTabla2daPagina">Thornton</td>
+                                    <td class="tdTabla2daPagina">Fatboy</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
-                </div>
-            </body>
-        ';
-
-        #Asignamos la estructura al PDF
-        $document->WriteHTML($html);
-        $document->AddPage();
-
-        $html2 = '
-            <body>
-                <div style="padding: 7% 11% 0% 11%;">
-                    <h1 style="color: #171717; font-size: 22px; font-family: montserratregular; font-weight: 500; letter-spacing: 0px; text-align: left; margin: 0">
-                        Titulo
-                    </h1>
-
-                    <h2 style="color: #545454; font-size: 16px; font-family: montserratregular; font-weight: 400; letter-spacing: 0px; text-align: left; margin: 0 0 6px 0;">
-                        Sub titulo
-                    </h2>
-
-                    <p style="color: #626262; font-size: 13px; font-family: montserratregular; font-weight: 400; letter-spacing: 0px; text-align: justify; margin: 0;">
-                        Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam,
-                        eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
-                        Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt.
-                        Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit,
-                        sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.
-                        Ut enim ad minima veniam, quis nostrum exercitationem ullam corporis suscipit laboriosam,
-                        nisi ut aliquid ex ea commodi consequatur? Quis autem vel eum iure reprehenderit qui in ea voluptate velit esse quam nihil molestiae consequatur,
-                        vel illum qui dolorem eum fugiat quo voluptas nulla pariatur?.
-                    </p>
-                </div>
-
-                <div style="padding: 2% 11% 0% 11%;">
-                    <h1 style="color: #171717; font-size: 22px; font-family: montserratregular; font-weight: 300; letter-spacing: 0px; text-align: left; margin: 0 0 10px 0;">
-                        Tabla
-                    </h1>
-                    <table class="tabla2daPagina">
-                        <thead>
-                            <tr>
-                                <th class="thTabla2daPagina" scope="col">Nombre</th>
-                                <th class="thTabla2daPagina" scope="col">Apellido</th>
-                                <th class="thTabla2daPagina" scope="col">Correo</th>
-                                <th class="thTabla2daPagina" scope="col">Representante</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td class="tdTabla2daPagina">Juan</td>
-                                <td class="tdTabla2daPagina">Mark</td>
-                                <td class="tdTabla2daPagina">Otto</td>
-                                <td class="tdTabla2daPagina">Marco</td>
-                            </tr>
-                            <tr>
-                                <td class="tdTabla2daPagina">Keila</td>
-                                <td class="tdTabla2daPagina">Jacob</td>
-                                <td class="tdTabla2daPagina">Thornton</td>
-                                <td class="tdTabla2daPagina">Fatboy</td>
-                            </tr>
-                            <tr>
-                                <td class="tdTabla2daPagina">Keila</td>
-                                <td class="tdTabla2daPagina">Jacob</td>
-                                <td class="tdTabla2daPagina">Thornton</td>
-                                <td class="tdTabla2daPagina">Fatboy</td>
-                            </tr>
-                            <tr>
-                                <td class="tdTabla2daPagina">Keila</td>
-                                <td class="tdTabla2daPagina">Jacob</td>
-                                <td class="tdTabla2daPagina">Thornton</td>
-                                <td class="tdTabla2daPagina">Fatboy</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div style="padding: 2% 11% 0% 11%;">
-                    <table>
-                        <tbody>
-                            <tr>
-                                <td class="td-texto">
-                                    <h1 style="float: top; color: #171717; font-size: 22px; font-family: montserratregular; font-weight: 500; letter-spacing: 0px; text-align: left; margin: 0">
-                                        Lista
-                                    </h1>
-                                    1. Lorem dolor sit amet
-                                </td>
-                                <td class="td-texto">
-                                    <h1 style="color: #171717; font-size: 22px; font-family: montserratregular; font-weight: 500; letter-spacing: 0px; text-align: left; margin: 0">Texto con campos</h1>
-                                    Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque
-                                    laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto
-                                    beatae vitae dicta sunt explicabo. Nemo enim ipsam voluptatem quia voluptas sit aspernatur
-                                    aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi.
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div style="padding: 2% 11% 0% 11%;">
-                    <table>
-                        <tbody>
-                            <tr>
-                                <td class="td-texto">
-                                    <h1 style="color: #171717; font-size: 22px; font-family: montserratregular; font-weight: 500; letter-spacing: 0px; text-align: left; margin: 0">
-                                        Votaciones
-                                    </h1>
-                                    Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium,
-                                    totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
-                                    sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.
-                                </td>
-                                <td style="with: 100%; border: 1px solid #DBDBDB; background-image: url(' . env('VIEW_BASE') . '/assets/img/meets/recorte.JPG);
-                                    background-size: cover; background-repeat: no-repeat; background-position: center;">
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </body>
-        ';
-
-        #Asignamos la estructura al PDF
-        $document->WriteHTML($html2);
-        $document->AddPage();
-
-        $html3 = '
-            <body>
-                <div style="padding: 7% 11% 0% 11%;">
-                    <h1 style="color: #171717; font-size: 22px; font-family: montserratregular; font-weight: 300; letter-spacing: 0px; text-align: left; margin: 0 0 10px 0;">
-                        Cifras
-                    </h1>
-                    <table class="tabla-cifras">
-                        <thead>
-                            <tr>
-                                <th class="th-cifras-1raColumna" scope="col">Proyecto de distribución de utilidades</th>
-                                <th class="th-cifras-2daColumna" scope="col">2020</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td class="td-cifras-1raColumna">Quia consequuntur</td>
-                                <td class="td-cifras-2daColumna">$12.252.354</td>
-                            </tr>
-                            <tr>
-                                <td class="td-cifras-1raColumna">Quia consequuntur</td>
-                                <td class="td-cifras-2daColumna">$12.252.354</td>
-                            </tr>
-                            <tr>
-                                <td class="td-cifras-1raColumna">Quia consequuntur</td>
-                                <td class="td-cifras-2daColumna">$12.252.354</td>
-                            </tr>
-                            <tr>
-                                <td class="td-cifras-1raColumna">Quia consequuntur</td>
-                                <td class="td-cifras-2daColumna">$12.252.354</td>
-                            </tr>
-                            <tr>
-                                <td class="td-cifras-1raColumna">Quia consequuntur</td>
-                                <td class="td-cifras-2daColumna">$12.252.354</td>
-                            </tr>
-                            <tr>
-                                <td class="td-cifras-1raColumna">Quia consequuntur</td>
-                                <td class="td-cifras-2daColumna">$12.252.354</td>
-                            </tr>
-                            <tr>
-                                <td class="td-cifras-1raColumna">Quia consequuntur</td>
-                                <td class="td-cifras-2daColumna">$12.252.354</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div style="padding: 2% 11% 0% 11%;">
-                    <table>
-                        <tbody>
-                            <tr>
-                                <td class="td-texto">
-                                    <h1 style="color: #171717; font-size: 22px; font-family: montserratregular; font-weight: 500; letter-spacing: 0px; text-align: left; margin: 0">
-                                        Opciones
-                                    </h1>
-                                    Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium,
-                                    totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
-                                    sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.
-                                </td>
-                                <td style="with: 100%; border: 1px solid #DBDBDB; background-image: url(' . env('VIEW_BASE') . '/assets/img/meets/recorte2.JPG);
-                                    background-size: cover; background-repeat: no-repeat; background-position: center;">
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div style="padding: 8% 11% 0% 11%;">
-                    <table style="width: 100%;">
-                        <tbody>
-                            <tr>
-                                <td class="firma">
-                                    <h1 class="textoFirma">non numquam eius mod</h1>
-                                </td>
-                                <td class="firma">
-                                    <h1 class="textoFirma">non numquam eius mod</h1>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </body>
-        ';
-
-        #Asignamos la estructura al PDF
-        $document->WriteHTML($html3);
-        $document->AddPage();
-
-        $html4 = '
-            <body>
-                <div class="ultimaPagina">
-                    <h1 align="center" style="padding-top: 900px; color: #FFFFFF; font-family: montserratlight; font-size: 20px; font-weight: 500; letter-spacing: 0px;">
-                        VOLUPTATEM ACCUSANTIUM DOLOREMQUE LAUDANTIUM
-                    </h1>
-                    <h1 align="center" style="color: #9F8C5B; font-family: montserratbold; font-size: 15px; font-weight: 500; letter-spacing: 0px;">
-                        NON NUMQUAM EIUS MOD
-                    </h1>
-                </div>
-            </body>
-        ';
-
-        #Asignamos la estructura al PDF
-        $document->WriteHTML($html4);
-
-        // Guarde PDF en su almacenamiento público
-        Storage::put($documentFileName, $document->Output($documentFileName, "S"));
-
-        // Recupere el archivo del almacenamiento con la información del encabezado de dar
-        return Storage::download($documentFileName, 'Request', $header);
+    
+                    <div style="padding: 2% 11% 0% 11%;">
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td class="td-texto">
+                                        <h1 style="float: top; color: #171717; font-size: 22px; font-family: montserratregular; font-weight: 500; letter-spacing: 0px; text-align: left; margin: 0">
+                                            Lista
+                                        </h1>
+                                        1. Lorem dolor sit amet
+                                    </td>
+                                    <td class="td-texto">
+                                        <h1 style="color: #171717; font-size: 22px; font-family: montserratregular; font-weight: 500; letter-spacing: 0px; text-align: left; margin: 0">Texto con campos</h1>
+                                        Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque
+                                        laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto
+                                        beatae vitae dicta sunt explicabo. Nemo enim ipsam voluptatem quia voluptas sit aspernatur
+                                        aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+    
+                    <div style="padding: 2% 11% 0% 11%;">
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td class="td-texto">
+                                        <h1 style="color: #171717; font-size: 22px; font-family: montserratregular; font-weight: 500; letter-spacing: 0px; text-align: left; margin: 0">
+                                            Votaciones
+                                        </h1>
+                                        Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium,
+                                        totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
+                                        sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.
+                                    </td>
+                                    <td style="with: 100%; border: 1px solid #DBDBDB; background-image: url(http://192.168.2.89:4200/assets/img/meets/recorte.JPG);
+                                        background-size: cover; background-repeat: no-repeat; background-position: center;">
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </body>
+            ';
+    
+            #Asignamos la estructura al PDF
+            $document->WriteHTML($html2);
+            $document->AddPage();
+    
+            $html3 = '
+                <body>
+                    <div style="padding: 7% 11% 0% 11%;">
+                        <h1 style="color: #171717; font-size: 22px; font-family: montserratregular; font-weight: 300; letter-spacing: 0px; text-align: left; margin: 0 0 10px 0;">
+                            Cifras
+                        </h1>
+                        <table class="tabla-cifras">
+                            <thead>
+                                <tr>
+                                    <th class="th-cifras-1raColumna" scope="col">Proyecto de distribución de utilidades</th>
+                                    <th class="th-cifras-2daColumna" scope="col">2020</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="td-cifras-1raColumna">Quia consequuntur</td>
+                                    <td class="td-cifras-2daColumna">$12.252.354</td>
+                                </tr>
+                                <tr>
+                                    <td class="td-cifras-1raColumna">Quia consequuntur</td>
+                                    <td class="td-cifras-2daColumna">$12.252.354</td>
+                                </tr>
+                                <tr>
+                                    <td class="td-cifras-1raColumna">Quia consequuntur</td>
+                                    <td class="td-cifras-2daColumna">$12.252.354</td>
+                                </tr>
+                                <tr>
+                                    <td class="td-cifras-1raColumna">Quia consequuntur</td>
+                                    <td class="td-cifras-2daColumna">$12.252.354</td>
+                                </tr>
+                                <tr>
+                                    <td class="td-cifras-1raColumna">Quia consequuntur</td>
+                                    <td class="td-cifras-2daColumna">$12.252.354</td>
+                                </tr>
+                                <tr>
+                                    <td class="td-cifras-1raColumna">Quia consequuntur</td>
+                                    <td class="td-cifras-2daColumna">$12.252.354</td>
+                                </tr>
+                                <tr>
+                                    <td class="td-cifras-1raColumna">Quia consequuntur</td>
+                                    <td class="td-cifras-2daColumna">$12.252.354</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+    
+                    <div style="padding: 2% 11% 0% 11%;">
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td class="td-texto">
+                                        <h1 style="color: #171717; font-size: 22px; font-family: montserratregular; font-weight: 500; letter-spacing: 0px; text-align: left; margin: 0">
+                                            Opciones
+                                        </h1>
+                                        Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium,
+                                        totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
+                                        sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.
+                                    </td>
+                                    <td style="with: 100%; border: 1px solid #DBDBDB; background-image: url(http://192.168.2.89:4200/assets/img/meets/recorte2.JPG);
+                                        background-size: cover; background-repeat: no-repeat; background-position: center;">
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+    
+                    <div style="padding: 8% 11% 0% 11%;">
+                        <table style="width: 100%;">
+                            <tbody>
+                                <tr>
+                                    <td class="firma">
+                                        <h1 class="textoFirma">non numquam eius mod</h1>
+                                    </td>
+                                    <td class="firma">
+                                        <h1 class="textoFirma">non numquam eius mod</h1>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </body>
+            ';
+    
+            #Asignamos la estructura al PDF
+            $document->WriteHTML($html3);
+            $document->AddPage();
+    
+            $html4 = '
+                <body>
+                    <div class="ultimaPagina">
+                        <h1 align="center" style="padding-top: 900px; color: #FFFFFF; font-family: montserratlight; font-size: 20px; font-weight: 500; letter-spacing: 0px;">
+                            VOLUPTATEM ACCUSANTIUM DOLOREMQUE LAUDANTIUM
+                        </h1>
+                        <h1 align="center" style="color: #9F8C5B; font-family: montserratbold; font-size: 15px; font-weight: 500; letter-spacing: 0px;">
+                            NON NUMQUAM EIUS MOD
+                        </h1>
+                    </div>
+                </body>
+            ';
+    
+            #Asignamos la estructura al PDF
+            $document->WriteHTML($html4);
+    
+            // Guarde PDF en su almacenamiento público
+            Storage::disk('public')->put($documentFileName, $document->Output($documentFileName, "S"));
+    
+            // Recupere el archivo del almacenamiento con la información del encabezado de dar
+            Gcm_Log_Acciones_Sistema_Controller::save(4, array('Descripcion' => 'Descarga del acta de una reunion'), null);
+            return Storage::download($documentFileName, 'Request', $header);
+            
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
+            return response()->json(["error" => $th->getMessage()], 500);
+        }
     }
 
 }

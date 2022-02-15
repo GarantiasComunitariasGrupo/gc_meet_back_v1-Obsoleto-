@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 class CrearGcmLogAccionesConvocadoTabla extends Migration
 {
@@ -19,7 +20,7 @@ class CrearGcmLogAccionesConvocadoTabla extends Migration
             $table->foreign('id_convocado_reunion')->references('id_convocado_reunion')->on('gcm_convocados_reunion');
             $table->string('accion', 3)->index()->required();
             $table->string('tabla', 100)->index()->required();
-            $table->timestampTz('fecha', $precision = 0)->required();
+            $table->timestamp('fecha', $precision = 0)->required()->default(DB::raw('CURRENT_TIMESTAMP'));
             $table->string('lugar', 100)->required();
             $table->longText('detalle')->required();
         });

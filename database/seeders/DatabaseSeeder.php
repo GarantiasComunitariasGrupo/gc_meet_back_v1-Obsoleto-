@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             RolSeeder::class,
             TipoReunionSeeder::class,
             RestriccionSeeder::class,
+            ReunionSeeder::class,
         ]);
     }
 }

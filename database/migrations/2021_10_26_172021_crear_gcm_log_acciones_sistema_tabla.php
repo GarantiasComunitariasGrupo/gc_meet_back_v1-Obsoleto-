@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 class CrearGcmLogAccionesSistemaTabla extends Migration
 {
@@ -17,7 +18,7 @@ class CrearGcmLogAccionesSistemaTabla extends Migration
             $table->bigIncrements('id_log_accion');
             $table->string('accion', 3)->index()->required();
             $table->string('tabla', 100)->index()->nullable();
-            $table->timestampTz('fecha', $precision = 0)->required();
+            $table->timestamp('fecha', $precision = 0)->required()->default(DB::raw('CURRENT_TIMESTAMP'));
             $table->string('lugar', 100)->required();
             $table->longText('detalle')->required();
         });
