@@ -270,6 +270,8 @@ Route::group([
     Route::post('/save-logout', [Gcm_Acceso_Reunion_Controller::class, 'saveLogout']);
     Route::get('/get-all-summoned-list/{id_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'getAllSummonedList']);
     Route::post('/save-program', [Gcm_Acceso_Reunion_Controller::class, 'saveProgram']);
+    Route::post('/summon/{id_grupo}/{id_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'summon']);
+    Route::post('/send-mail-to-summon', [Gcm_Acceso_Reunion_Controller::class, 'sendMailToSummon']);
 });
 
 Route::get('/buscar-archivos', function (Request $request) {

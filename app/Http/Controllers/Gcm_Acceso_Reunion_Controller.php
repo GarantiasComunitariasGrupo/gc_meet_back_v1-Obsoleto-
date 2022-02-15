@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Classes\Encrypt;
 use App\Http\Controllers\Gcm_Log_Acciones_Sistema_Controller;
 use App\Http\Controllers\Gcm_Mail_Controller;
+use App\Mail\TestMail;
 use App\Models\Gcm_Archivo_Programacion;
 use App\Models\Gcm_Asistencia_Reunion;
 use App\Models\Gcm_Convocado_Reunion;
@@ -15,9 +16,11 @@ use App\Models\Gcm_Relacion;
 use App\Models\Gcm_Respuesta_Convocado;
 use App\Models\Gcm_Restriccion_Rol_Representante;
 use App\Models\Gcm_Reunion;
+use App\Models\Gcm_Rol;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 
 class Gcm_Acceso_Reunion_Controller extends Controller
@@ -1488,6 +1491,196 @@ class Gcm_Acceso_Reunion_Controller extends Controller
     public function stringNullToNull($val)
     {
         return in_array($val, ['null', 'undefined']) ? null : $val;
+    }
+
+    public function summon($id_grupo, $id_reunion, Request $request)
+    {
+        DB::beginTransaction();
+        try {
+
+            $validator = Validator::make($request->all(), [
+                'identificacion' => 'required|max:20',
+                'nombre' => 'required|max:255',
+                'telefono' => 'max:20',
+                'correo' => 'required|max:255|email',
+            ], [
+                'identificacion.required' => '*Rellena este campo',
+                'identificacion.max' => '*Maximo 20 caracteres',
+                'nombre.required' => '*Rellena este campo',
+                'nombre.max' => '*Maximo 255 caracteres',
+                'telefono.max' => '*Maximo 20 caracteres',
+                'correo.required' => '*Rellena este campo',
+                'correo.max' => '*Máximo 255 caracteres',
+                'correo.email' => '*Formato de correo invalido',
+            ]);
+
+            if ($validator->fails()) {
+                DB::rollback();
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1517), null);
+                return response()->json($validator->errors(), 422);
+            }
+
+            // Consulta si el convocado ya fue registrado como recurso
+            $recurso_existe = DB::table('gcm_recursos')->where('identificacion', '=', $request->identificacion)->first();
+
+            $recurso_existe = !$recurso_existe ? new Gcm_Recurso() : Gcm_Recurso::findOrFail($recurso_existe->id_recurso);
+
+            $recurso_existe->identificacion = $request->identificacion;
+            $recurso_existe->nombre = $request->nombre;
+            if (!empty($request->telefono)) {$recurso_existe->telefono = $request->telefono;}
+            $recurso_existe->correo = $request->correo;
+            $recurso_existe->estado = 1;
+
+            $recurso_existe->save();
+
+            // Consulta si el rol ya esta registrado
+            $validator = Validator::make($request->all(), [
+                'rol' => 'required|max:100',
+            ], [
+                'rol.required' => '*Rellena este campo',
+                'rol.max' => '*Maximo 100 caracteres',
+            ]);
+
+            if ($validator->fails()) {
+                DB::rollback();
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1544), null);
+                return response()->json($validator->errors(), 422);
+            }
+
+            $rol_existe = DB::table('gcm_roles')->where('descripcion', '=', $request->rol)->first();
+
+            $rol_existe = !$rol_existe ? new Gcm_Rol() : Gcm_Rol::findOrFail($rol_existe->id_rol);
+            $rol_existe->descripcion = $request->rol;
+            $rol_existe->relacion = null;
+            $rol_existe->estado = 1;
+            $rol_existe->save();
+
+            // Consulta si ya existe una relacion registrada con los datos subministrados(id_grupo, id_rol, id_recurso)
+            $relacion_existe = DB::table('gcm_relaciones')->where([['id_grupo', '=', $id_grupo], ['id_rol', '=', $rol_existe->id_rol], ['id_recurso', '=', $recurso_existe->id_recurso]])->first();
+
+            // Registra la relación nueva
+            $relacion_nueva = !$relacion_existe ? new Gcm_Relacion() : Gcm_Relacion::findOrFail($relacion_existe->id_relacion);
+            $relacion_nueva->id_grupo = $id_grupo;
+            $relacion_nueva->id_rol = $rol_existe->id_rol;
+            $relacion_nueva->id_recurso = $recurso_existe->id_recurso;
+            $relacion_nueva->estado = 1;
+
+            $relacion_nueva->save();
+
+            // Registra el convocado con nit y razon social
+            $validator;
+            if ($request->tipo == '2') {
+                $validator = Validator::make($request->all(), [
+                    'tipo' => 'required|max:2',
+                    'nit' => 'max:20',
+                    'razon_social' => 'max:100',
+                ], [
+                    'tipo.required' => '*Rellena este campo',
+                    'tipo.max' => '*Maximo 2 caracteres',
+                    'nit.max' => '*Maximo 20 caracteres',
+                    'razon_social.max' => '*Máximo 100 caracteres',
+                ]);
+            } else {
+                // Registra el convocado sin nit ni razon social
+                $validator = Validator::make($request->all(), [
+                    'tipo' => 'required|max:2',
+                ], [
+                    'tipo.required' => '*Rellena este campo',
+                    'tipo.max' => '*Maximo 2 caracteres',
+                ]);
+            }
+
+            if ($validator->fails()) {
+                DB::rollback();
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1593), null);
+                return response()->json($validator->errors(), 200);
+            }
+
+            $convocado = new Gcm_Convocado_Reunion;
+            $convocado->id_reunion = $id_reunion;
+            $convocado->representacion = null;
+            $convocado->id_relacion = $relacion_nueva->id_relacion;
+            $convocado->tipo = $request->tipo;
+            $convocado->nit = $request->tipo == '2' ? $request->nit : null;
+            $convocado->razon_social = $request->tipo == '2' ? $request->razon_social : null;
+            $convocado->participacion = ($request->tipo == '2' || $request->tipo == 0) ? (isset($request->participacion) ? $request->participacion : null) : null;
+            $convocado->soporte = null;
+            $convocado->firma = 0;
+            $convocado->acta = 0;
+            $convocado->estado = 1;
+
+            $convocado->save();
+
+            DB::commit();
+            return response()->json(['status' => true, 'message' => $convocado->id_convocado_reunion]);
+        } catch (\Throwable $th) {
+            DB::rollback();
+            Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
+            return response()->json(['status' => false, 'message' => $th->getMessage() . ' - ' . $th->getLine()], 200);
+        }
+    }
+
+/**
+ * Realizo el envio de un correo electronico a los convocados de una reunion
+ *
+ * @param Request Aqui toda la información de la reunion, de los convocados y los programas, pero solo se toma los convocados
+ * @return void Retorna un mensaje donde se evidencia si el envio de los correos fue exitoso o fallo
+ */
+    public function sendMailToSummon(Request $request)
+    {
+
+        try {
+            if (!isset($request->summonedList)) {throw new \Error("sendMailToSummon: {summonedList} es requerido", 1);}
+            // $programas = [];
+            $encrypt = new Encrypt();
+            $MC = new Gcm_Mail_Controller();
+
+            $summonedList = json_decode($request->summonedList, true);
+
+            $programList = null;
+            $meet = null;
+
+            $mailList = [];
+
+            foreach ($summonedList as $id_convocado_reunion) {
+                $summoned = Gcm_Convocado_Reunion::findOrFail($id_convocado_reunion);
+                $summoned->fecha_envio_invitacion = date('Y-m-d h:i:s');
+                $summoned->save();
+
+                $resource = Gcm_Convocado_Reunion::join('gcm_relaciones AS rlc', 'gcm_convocados_reunion.id_relacion', '=', 'rlc.id_relacion')
+                    ->join('gcm_recursos AS rcs', 'rlc.id_recurso', '=', 'rcs.id_recurso')->where('id_convocado_reunion', $id_convocado_reunion)->first();
+
+                if (!$resource) {throw new \Error("Recurso no encontrado", 1);}
+
+                if (!$programList) {
+                    $programList = Gcm_Programacion::where([['id_reunion', $resource->id_reunion], ['estado', '!=', '4']])
+                        ->whereNull('relacion')->orderBy('orden', 'ASC')->get();
+                }
+
+                if (!$meet) {$meet = Gcm_Reunion::where('id_reunion', $resource->id_reunion)->first();}
+
+                $token = $encrypt->encriptar($id_convocado_reunion);
+
+                $detalle = [
+                    'nombre' => $resource->nombre,
+                    'titulo' => $meet->titulo,
+                    'descripcion' => $meet->descripcion,
+                    'fecha_reunion' => $meet->fecha_reunion,
+                    'hora' => $meet->hora,
+                    'programas' => $programList,
+                    'url' => env('VIEW_BASE') . '/public/acceso-reunion/acceso/' . $token,
+                ];
+                array_push($mailList, $resource->correo);
+                Mail::to($resource->correo)->send(new TestMail($detalle));
+
+            }
+
+            Gcm_Log_Acciones_Sistema_Controller::save(4, array('Descripcion' => 'Envio correo reunión en curso', 'Correos' => $mailList), null);
+            return response()->json(["status" => true, "message" => 'Correo enviado correctamente'], 200);
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
+            return response()->json(["status" => true, "message" => $th->getMessage() . ' - ' . $th->getLine()], 200);
+        }
     }
 
 }
