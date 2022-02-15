@@ -898,8 +898,21 @@ class Gcm_Acceso_Reunion_Controller extends Controller
     {
         try {
 
-            $update = Gcm_Programacion::where('id_programa', $request->id_programa)
-                ->update(['estado' => $request->estado]);
+            $program = Gcm_Programacion::find($request->id_programa);
+            $program->estado = $request->estado;
+            $update = $program->save();
+
+            if (+$request->estado === 4) { // Si se elimina un programa se actualiza el orden del resto
+                $programList = Gcm_Programacion::where([['estado', '!=', '4'], ['id_reunion', $program->id_reunion]]);
+                if ($program->relacion) {$programList = $programList->whereNotNull('relacion');}
+                if (!$program->relacion) {$programList = $programList->whereNull('relacion');}
+                $programList = $programList->orderBy('orden', 'ASC')->get();
+
+                $programList->each(function ($item, $i) {
+                    $item->orden = $i + 1;
+                    $item->save();
+                });
+            }
 
             return response()->json(['ok' => ($update) ? true : false]);
 
@@ -1453,7 +1466,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
     public function liberarOrden($id_reunion, $ordenTarget)
     {
         try {
-            $program = Gcm_Programacion::where([['estado', '!=', 3], ['orden', $ordenTarget], ['id_reunion', $id_reunion]])
+            $program = Gcm_Programacion::where([['estado', '!=', 4], ['orden', $ordenTarget], ['id_reunion', $id_reunion]])
                 ->whereNull('relacion')->first();
             if ($program) {
                 $this->liberarOrden($id_reunion, $ordenTarget + 1);
