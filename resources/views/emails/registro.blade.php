@@ -71,7 +71,7 @@
             <tr align="center">
                 <td style="padding: 20px; background-color:#ffffff;">
                     <h1 style="margin-bottom: 13px; font-size: 30px; color: #171717; font-family: Helvetica">¡Hola, {{$data['nombre']}}!</h1>
-                    <h1 style="font-size: 15px; color: #545454; font-family: Helvetica">Has quedado resgistado en la plataforma de Garantias Comuntarias.</h1>
+                    <h1 style="font-size: 15px; color: #545454; font-family: Helvetica">Has quedado registrado en la plataforma de Garantías Comunitarias.</h1>
                 </td>
             </tr>
 

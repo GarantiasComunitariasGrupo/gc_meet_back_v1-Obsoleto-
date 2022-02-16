@@ -13,8 +13,6 @@ class TestMail extends Mailable
 
     public $detalle;
 
-    // public $subject = 'Informacion de contacto';
-
     /**
      * Create a new message instance.
      *

@@ -1,5 +1,4 @@
-<!DOCTYPE html
-    PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 
 <head>
@@ -54,11 +53,9 @@
                 <td>
                     <table width="100%">
                         <tr>
-                            <td
-                                style="text-align:center; padding: 15px; line-height:28px; font-weight:bold; position:relative; border-bottom: 1px solid #E2E2E2;">
+                            <td style="text-align:center; padding: 15px; line-height:28px; font-weight:bold; position:relative; border-bottom: 1px solid #E2E2E2;">
                                 <div>
-                                    <img src="http://burodeconexiones.com/gc_balanced/public/assets/img/test/fondo-con-logo.PNG"
-                                        style="width:700px; height:277px; display:block; border:none;">
+                                    <img src="http://burodeconexiones.com/gc_balanced/public/assets/img/test/fondo-con-logo.PNG" style="width:700px; height:277px; display:block; border:none;">
                                 </div>
                             </td>
                         </tr>
@@ -79,37 +76,36 @@
                 <td style="padding: 20px; background-color:#ffffff; width:100%; padding-bottom:20px;">
                     <div class="col-lge">
                         <h1 style="font-family: Helvetica; font-size: 15px; color: #545454;">
-                        Descripción: {{$data['descripcion']}}
+                            Descripción: {{$data['descripcion']}}
                         </h1>
                     </div>
                     <div class="col-lge">
                         <h1 style="font-family: Helvetica; font-size: 15px; color: #545454;">
-                        Nueva fecha de la reunión: {{$data['fecha_reunion']}}
+                            Nueva fecha de la reunión: {{$data['fecha_reunion']}}
                         </h1>
                     </div>
                     <div class="col-lge">
                         <h1 style="font-family: Helvetica; font-size: 15px; color: #545454;">
-                        Nueva hora de la reunión: {{$data['hora']}}
+                            Nueva hora de la reunión: {{$data['hora']}}
                         </h1>
                     </div>
+
+                    <a href="{{$data['url']}}" style="margin:0; font-size:28px; text-decoration: none; padding: 15px 15px; color: #171717; border-radius: 4px; display: inline-block;">
+                        <span style="font-weight: bold; color: #4883BE; font-family: Helvetica">Haz click aquí</span>
+                    </a>
+
                     <div class="col-lge">
                         <h1 style="font-family: Helvetica; font-size: 15px; color: #545454;">
-                        Link de acceso unico: {{$data['url']}}
-                        </h1>
-                    </div>
-                    <div class="col-lge">
-                        <h1 style="font-family: Helvetica; font-size: 15px; color: #545454;">
-                        Estado: REPROGRAMADA
+                            Estado: REPROGRAMADA
                         </h1>
                     </div>
                 </td>
             </tr>
 
             <tr>
-                <td
-                    style="padding:30px; text-align:center; font-size:13px; background-color:#16151E; border-color: #C6D2DF; opacity: 1; color:#BBB9C8;">
+                <td style="padding:30px; text-align:center; font-size:13px; background-color:#16151E; border-color: #C6D2DF; opacity: 1; color:#BBB9C8;">
                     <p style="margin:0; font-size:14px; line-height:20px; color:#BBB9C8; font-family: Helvetica;">
-                      Este es un mensaje automático generado por Garantías Comunitarias, por favor no responda este correo.
+                        Este es un mensaje automático generado por Garantías Comunitarias, por favor no responda este correo.
                     </p>
                 </td>
             </tr>

@@ -409,31 +409,44 @@ class Gcm_Reunion_Controller extends Controller
                 'fecha_reunion.required' => '*Rellena este campo',
                 'hora.required' => '*Rellena este campo',
             ]);
-
+            
             if ($validator->fails()) {
                 Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 378), null);
                 return response()->json($validator->errors(), 422);
             }
-
+            
             $reunion = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
-                ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo')
-                ->where([['gcm_reuniones.id_reunion', '=', $request->id_reunion], ['gcm_reuniones.estado', '!=', 4]])->firstOrFail();
-
+            ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo')
+            ->where([['gcm_reuniones.id_reunion', '=', $request->id_reunion], ['gcm_reuniones.estado', '!=', 4]])->firstOrFail();
+            
             $reunion->fecha_reunion = $request->fecha_reunion;
             $reunion->hora = $request->hora;
             $reunion->estado = 0;
             $response = $reunion->save();
-
+            
             $convocados = $request->convocados;
             $encrypt = new Encrypt();
             // Aqui realizo un array_map con el objetivo de obtener solo el correo del objeto que llega y que este se almacene en un array nuevo
             $correosOrganizados = array_map(function ($row) {
                 return $row['correo'];
             }, $convocados);
+            
+            $imagen = '';
+
+            if ($request->id_grupo == 1) {
+                $imagen = 'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GCL.jpg';
+            } else if ($request->id_grupo == 2) {
+                $imagen = 'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GCP.jpg';
+            } else if ($request->id_grupo == 3) {
+                $imagen = 'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GBR.jpg';
+            } else {
+                $imagen = 'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GM.jpg';
+            }
 
             for ($i = 0; $i < count($convocados); $i++) {
                 $valorEncriptado = $encrypt->encriptar($convocados[$i]['id_convocado_reunion']);
                 $detalle = [
+                    'imagen' => $imagen,
                     'nombre' => $convocados[$i]['nombre'],
                     'titulo' => $reunion['titulo'],
                     'descripcion' => $reunion['descripcion'],
