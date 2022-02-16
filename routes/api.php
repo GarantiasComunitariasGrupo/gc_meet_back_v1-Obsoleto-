@@ -231,6 +231,8 @@ Route::group([
     Route::get('/autocompletar/{identificacion}', [Gcm_Reunion_Controller::class, 'autocompletar']);
     // PDF Programación
     Route::post('/downloadPDF-programacion', [Gcm_Reunion_Controller::class, 'descargarPDFProgramacion']);
+    // Actas
+    Route::get('/get-actas', [Gcm_Reunion_Controller::class, 'getActas']);
 });
 
 /**

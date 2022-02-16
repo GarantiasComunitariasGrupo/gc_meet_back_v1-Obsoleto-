@@ -7,6 +7,7 @@ use App\Http\Classes\Encrypt;
 use App\Mail\ReunionCancelada;
 use App\Mail\ReunionReprogramada;
 use App\Mail\TestMail;
+use App\Models\Gcm_Acta;
 use App\Models\Gcm_Archivo_Programacion;
 use App\Models\Gcm_Convocado_Reunion;
 use App\Models\Gcm_Grupo;
@@ -134,9 +135,15 @@ class Gcm_Reunion_Controller extends Controller
         try {
             //toma todos los datos de programacion sin importar si tiene o no archivos
             $base = Gcm_Programacion::leftJoin('gcm_archivos_programacion', 'gcm_archivos_programacion.id_programa', '=', 'gcm_programacion.id_programa')
+                ->leftJoin('gcm_roles_actas as gra', 'gcm_programacion.id_rol_acta', '=', 'gra.id_rol_acta')
                 ->select(
                     'gcm_programacion.*',
+                    'gra.descripcion as rol_acta_descripcion',
+                    'gra.firma as rol_acta_firma',
+                    'gra.acta as rol_acta_acta',
+                    DB::raw('GROUP_CONCAT(gcm_archivos_programacion.id_archivo_programacion SEPARATOR "|") AS id_archivo_programacion_archivos'),
                     DB::raw('GROUP_CONCAT(gcm_archivos_programacion.descripcion SEPARATOR "|") AS descripciones_archivos'),
+                    DB::raw('GROUP_CONCAT(gcm_archivos_programacion.id_programa SEPARATOR "|") AS id_programas_archivos'),
                     DB::raw('GROUP_CONCAT(gcm_archivos_programacion.peso SEPARATOR "|") AS pesos_archivos'),
                     DB::raw('GROUP_CONCAT(gcm_archivos_programacion.url SEPARATOR "|") AS url_archivos')
                 )->where([['gcm_programacion.id_reunion', $id_reunion], ['gcm_programacion.estado', '!=', '4']])->groupBy('gcm_programacion.id_programa')->get()->toArray();
@@ -145,19 +152,25 @@ class Gcm_Reunion_Controller extends Controller
                 $item['archivos'] = [];
                 if (!empty($item['descripciones_archivos'])) {
                     $descripcionesArchivo = explode('|', $item['descripciones_archivos']);
+                    $idArchivo = explode('|', $item['id_archivo_programacion_archivos']);
+                    $idPrograma = explode('|', $item['id_programas_archivos']);
                     $pesosArchivo = explode('|', $item['pesos_archivos']);
                     $urlArchivo = explode('|', $item['url_archivos']);
 
                     for ($i = 0; $i < count($descripcionesArchivo); $i++) {
                         array_push($item['archivos'], [
+                            "id_archivo_programacion" => $idArchivo[$i],
                             "descripcion" => $descripcionesArchivo[$i],
+                            "id_programa" => $idPrograma[$i],
                             "peso" => $pesosArchivo[$i],
                             "url" => $urlArchivo[$i],
                         ]);
                     }
                 }
 
+                unset($item['id_archivo_programacion_archivos']);
                 unset($item['descripciones_archivos']);
+                unset($item['id_programas_archivos']);
                 unset($item['pesos_archivos']);
                 unset($item['url_archivos']);
 
@@ -183,7 +196,7 @@ class Gcm_Reunion_Controller extends Controller
 
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
-            return response()->json(["error" => $th->getMessage()], 500);
+            return response()->json(["error" => $th->getMessage() . ' - ' . $th->getLine()], 500);
         }
     }
 
@@ -691,12 +704,12 @@ class Gcm_Reunion_Controller extends Controller
 
             if (!$tipo_reunion) {$tipo_reunion = new Gcm_Tipo_Reunion();}
 
+            $tipo_reunion->imagen = "/assets/img/meets/bg" . random_int(1, 4) . ".png";
             $tipo_reunion->honorifico_representante = 'Representantes';
             $tipo_reunion->honorifico_participante = 'Participantes';
             $tipo_reunion->honorifico_invitado = 'Invitados';
             $tipo_reunion->id_grupo = $data['id_grupo'];
             $tipo_reunion->titulo = $data['titulo'];
-            $tipo_reunion->imagen = null;
             $tipo_reunion->estado = 1;
             $tipo_reunion->save();
 
@@ -857,7 +870,6 @@ class Gcm_Reunion_Controller extends Controller
                 $convocado->nit = $convocadoItem['tipo'] == '2' ? $convocadoItem['nit'] : null;
                 $convocado->id_relacion = $relacion->id_relacion;
                 $convocado->id_reunion = $reunion->id_reunion;
-                $convocado->fecha_envio_invitacion = null;
                 $convocado->firma = $convocadoItem['firma'];
                 $convocado->tipo = $convocadoItem['tipo'];
                 $convocado->acta = $convocadoItem['acta'];
@@ -890,15 +902,29 @@ class Gcm_Reunion_Controller extends Controller
 
             if (isset($request['titulo'])) {
                 for ($i = 0; $i < count($request['titulo']); $i++) {
+
+                    $id_rol_acta = null;
+                    if ($reunion->id_acta != null && isset($request['rol_acta_descripcion']) && $this->stringNullToNull($request['rol_acta_descripcion'][$i]) !== null) {
+                        $rol_acta_existe = Gcm_Rol_Acta::where([['id_acta', $reunion->id_acta], ['descripcion', $request['rol_acta_descripcion'][$i]]])->first();
+                        $rol_acta = !$rol_acta_existe ? new Gcm_Rol_Acta() : Gcm_Rol_Acta::findOrFail($rol_acta_existe->id_rol_acta);
+
+                        $rol_acta->descripcion = $request['rol_acta_descripcion'][$i];
+                        $rol_acta->firma = $request['rol_acta_firma'][$i];
+                        $rol_acta->acta = $request['rol_acta_acta'][$i];
+                        $rol_acta->id_acta = $reunion->id_acta;
+                        $rol_acta->estado = 1;
+                        $rol_acta->save();
+                        $id_rol_acta = $rol_acta->id_rol_acta;
+                    }
+
                     $programa = !$this->stringNullToNull($request['id_programa'][$i]) ? new Gcm_Programacion() : Gcm_Programacion::findOrFail($request['id_programa'][$i]);
 
-                    $programa->id_convocado_reunion = $this->stringNullToNull($request['id_convocado_reunion'][$i]);
                     $programa->descripcion = $this->stringNullToNull($request['descripcion'][$i]);
-                    $programa->id_rol_acta = $this->stringNullToNull($request['id_rol_acta'][$i]);
                     $programa->estado = $request['estado'][$i] ? $request['estado'][$i] : 0;
                     $programa->titulo = $this->stringNullToNull($request['titulo'][$i]);
                     $programa->tipo = $this->stringNullToNull($request['tipo'][$i]);
                     $programa->id_reunion = $reunion->id_reunion;
+                    $programa->id_rol_acta = $id_rol_acta;
                     $programa->relacion = null;
                     $programa->orden = $i + 1;
                     $programa->numeracion = 0;
@@ -1635,6 +1661,17 @@ class Gcm_Reunion_Controller extends Controller
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
             return response()->json(["error" => $th->getMessage()], 500);
+        }
+    }
+
+    public function getActas()
+    {
+        try {
+            $actas = Gcm_Acta::get();
+            return response()->json(["status" => true, "message" => $actas], 200);
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
+            return response()->json(["status" => false, "message" => $th->getMessage() . ' - ' . $th->getLine()], 200);
         }
     }
 
