@@ -17,6 +17,7 @@ use App\Models\Gcm_Respuesta_Convocado;
 use App\Models\Gcm_Restriccion_Rol_Representante;
 use App\Models\Gcm_Reunion;
 use App\Models\Gcm_Rol;
+use App\Models\Gcm_Rol_Acta;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -823,17 +824,21 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
             //toma todos los datos de programacion sin importar si tiene o no archivos
             $base = Gcm_Programacion::leftJoin('gcm_archivos_programacion', 'gcm_archivos_programacion.id_programa', '=', 'gcm_programacion.id_programa')
+                ->leftJoin('gcm_roles_actas as gra', 'gcm_programacion.id_rol_acta', '=', 'gra.id_rol_acta')
                 ->leftJoinSub($respose, 'rsc', function ($join) {
                     $join->on('rsc.id_programa', '=', 'gcm_programacion.id_programa');
                 })->select(
                 'gcm_programacion.*',
+                'gra.descripcion as rol_acta_descripcion',
+                'gra.firma as rol_acta_firma',
+                'gra.acta as rol_acta_acta',
                 DB::raw('GROUP_CONCAT(gcm_archivos_programacion.id_archivo_programacion SEPARATOR "|") AS id_archivo_programacion_archivos'),
-                DB::raw('GROUP_CONCAT(gcm_archivos_programacion.id_programa SEPARATOR "|") AS id_programas_archivos'),
                 DB::raw('GROUP_CONCAT(gcm_archivos_programacion.descripcion SEPARATOR "|") AS descripciones_archivos'),
+                DB::raw('GROUP_CONCAT(gcm_archivos_programacion.id_programa SEPARATOR "|") AS id_programas_archivos'),
                 DB::raw('GROUP_CONCAT(gcm_archivos_programacion.peso SEPARATOR "|") AS pesos_archivos'),
                 DB::raw('GROUP_CONCAT(gcm_archivos_programacion.url SEPARATOR "|") AS url_archivos'),
                 'rsc.descripcion as response')
-                ->where([['id_reunion', $id_reunion], ['estado', '!=', '4']])
+                ->where([['id_reunion', $id_reunion], ['gcm_programacion.estado', '!=', '4']])
                 ->groupBy('gcm_programacion.id_programa')->get()->toArray();
 
             $base = array_map(function ($item) {
@@ -1251,22 +1256,35 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 $this->liberarOrden($request->id_reunion, $request->orden);
             }
 
+            $id_rol_acta = null;
+            if ($request->id_acta != null && isset($request->rol_acta_descripcion)) {
+                $rol_acta_existe = Gcm_Rol_Acta::where([['id_acta', $request->id_acta], ['descripcion', $request->rol_acta_descripcion]])->first();
+                $rol_acta = !$rol_acta_existe ? new Gcm_Rol_Acta() : Gcm_Rol_Acta::findOrFail($rol_acta_existe->id_rol_acta);
+
+                $rol_acta->descripcion = $request->rol_acta_descripcion;
+                $rol_acta->firma = $request->rol_acta_firma;
+                $rol_acta->acta = $request->rol_acta_acta;
+                $rol_acta->id_acta = $request->id_acta;
+                $rol_acta->estado = 1;
+                $rol_acta->save();
+                $id_rol_acta = $rol_acta->id_rol_acta;
+            }
+
             // Registra la programación de una reunion
             $programa_nuevo = new Gcm_Programacion;
             if ($this->stringNullToNull($request->id_programa) !== null) {
                 $programa_nuevo = Gcm_Programacion::find($request->id_programa);
                 if (!$programa_nuevo) {throw new \Error("El programa no existe", 1);}
             }
-            $programa_nuevo->id_reunion = $this->stringNullToNull($request->id_reunion);
-            $programa_nuevo->titulo = $this->stringNullToNull($request->titulo);
             $programa_nuevo->descripcion = $this->stringNullToNull($request->descripcion);
-            $programa_nuevo->orden = $request->orden;
-            $programa_nuevo->numeracion = $this->stringNullToNull($request->numeracion);
-            $programa_nuevo->tipo = $this->stringNullToNull($request->tipo);
-            $programa_nuevo->relacion = null;
-            $programa_nuevo->id_rol_acta = null;
-            $programa_nuevo->id_convocado_reunion = null;
             $programa_nuevo->estado = $request->estado ? $request->estado : 0;
+            $programa_nuevo->titulo = $this->stringNullToNull($request->titulo);
+            $programa_nuevo->tipo = $this->stringNullToNull($request->tipo);
+            $programa_nuevo->id_reunion = $this->stringNullToNull($request->id_reunion);
+            $programa_nuevo->id_rol_acta = $id_rol_acta;
+            $programa_nuevo->relacion = null;
+            $programa_nuevo->orden = $request->orden;
+            $programa_nuevo->numeracion = 0;
 
             $programa_nuevo->save();
 
@@ -1291,6 +1309,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
                 if (!file_exists($carpeta)) {
                     mkdir($carpeta, 0777, true);
+                    chmod($carpeta, 0777);
                 }
 
                 for ($j = 0; $j < count($request['file']); $j++) {
@@ -1353,21 +1372,6 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
                 for ($j = 0; $j < count($request['opcion_titulo']); $j++) {
 
-                    $validator = Validator::make($request->all(), [
-                        'titulo' => 'required|max:500',
-                        'descripcion' => 'max:500',
-                    ], [
-                        'titulo.required' => '*Rellena este campo',
-                        'titulo.max' => '*Máximo 500 caracteres',
-                        'descripcion.max' => '*Maximo 500 caracteres',
-                    ]);
-
-                    if ($validator->fails()) {
-                        DB::rollback();
-                        Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1296), null);
-                        return response()->json($validator->errors(), 422);
-                    }
-
                     // Registra las opciones
                     $opcion_nueva = new Gcm_Programacion;
                     if ($this->stringNullToNull($request['opcion_id_programa'][$j]) !== null) {
@@ -1375,16 +1379,16 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                         if (!$opcion_nueva) {throw new \Error("La opción no existe", 1);}
                     }
 
-                    $opcion_nueva->id_reunion = $this->stringNullToNull($request->id_reunion);
-                    $opcion_nueva->titulo = $this->stringNullToNull($request['opcion_titulo'][$j]);
+                    $opcion_nueva->estado = $request['opcion_estado'][$j] ? $request['opcion_estado'][$j] : 0;
                     $opcion_nueva->descripcion = $this->stringNullToNull($request['opcion_descripcion'][$j]);
+                    $opcion_nueva->titulo = $this->stringNullToNull($request['opcion_titulo'][$j]);
+                    $opcion_nueva->id_reunion = $this->stringNullToNull($request->id_reunion);
+                    $opcion_nueva->relacion = $this->stringNullToNull($programa_nuevo->id_programa);
+                    $opcion_nueva->id_convocado_reunion = null;
+                    $opcion_nueva->id_rol_acta = null;
                     $opcion_nueva->orden = $j + 1;
                     $opcion_nueva->numeracion = 1;
                     $opcion_nueva->tipo = 0;
-                    $opcion_nueva->relacion = $this->stringNullToNull($programa_nuevo->id_programa);
-                    $opcion_nueva->id_rol_acta = null;
-                    $opcion_nueva->id_convocado_reunion = null;
-                    $opcion_nueva->estado = $request['opcion_estado'][$j] ? $request['opcion_estado'][$j] : 0;
 
                     $opcion_nueva->save();
 

@@ -30,22 +30,22 @@ class TipoReunionSeeder extends Seeder
             'honorifico_participante' => 'Participantes',
             'honorifico_invitado' => 'Invitados',
             'honorifico_representante' => 'Representantes',
+            'imagen' => '/assets/img/meets/bg2.png',
+            'estado' => 1,
+        ]);
+
+        DB::table('gcm_tipo_reuniones')->insert([
+            'id_grupo' => 2,
+            'titulo' => 'Asamblea de accionistas',
+            'honorifico_participante' => 'Participantes',
+            'honorifico_invitado' => 'Invitados',
+            'honorifico_representante' => 'Representantes',
             'imagen' => '/assets/img/meets/bg1.png',
             'estado' => 1,
         ]);
 
         DB::table('gcm_tipo_reuniones')->insert([
             'id_grupo' => 2,
-            'titulo' => 'Asamblea de accionistas',
-            'honorifico_participante' => 'Participantes',
-            'honorifico_invitado' => 'Invitados',
-            'honorifico_representante' => 'Representantes',
-            'imagen' => '/assets/img/meets/bg2.png',
-            'estado' => 1,
-        ]);
-
-        DB::table('gcm_tipo_reuniones')->insert([
-            'id_grupo' => 2,
             'titulo' => 'Junta directiva',
             'honorifico_participante' => 'Participantes',
             'honorifico_invitado' => 'Invitados',
@@ -60,7 +60,7 @@ class TipoReunionSeeder extends Seeder
             'honorifico_participante' => 'Participantes',
             'honorifico_invitado' => 'Invitados',
             'honorifico_representante' => 'Representantes',
-            'imagen' => '/assets/img/meets/bg3.png',
+            'imagen' => '/assets/img/meets/bg1.png',
             'estado' => 1,
         ]);
 
@@ -70,7 +70,7 @@ class TipoReunionSeeder extends Seeder
             'honorifico_participante' => 'Participantes',
             'honorifico_invitado' => 'Invitados',
             'honorifico_representante' => 'Representantes',
-            'imagen' => '/assets/img/meets/bg3.png',
+            'imagen' => '/assets/img/meets/bg2.png',
             'estado' => 1,
         ]);
 
@@ -80,7 +80,7 @@ class TipoReunionSeeder extends Seeder
             'honorifico_participante' => 'Participantes',
             'honorifico_invitado' => 'Invitados',
             'honorifico_representante' => 'Representantes',
-            'imagen' => '/assets/img/meets/bg4.png',
+            'imagen' => '/assets/img/meets/bg1.png',
             'estado' => 1,
         ]);
 
@@ -90,7 +90,7 @@ class TipoReunionSeeder extends Seeder
             'honorifico_participante' => 'Participantes',
             'honorifico_invitado' => 'Invitados',
             'honorifico_representante' => 'Representantes',
-            'imagen' => '/assets/img/meets/bg4.png',
+            'imagen' => '/assets/img/meets/bg2.png',
             'estado' => 1,
         ]);
     }
