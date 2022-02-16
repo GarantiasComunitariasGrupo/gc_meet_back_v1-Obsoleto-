@@ -1291,6 +1291,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
                 if (!file_exists($carpeta)) {
                     mkdir($carpeta, 0777, true);
+                    chmod($carpeta, 0777);
                 }
 
                 for ($j = 0; $j < count($request['file']); $j++) {
@@ -1352,21 +1353,6 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             if (isset($request['opcion_titulo'])) {
 
                 for ($j = 0; $j < count($request['opcion_titulo']); $j++) {
-
-                    $validator = Validator::make($request->all(), [
-                        'titulo' => 'required|max:500',
-                        'descripcion' => 'max:500',
-                    ], [
-                        'titulo.required' => '*Rellena este campo',
-                        'titulo.max' => '*Máximo 500 caracteres',
-                        'descripcion.max' => '*Maximo 500 caracteres',
-                    ]);
-
-                    if ($validator->fails()) {
-                        DB::rollback();
-                        Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1296), null);
-                        return response()->json($validator->errors(), 422);
-                    }
 
                     // Registra las opciones
                     $opcion_nueva = new Gcm_Programacion;

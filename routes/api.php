@@ -211,8 +211,7 @@ Route::group([
     Route::get('/traer-reunion/{id_reunion}', [Gcm_Reunion_Controller::class, 'getReunion']);
     Route::get('/traer-ultima-reunion/{id_tipo_reunion}', [Gcm_Reunion_Controller::class, 'traerReunion']);
     Route::post('/editar-reunion', [Gcm_Reunion_Controller::class, 'editarReunionCompleta']);
-    Route::post('/enviar-correos', [Gcm_Reunion_Controller::class, 'enviarCorreos']);
-    Route::get('/traer-roles-actas', [Gcm_Reunion_Controller::class, 'getRolesActas']);
+    Route::get('/traer-roles-actas/{id_acta}', [Gcm_Reunion_Controller::class, 'getRolesActas']);
     // Grupos
     Route::get('/traer-grupos/{id_usuario}', [Gcm_Reunion_Controller::class, 'getGrupos']);
     Route::get('/traer-grupo/{id_grupo}', [Gcm_Reunion_Controller::class, 'getGrupo']);

@@ -14,8 +14,8 @@ use App\Models\Gcm_Programacion;
 use App\Models\Gcm_Recurso;
 use App\Models\Gcm_Relacion;
 use App\Models\Gcm_Reunion;
-use App\Models\Gcm_Rol_Acta;
 use App\Models\Gcm_Rol;
+use App\Models\Gcm_Rol_Acta;
 use App\Models\Gcm_Tipo_Reunion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -115,10 +115,10 @@ class Gcm_Reunion_Controller extends Controller
     /**
      * Trae todos los roles actas registrados
      */
-    public function getRolesActas()
+    public function getRolesActas($id_acta)
     {
         try {
-            $rolesActas = Gcm_Rol_Acta::where('estado', '1')->get();
+            $rolesActas = Gcm_Rol_Acta::where([['estado', '1'], ['id_acta', $id_acta]])->get();
             return response()->json($rolesActas);
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
@@ -255,7 +255,7 @@ class Gcm_Reunion_Controller extends Controller
             for ($i = 0; $i < count($request->correos); $i++) {
 
                 $convocado = Gcm_Convocado_Reunion::findOrFail($request->correos[$i]['id_convocado']);
-                $fecha = '2022-02-02 18:06:00';
+                $fecha = date('Y-m-d h:i:s');
                 $convocado->fecha_envio_invitacion = $fecha;
                 $response = $convocado->save();
 
@@ -649,661 +649,299 @@ class Gcm_Reunion_Controller extends Controller
         }
     }
 
-    /**
-     * Función que actualiza los datos, los convocados y los programas de una reunión.
-     *
-     * @param Request Aqui toda la información de la reunion, de los convocados y los programas.
-     * @return void Retorna un mensaje donde se evidencia si la actualizacion fue exitosa o fallo
-     */
     public function editarReunionCompleta(Request $request)
     {
-
-        DB::beginTransaction();
         try {
+
             // Array para almacenar los id de los convocados para poder enviar los correos con la url de la reunion
             $array_id_convocados = [];
 
             // Actualiza los datos de la reunión
             $data = json_decode($request->reunion, true);
             $dataCollection = collect($data);
-            $id_tipo_reunion = $data['id_tipo_reunion'];
 
-            // En caso de no existir el tipo reunión, registra un tipo nuevo
-            if (empty($id_tipo_reunion)) {
+            $validator = Validator::make($dataCollection->all(), [
+                'titulo' => 'required|max:255',
+                'descripcion' => 'max:5000',
+                'fecha_reunion' => 'required',
+                'hora' => 'required',
+                'quorum' => 'required|max:2',
+            ], [
+                'titulo.required' => '*Rellena este campo',
+                'titulo.max' => '*Maximo 255 caracteres',
+                'descripcion.max' => '*Maximo 5000 caracteres',
+                'fecha_reunion.required' => '*Rellena este campo',
+                'hora.required' => '*Rellena este campo',
+                'quorum.required' => '*Rellena este campo',
+                'quorum.max' => '*Máximo 2 caracteres',
+            ]);
 
-                $validator = Validator::make($dataCollection->all(), [
-                    'titulo' => 'required|max:255',
-                ], [
-                    'titulo.required' => '*Rellena este campo',
-                    'titulo.max' => '*Maximo 255 caracteres',
-                ]);
-
-                if ($validator->fails()) {
-                    DB::rollback();
-                    Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 647), null);
-                    return response()->json($validator->errors(), 422);
-                }
-
-                $tipo_reunion_nueva = new Gcm_Tipo_Reunion;
-                $tipo_reunion_nueva->id_grupo = $data['id_grupo'];
-                $tipo_reunion_nueva->titulo = $data['titulo'];
-                $tipo_reunion_nueva->honorifico_participante = 'Participantes';
-                $tipo_reunion_nueva->honorifico_invitado = 'Invitados';
-                $tipo_reunion_nueva->honorifico_representante = 'Representantes';
-                $tipo_reunion_nueva->imagen = null;
-                $tipo_reunion_nueva->estado = 1;
-
-                $response = $tipo_reunion_nueva->save();
-                $id_tipo_reunion = $tipo_reunion_nueva->id_tipo_reunion;
-
+            if ($validator->fails()) {
+                DB::rollback();
+                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 647), null);
+                return response()->json($validator->errors(), 422);
             }
+
+            $tipo_reunion = Gcm_Tipo_Reunion::find($data['id_tipo_reunion']);
+
+            if (!$tipo_reunion) {
+                $tipo_existe = Gcm_Tipo_Reunion::where([['id_grupo', $data['id_grupo']], ['titulo', $data['titulo']]])->first();
+                if ($tipo_existe) {$tipo_reunion = Gcm_Tipo_Reunion::find($tipo_existe->id_tipo_reunion);}
+            }
+
+            if (!$tipo_reunion) {$tipo_reunion = new Gcm_Tipo_Reunion();}
+
+            $tipo_reunion->honorifico_representante = 'Representantes';
+            $tipo_reunion->honorifico_participante = 'Participantes';
+            $tipo_reunion->honorifico_invitado = 'Invitados';
+            $tipo_reunion->id_grupo = $data['id_grupo'];
+            $tipo_reunion->titulo = $data['titulo'];
+            $tipo_reunion->imagen = null;
+            $tipo_reunion->estado = 1;
+            $tipo_reunion->save();
 
             // Array de extensiones que se van a permitir en la inserción del archivo de firma programacion
             $extensionesFirmaProgramacion = array('PNG', 'JPG', 'JPEG', 'PDF');
-            $id_reunion = $data['id_reunion'];
 
-            // En caso de no existir la reunión, crea una nueva
-            if (empty($id_reunion)) {
+            $reunion = Gcm_Reunion::find($data['id_reunion']);
+            if (!$reunion) {$reunion = new Gcm_Reunion();}
 
-                $validator = Validator::make($dataCollection->all(), [
-                    'descripcion' => 'max:5000',
-                    'fecha_reunion' => 'required',
-                    'hora' => 'required',
-                    'quorum' => 'required|max:2',
-                ], [
-                    'descripcion.max' => '*Maximo 5000 caracteres',
-                    'fecha_reunion.required' => '*Rellena este campo',
-                    'hora.required' => '*Rellena este campo',
-                    'quorum.required' => '*Rellena este campo',
-                    'quorum.max' => '*Máximo 2 caracteres',
-                ]);
+            $reunion->id_tipo_reunion = $tipo_reunion->id_tipo_reunion;
+            $reunion->id_acta = $data['id_acta'] == 0 ? null : $data['id_acta'];
+            $reunion->fecha_reunion = $data['fecha_reunion'];
+            $reunion->descripcion = $data['descripcion'];
+            $reunion->quorum = $data['quorum'];
+            $reunion->estado = $data['estado'];
+            $reunion->hora = $data['hora'];
 
-                if ($validator->fails()) {
+            $reunion->save();
+
+            if ($request->hasFile('programacion')) {
+                $subcarpeta = 'archivos_reunion/' . $reunion->id_reunion;
+                $carpeta = 'storage/app/public/' . $subcarpeta;
+
+                if (!file_exists($carpeta)) {
+                    mkdir($carpeta, 0777, true);
+                    chmod($carpeta, 0777);
+                }
+
+                $file = $request['programacion'];
+                $extension = $file->getClientOriginalExtension();
+
+                if (!in_array(strtoupper($extension), $extensionesFirmaProgramacion)) {
                     DB::rollback();
-                    Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 687), null);
-                    return response()->json($validator->errors(), 422);
+                    Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => 'La extensión del archivo no es permitida'), null);
+                    return response()->json(['error' => 'La extensión del archivo no es permitida'], 500);
                 }
 
-                $reunion_nueva = new Gcm_Reunion;
-                $reunion_nueva->id_tipo_reunion = $id_tipo_reunion;
-                $reunion_nueva->descripcion = $data['descripcion'];
-                $reunion_nueva->fecha_reunion = $data['fecha_reunion'];
-                $reunion_nueva->hora = $data['hora'];
-                $reunion_nueva->quorum = $data['quorum'];
-                $reunion_nueva->id_acta = null;
-                $reunion_nueva->estado = $data['estado'];
+                $picture = substr(md5(microtime()), rand(0, 31 - 8), 8) . '.' . $extension;
+                $reunion->programacion = $subcarpeta . '/' . $picture;
+                $file->move(storage_path('app/public/archivos_reunion/' . $reunion->id_reunion), $picture);
+                chmod(storage_path('app/public/archivos_reunion/' . $reunion->id_reunion . '/' . $picture), 0777);
+            } else { $reunion->programacion = $data['programacion'];}
 
-                $response = $reunion_nueva->save();
-                $id_reunion = $reunion_nueva->id_reunion;
-
-                $picture = 0;
-
-                if ($request->hasFile('programacion')) {
-
-                    $subcarpeta = 'archivos_reunion/' . $id_reunion;
-                    $carpeta = 'storage/app/public/' . $subcarpeta;
-
-                    if (!file_exists($carpeta)) {
-                        mkdir($carpeta, 0777, true);
-                    }
-
-                    $file = $request['programacion'];
-                    $extension = $file->getClientOriginalExtension();
-
-                    if (in_array(strtoupper($extension), $extensionesFirmaProgramacion)) {
-                        $picture = substr(md5(microtime()), rand(0, 31 - 8), 8) . '.' . $extension;
-                        $reunion_nueva->programacion = $subcarpeta . '/' . $picture;
-                        $file->move(storage_path('app/public/archivos_reunion/' . $id_reunion), $picture);
-                        chmod(storage_path('app/public/archivos_reunion/' . $id_reunion . '/' . $picture), 0777);
-                    } else {
-                        DB::rollback();
-                        Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => 'La extensión del archivo no es permitida'), null);
-                        return response()->json(['error' => 'La extensión del archivo no es permitida'], 500);
-                    }
-
-                } else {
-                    $reunion_nueva->programacion = $data['programacion'];
-                }
-                $response = $reunion_nueva->save();
-
-            } else {
-
-                $validator = Validator::make($dataCollection->all(), [
-                    'descripcion' => 'max:5000',
-                    'fecha_reunion' => 'required',
-                    'hora' => 'required',
-                    'quorum' => 'required|max:2',
-                ], [
-                    'descripcion.max' => '*Maximo 5000 caracteres',
-                    'fecha_reunion.required' => '*Rellena este campo',
-                    'hora.required' => '*Rellena este campo',
-                    'quorum.required' => '*Rellena este campo',
-                    'quorum.max' => '*Máximo 2 caracteres',
-                ]);
-
-                if ($validator->fails()) {
-                    DB::rollback();
-                    Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 750), null);
-                    return response()->json($validator->errors(), 422);
-                }
-
-                // Actualiza los datos de la reunión
-                $reunion = Gcm_Reunion::findOrFail($id_reunion);
-                $reunion->id_tipo_reunion = $id_tipo_reunion;
-                $reunion->descripcion = $data['descripcion'];
-                $reunion->fecha_reunion = $data['fecha_reunion'];
-                $reunion->hora = $data['hora'];
-                $reunion->quorum = $data['quorum'];
-                $reunion->id_acta = null;
-                $reunion->estado = $data['estado'];
-
-                $picture = 0;
-
-                if ($request->hasFile('programacion')) {
-
-                    $subcarpeta = 'archivos_reunion/' . $id_reunion;
-                    $carpeta = 'storage/app/public/' . $subcarpeta;
-
-                    if (!file_exists($carpeta)) {
-                        mkdir($carpeta, 0777, true);
-                    }
-
-                    $file = $request['programacion'];
-                    $extension = $file->getClientOriginalExtension();
-
-                    if (in_array(strtoupper($extension), $extensionesFirmaProgramacion)) {
-                        $picture = substr(md5(microtime()), rand(0, 31 - 8), 8) . '.' . $extension;
-                        $reunion->programacion = $subcarpeta . '/' . $picture;
-                        $file->move(storage_path('app/public/archivos_reunion/' . $id_reunion), $picture);
-                        chmod(storage_path('app/public/archivos_reunion/' . $id_reunion . '/' . $picture), 0777);
-                    } else {
-                        DB::rollback();
-                        Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => 'La extensión del archivo no es permitida'), null);
-                        return response()->json(['error' => 'La extensión del archivo no es permitida'], 500);
-                    }
-
-                } else {
-                    $reunion->programacion = $data['programacion'];
-                }
-                $response = $reunion->save();
-            }
-
-            // Cambia el estado de los convocados de una reunion por eliminado
-            Gcm_Convocado_Reunion::changeStatus(Gcm_Convocado_Reunion::where([['id_reunion', '=', $id_reunion], ['estado', 1]])->get(), 0);
+            $reunion->save();
 
             $convocados = json_decode($request->convocados, true);
 
-            // Registra los convocados en el tipo Participante o Representante Legal
-            for ($i = 0; $i < count($convocados); $i++) {
+            $summonList = array_map(function ($summon) {return $summon['identificacion'];}, $convocados);
 
-                $convocadosCollection = collect($convocados[$i]);
+            $removedSummonList = Gcm_Convocado_Reunion::join('gcm_relaciones AS rlc', 'gcm_convocados_reunion.id_relacion', '=', 'rlc.id_relacion')
+                ->join('gcm_recursos AS rcs', 'rlc.id_recurso', '=', 'rcs.id_recurso')
+                ->where([['gcm_convocados_reunion.id_reunion', $reunion->id_reunion], ['gcm_convocados_reunion.estado', '!=', '4']])
+                ->whereNotIn('rcs.identificacion', $summonList)->get();
 
-                $relacion_nueva = new Gcm_Relacion;
+            $removedSummonList->each(function ($summonToRemoveItem) {
+                $summonToRemove = Gcm_Convocado_Reunion::find($summonToRemoveItem->id_convocado_reunion);
+                if ($summonToRemove) {
+                    $summonToRemove->estado = '0';
+                    $summonToRemove->save();
+                }
+            });
+
+            foreach ($convocados as $convocadoItem) {
+                $convocadosCollection = collect($convocadoItem);
+
+                $validator = Validator::make($convocadosCollection->all(), [
+                    'rol' => 'required|max:100',
+                    'identificacion' => 'required|max:20',
+                    'nombre' => 'required|max:255',
+                    'telefono' => 'max:20',
+                    'correo' => 'required|max:255|email',
+                ], [
+                    'identificacion.required' => '*Rellena este campo',
+                    'identificacion.max' => '*Maximo 20 caracteres',
+                    'nombre.required' => '*Rellena este campo',
+                    'nombre.max' => '*Maximo 255 caracteres',
+                    'telefono.max' => '*Maximo 20 caracteres',
+                    'correo.required' => '*Rellena este campo',
+                    'correo.max' => '*Máximo 255 caracteres',
+                    'correo.email' => '*Formato de correo invalido',
+                    'rol.required' => '*Rellena este campo',
+                    'rol.max' => '*Maximo 100 caracteres',
+                ]);
+
+                if ($validator->fails()) {
+                    DB::rollback();
+                    Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 831), null);
+                    return response()->json($validator->errors(), 422);
+                }
 
                 // Consulta si el convocado ya fue registrado como recurso
-                $recurso_existe = DB::table('gcm_recursos')->where('identificacion', '=', $convocados[$i]['identificacion'])->first();
+                $recurso_existe = DB::table('gcm_recursos')->where('identificacion', '=', $convocadoItem['identificacion'])->first();
+                $recurso = !$recurso_existe ? new Gcm_Recurso() : Gcm_Recurso::findOrFail($recurso_existe->id_recurso);
 
-                // En caso de no existir el recurso, lo registra
-                if (!$recurso_existe) {
+                if (!empty($convocadoItem['telefono'])) {$recurso->telefono = $convocadoItem['telefono'];}
+                $recurso->identificacion = $convocadoItem['identificacion'];
+                $recurso->nombre = $convocadoItem['nombre'];
+                $recurso->correo = $convocadoItem['correo'];
+                $recurso->estado = 1;
 
+                $recurso->save();
+
+                $rol_existe = DB::table('gcm_roles')->where('descripcion', '=', $convocadoItem['rol'])->first();
+                $rol = !$rol_existe ? new Gcm_Rol() : Gcm_Rol::findOrFail($rol_existe->id_rol);
+
+                $rol->descripcion = $convocadoItem['rol'];
+                $rol->relacion = null;
+                $rol->estado = 1;
+                $rol->save();
+
+                // Consulta si ya existe una relacion registrada con los datos subministrados(id_grupo, id_rol, id_recurso)
+                $relacion_existe = DB::table('gcm_relaciones')->where([['id_grupo', '=', $data['id_grupo']], ['id_rol', '=', $rol->id_rol], ['id_recurso', '=', $recurso->id_recurso]])->first();
+                $relacion = !$relacion_existe ? new Gcm_Relacion() : Gcm_Relacion::findOrFail($relacion_existe->id_relacion);
+
+                $relacion->id_recurso = $recurso->id_recurso;
+                $relacion->id_grupo = $data['id_grupo'];
+                $relacion->id_rol = $rol->id_rol;
+                $relacion->estado = 1;
+                $relacion->save();
+
+                // Registra el convocado con nit y razon social
+                $validator;
+                if ($convocadoItem['tipo'] == '2') {
                     $validator = Validator::make($convocadosCollection->all(), [
-                        'identificacion' => 'required|max:20',
-                        'nombre' => 'required|max:255',
-                        'telefono' => 'max:20',
-                        'correo' => 'required|max:255|email',
+                        'tipo' => 'required|max:2',
+                        'nit' => 'max:20',
+                        'razon_social' => 'max:100',
                     ], [
-                        'identificacion.required' => '*Rellena este campo',
-                        'identificacion.max' => '*Maximo 20 caracteres',
-                        'nombre.required' => '*Rellena este campo',
-                        'nombre.max' => '*Maximo 255 caracteres',
-                        'telefono.max' => '*Maximo 20 caracteres',
-                        'correo.required' => '*Rellena este campo',
-                        'correo.max' => '*Máximo 255 caracteres',
-                        'correo.email' => '*Formato de correo invalido',
+                        'tipo.required' => '*Rellena este campo',
+                        'tipo.max' => '*Maximo 2 caracteres',
+                        'nit.max' => '*Maximo 20 caracteres',
+                        'razon_social.max' => '*Máximo 100 caracteres',
                     ]);
-
-                    if ($validator->fails()) {
-                        DB::rollback();
-                        Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 831), null);
-                        return response()->json($validator->errors(), 422);
-                    }
-
-                    $recurso_nuevo = new Gcm_Recurso;
-                    $recurso_nuevo->identificacion = $convocados[$i]['identificacion'];
-                    $recurso_nuevo->nombre = $convocados[$i]['nombre'];
-                    $recurso_nuevo->telefono = $convocados[$i]['telefono'];
-                    $recurso_nuevo->correo = $convocados[$i]['correo'];
-                    $recurso_nuevo->estado = 1;
-
-                    $response = $recurso_nuevo->save();
-
-                    // Consulta si el rol ya esta registrado
-                    $rol_existe = DB::table('gcm_roles')->where('descripcion', '=', $convocados[$i]['rol'])->first();
-
-                    // En caso de no existir el rol, lo registra
-                    if (!$rol_existe) {
-
-                        $validator = Validator::make($convocadosCollection->all(), [
-                            'rol' => 'required|max:100',
-                        ], [
-                            'rol.required' => '*Rellena este campo',
-                            'rol.max' => '*Maximo 100 caracteres',
-                        ]);
-
-                        if ($validator->fails()) {
-                            DB::rollback();
-                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 859), null);
-                            return response()->json($validator->errors(), 422);
-                        }
-
-                        $rol_nuevo = new Gcm_Rol;
-                        $rol_nuevo->descripcion = $convocados[$i]['rol'];
-                        $rol_nuevo->relacion = null;
-                        $rol_nuevo->estado = 1;
-
-                        $response = $rol_nuevo->save();
-
-                        // Registra la relación nueva
-                        $relacion_nueva->id_grupo = $data['id_grupo'];
-                        $relacion_nueva->id_rol = $rol_nuevo->id_rol;
-                        $relacion_nueva->id_recurso = $recurso_nuevo->id_recurso;
-                        $relacion_nueva->estado = 1;
-
-                        $response = $relacion_nueva->save();
-
-                    } else { // En caso de que si exista el rol
-
-                        // Si existe le actualiza el estado en caso que este este inactivo
-                        if ($rol_existe->estado === '0') {
-
-                            $validator = Validator::make($convocadosCollection->all(), [
-                                'rol' => 'required|max:100',
-                            ], [
-                                'rol.required' => '*Rellena este campo',
-                                'rol.max' => '*Maximo 100 caracteres',
-                            ]);
-
-                            if ($validator->fails()) {
-                                DB::rollback();
-                                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 892), null);
-                                return response()->json($validator->errors(), 422);
-                            }
-
-                            $rol = Gcm_Rol::findOrFail($rol_existe->id_rol);
-                            $rol->descripcion = $convocados[$i]['rol'];
-                            $rol->relacion = null;
-                            $rol->estado = 1;
-
-                            $response = $rol->save();
-                        }
-
-                        // Consulta el id del rol donde la descripcion sea igual a la que se trae en el convocado
-                        $rol = DB::table('gcm_roles')->select('id_rol')->where('descripcion', '=', $convocados[$i]['rol'])->first();
-
-                        // Registra la relación nueva
-                        $relacion_nueva->id_grupo = $data['id_grupo'];
-                        $relacion_nueva->id_rol = $rol->id_rol;
-                        $relacion_nueva->id_recurso = $recurso_nuevo->id_recurso;
-                        $relacion_nueva->estado = 1;
-
-                        $response = $relacion_nueva->save();
-                    }
-
-                    // Registra el convocado con nit y razon social
-                    if ($convocados[$i]['tipo'] === '2') {
-
-                        $validator = Validator::make($convocadosCollection->all(), [
-                            'tipo' => 'required|max:2',
-                            'nit' => 'max:20',
-                            'razon_social' => 'max:100',
-                        ], [
-                            'tipo.required' => '*Rellena este campo',
-                            'tipo.max' => '*Maximo 2 caracteres',
-                            'nit.max' => '*Maximo 20 caracteres',
-                            'razon_social.max' => '*Máximo 100 caracteres',
-                        ]);
-
-                        if ($validator->fails()) {
-                            DB::rollback();
-                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 932), null);
-                            return response()->json($validator->errors(), 422);
-                        }
-
-                        $fechaActual = date('Y-m-d H:i:s');
-
-                        $convocado = new Gcm_Convocado_Reunion;
-                        $convocado->id_reunion = $id_reunion;
-                        $convocado->representacion = null;
-                        $convocado->id_relacion = $relacion_nueva->id_relacion;
-                        $convocado->fecha = $fechaActual;
-                        $convocado->tipo = $convocados[$i]['tipo'];
-                        $convocado->nit = $convocados[$i]['nit'];
-                        $convocado->razon_social = $convocados[$i]['razon_social'];
-                        $convocado->participacion = isset($convocados[$i]['participacion']) ? $convocados[$i]['participacion'] : null;
-                        $convocado->soporte = null;
-                        $convocado->fecha_envio_invitacion = null;
-                        $convocado->firma = $convocados[$i]['firma'];
-                        $convocado->acta = $convocados[$i]['acta'];
-                        $convocado->estado = 1;
-
-                        $response = $convocado->save();
-
-                        array_push($array_id_convocados, $convocado->id_convocado_reunion);
-                    } else {
-
-                        // Registra el convocado sin nit ni razon social
-                        $validator = Validator::make($convocadosCollection->all(), [
-                            'tipo' => 'required|max:2',
-                        ], [
-                            'tipo.required' => '*Rellena este campo',
-                            'tipo.max' => '*Maximo 2 caracteres',
-                        ]);
-
-                        if ($validator->fails()) {
-                            DB::rollback();
-                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 969), null);
-                            return response()->json($validator->errors(), 422);
-                        }
-
-                        $fechaActual = date('Y-m-d H:i:s');
-
-                        $convocado = new Gcm_Convocado_Reunion;
-                        $convocado->id_reunion = $id_reunion;
-                        $convocado->representacion = null;
-                        $convocado->id_relacion = $relacion_nueva->id_relacion;
-                        $convocado->fecha = $fechaActual;
-                        $convocado->tipo = $convocados[$i]['tipo'];
-                        $convocado->participacion = $convocados[$i]['tipo'] == 0 ? (isset($convocados[$i]['participacion']) ? $convocados[$i]['participacion'] : null) : null;
-                        $convocado->nit = null;
-                        $convocado->razon_social = null;
-                        $convocado->soporte = null;
-                        $convocado->fecha_envio_invitacion = null;
-                        $convocado->firma = $convocados[$i]['firma'];
-                        $convocado->acta = $convocados[$i]['acta'];
-                        $convocado->estado = 1;
-
-                        $response = $convocado->save();
-
-                        array_push($array_id_convocados, $convocado->id_convocado_reunion);
-                    }
-
-                } else { // En caso de que si exista el recurso
-
-                    // Actualiza el recurso con los nuevos datos, en caso de enviar el campo de telefono vacio entonces se guarda el antiguo valor del telefono y en caso de que el estado del recurso sea inactivo entonces lo activa
-
+                } else {
+                    // Registra el convocado sin nit ni razon social
                     $validator = Validator::make($convocadosCollection->all(), [
-                        'nombre' => 'required|max:255',
-                        'telefono' => 'max:20',
-                        'correo' => 'required|max:255|email',
+                        'tipo' => 'required|max:2',
                     ], [
-                        'nombre.required' => '*Rellena este campo',
-                        'nombre.max' => '*Maximo 255 caracteres',
-                        'telefono.max' => '*Maximo 20 caracteres',
-                        'correo.required' => '*Rellena este campo',
-                        'correo.max' => '*Máximo 255 caracteres',
-                        'correo.email' => '*Formato de correo invalido',
+                        'tipo.required' => '*Rellena este campo',
+                        'tipo.max' => '*Maximo 2 caracteres',
                     ]);
-
-                    if ($validator->fails()) {
-                        DB::rollback();
-                        Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1011), null);
-                        return response()->json($validator->errors(), 422);
-                    }
-
-                    $recurso = Gcm_Recurso::findOrFail($recurso_existe->id_recurso);
-                    $recurso->nombre = $convocados[$i]['nombre'];
-                    if (!empty($convocados[$i]['telefono'])) {$recurso->telefono = $convocados[$i]['telefono'];}
-                    $recurso->correo = $convocados[$i]['correo'];
-                    if ($recurso_existe->estado === '0') {
-                        $recurso->estado = 1;
-                    }
-                    $response = $recurso->save();
-
-                    // Cosulta si existe el rol ya esta registrado
-                    $rol_existe = DB::table('gcm_roles')->where('descripcion', '=', $convocados[$i]['rol'])->first();
-
-                    // En caso de que no exista el rol, lo registra
-                    if (!$rol_existe) {
-
-                        $validator = Validator::make($convocadosCollection->all(), [
-                            'rol' => 'required|max:100',
-                        ], [
-                            'rol.required' => '*Rellena este campo',
-                            'rol.max' => '*Maximo 100 caracteres',
-                        ]);
-
-                        if ($validator->fails()) {
-                            DB::rollback();
-                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1039), null);
-                            return response()->json($validator->errors(), 422);
-                        }
-
-                        $rol_nuevo = new Gcm_Rol;
-                        $rol_nuevo->descripcion = $convocados[$i]['rol'];
-                        $rol_nuevo->relacion = null;
-                        $rol_nuevo->estado = 1;
-
-                        $response = $rol_nuevo->save();
-
-                        // Registra la relación
-                        $relacion_nueva->id_grupo = $data['id_grupo'];
-                        $relacion_nueva->id_rol = $rol_nuevo->id_rol;
-                        $relacion_nueva->id_recurso = $recurso_existe->id_recurso;
-                        $relacion_nueva->estado = 1;
-
-                        $response = $relacion_nueva->save();
-
-                    } else { // En caso de que si exista el rol
-
-                        if ($rol_existe->estado === '0') {
-
-                            $validator = Validator::make($convocadosCollection->all(), [
-                                'rol' => 'required|max:100',
-                            ], [
-                                'rol.required' => '*Rellena este campo',
-                                'rol.max' => '*Maximo 100 caracteres',
-                            ]);
-
-                            if ($validator->fails()) {
-                                DB::rollback();
-                                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1071), null);
-                                return response()->json($validator->errors(), 422);
-                            }
-
-                            $rol = Gcm_Rol::findOrFail($rol_existe->id_rol);
-                            $rol->descripcion = $convocados[$i]['rol'];
-                            $rol->relacion = null;
-                            $rol->estado = 1;
-
-                            $response = $rol->save();
-                        }
-                        // Consulta si ya existe una relacion registrada con los datos subministrados(id_grupo, id_rol, id_recurso)
-                        $relacion_existe = DB::table('gcm_relaciones')->where([['id_grupo', '=', $data['id_grupo']], ['id_rol', '=', $rol_existe->id_rol], ['id_recurso', '=', $recurso_existe->id_recurso]])->first();
-
-                        // En caso de que no exista la relación, la registra
-                        if (!$relacion_existe) {
-                            $relacion_nueva->id_grupo = $data['id_grupo'];
-                            $relacion_nueva->id_rol = $rol_existe->id_rol;
-                            $relacion_nueva->id_recurso = $recurso_existe->id_recurso;
-                            $relacion_nueva->estado = 1;
-
-                            $response = $relacion_nueva->save();
-                        } else { // En caso de que si exista la relación y el estado de estado sea inactivo entonces lo actualiza a activo
-
-                            if ($relacion_existe->estado === '0') {
-                                $relacion = Gcm_Relacion::findOrFail($relacion_existe->id_relacion);
-                                $relacion->id_grupo = $data['id_grupo'];
-                                $relacion->id_rol = $rol_existe->id_rol;
-                                $relacion->id_recurso = $recurso_existe->id_recurso;
-                                $relacion->estado = 1;
-
-                                $response = $relacion->save();
-                            }
-                            // En caso de que si exista la relación actualiza el valor de id_relacion por el que trae el convocado
-                            $relacion_nueva->id_relacion = $relacion_existe->id_relacion;
-                        }
-                    }
-                    if ($convocados[$i]['tipo'] === '2') {
-
-                        // Registra el convocado con nit y razon social
-                        $validator = Validator::make($convocadosCollection->all(), [
-                            'tipo' => 'required|max:2',
-                            'nit' => 'max:20',
-                            'razon_social' => 'max:100',
-                        ], [
-                            'tipo.required' => '*Rellena este campo',
-                            'tipo.max' => '*Maximo 2 caracteres',
-                            'nit.max' => '*Maximo 20 caracteres',
-                            'razon_social.max' => '*Máximo 100 caracteres',
-                        ]);
-
-                        if ($validator->fails()) {
-                            DB::rollback();
-                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1124), null);
-                            return response()->json($validator->errors(), 422);
-                        }
-
-                        $fechaActual = date('Y-m-d H:i:s');
-
-                        $convocado = new Gcm_Convocado_Reunion;
-                        $convocado->id_reunion = $id_reunion;
-                        $convocado->representacion = null;
-                        $convocado->id_relacion = $relacion_nueva->id_relacion;
-                        $convocado->fecha = $fechaActual;
-                        $convocado->tipo = $convocados[$i]['tipo'];
-                        $convocado->nit = $convocados[$i]['nit'];
-                        $convocado->razon_social = $convocados[$i]['razon_social'];
-                        $convocado->participacion = isset($convocados[$i]['participacion']) ? $convocados[$i]['participacion'] : null;
-                        $convocado->soporte = null;
-                        $convocado->fecha_envio_invitacion = null;
-                        $convocado->firma = $convocados[$i]['firma'];
-                        $convocado->acta = $convocados[$i]['acta'];
-                        $convocado->estado = 1;
-
-                        $response = $convocado->save();
-
-                        // Añade al array_id_convocados los id de cada convocado que vaya agregando con el fin de poder enviarlos en la funcion de enviar correos
-                        array_push($array_id_convocados, $convocado->id_convocado_reunion);
-                    } else {
-
-                        // Registra el convocado sin nit ni razon social
-                        $validator = Validator::make($convocadosCollection->all(), [
-                            'tipo' => 'required|max:2',
-                        ], [
-                            'tipo.required' => '*Rellena este campo',
-                            'tipo.max' => '*Maximo 2 caracteres',
-                        ]);
-
-                        if ($validator->fails()) {
-                            DB::rollback();
-                            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1158), null);
-                            return response()->json($validator->errors(), 422);
-                        }
-
-                        $fechaActual = date('Y-m-d H:i:s');
-
-                        $convocado = new Gcm_Convocado_Reunion;
-                        $convocado->id_reunion = $id_reunion;
-                        $convocado->representacion = null;
-                        $convocado->id_relacion = $relacion_nueva->id_relacion;
-                        $convocado->fecha = $fechaActual;
-                        $convocado->tipo = $convocados[$i]['tipo'];
-                        $convocado->nit = null;
-                        $convocado->razon_social = null;
-                        $convocado->participacion =  $convocados[$i]['tipo'] == 0 ? (isset($convocados[$i]['participacion']) ? $convocados[$i]['participacion'] : null) : null;
-                        $convocado->soporte = null;
-                        $convocado->fecha_envio_invitacion = null;
-                        $convocado->firma = $convocados[$i]['firma'];
-                        $convocado->acta = $convocados[$i]['acta'];
-                        $convocado->estado = 1;
-
-                        $response = $convocado->save();
-
-                        // Añade al array_id_convocados los id de cada convocado que vaya agregando con el fin de poder enviarlos en la funcion de enviar correos
-                        array_push($array_id_convocados, $convocado->id_convocado_reunion);
-                    }
                 }
+
+                if ($validator->fails()) {
+                    DB::rollback();
+                    Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1593), null);
+                    return response()->json($validator->errors(), 200);
+                }
+
+                $convocado_existe = Gcm_Convocado_Reunion::join('gcm_relaciones AS rlc', 'gcm_convocados_reunion.id_relacion', '=', 'rlc.id_relacion')
+                    ->join('gcm_recursos AS rcs', 'rlc.id_recurso', '=', 'rcs.id_recurso')
+                    ->where([['gcm_convocados_reunion.id_reunion', $reunion->id_reunion], ['rcs.identificacion', $recurso->identificacion]])->first();
+
+                $convocado = !$convocado_existe ? new Gcm_Convocado_Reunion() : Gcm_Convocado_Reunion::findOrFail($convocado_existe->id_convocado_reunion);
+
+                $convocado->participacion = ($convocadoItem['tipo'] == '2' || $convocadoItem['tipo'] == 0) ? (isset($convocadoItem['participacion']) ? $convocadoItem['participacion'] : null) : null;
+                $convocado->razon_social = $convocadoItem['tipo'] == '2' ? $convocadoItem['razon_social'] : null;
+                $convocado->nit = $convocadoItem['tipo'] == '2' ? $convocadoItem['nit'] : null;
+                $convocado->id_relacion = $relacion->id_relacion;
+                $convocado->id_reunion = $reunion->id_reunion;
+                $convocado->fecha_envio_invitacion = null;
+                $convocado->firma = $convocadoItem['firma'];
+                $convocado->tipo = $convocadoItem['tipo'];
+                $convocado->acta = $convocadoItem['acta'];
+                $convocado->representacion = null;
+                $convocado->soporte = null;
+                $convocado->estado = 1;
+
+                $convocado->save();
+
+                array_push($array_id_convocados, $convocado->id_convocado_reunion);
             }
 
             // Array de extensiones que se van a permitir en la inserción de archivos de la programación
             $extensiones = array('PNG', 'JPG', 'JPEG', 'GIF', 'XLSX', 'CSV', 'PDF', 'DOCX', 'TXT', 'PPTX', 'SVG', 'PDF');
 
-            // Elimina de la tabla de gcm_archivos_programacion los registros donde el id_reunion del programa sea igual al que se esta enviando
-            // DB::table('gcm_archivos_programacion as ap')->join('gcm_programacion as p', 'p.id_programa', '=', 'ap.id_programa')->where('p.id_reunion', '=', $id_reunion)->delete();
-            Gcm_Archivo_Programacion::groupDeletion(Gcm_Archivo_Programacion::join('gcm_programacion as p', 'p.id_programa', '=', 'gcm_archivos_programacion.id_programa')->where('p.id_reunion', '=', $id_reunion)->get());
+            $programList = isset($request['id_programa']) ? array_values(
+                array_filter($request['id_programa'], function ($program) {return $this->stringNullToNull($program) !== null;})
+            ) : [];
 
-            // Elimina de la tabla de programacion las opciones con un id_reunion en comun(las opciones tienen relacion por eso se valida que no sean nulas)
-            // DB::table('gcm_programacion')->where('id_reunion', '=', $id_reunion)->whereNotNull('relacion')->delete();
-            // Gcm_Programacion::groupDeletion(Gcm_Programacion::where('id_reunion', '=', $id_reunion)->whereNotNull('relacion')->get());
-            Gcm_Programacion::changeStatus(Gcm_Programacion::where('id_reunion', '=', $id_reunion)->whereNotNull('relacion')->get(), 4);
+            $removedProgramList = Gcm_Programacion::where('id_reunion', $reunion->id_reunion)
+                ->whereNull('relacion')->whereNotIn('id_programa', $programList)->get();
 
-            // Vacea la tabla de programacion los programas con un id_reunion en comun
-            // DB::table('gcm_programacion')->where('id_reunion', '=', $id_reunion)->delete();
-            Gcm_Programacion::changeStatus(Gcm_Programacion::where('id_reunion', '=', $id_reunion)->get(), 4);
+            $removedProgramList->each(function ($programToRemoveItem) {
+                $programToRemove = Gcm_Programacion::find($programToRemoveItem->id_programa);
+                if ($programToRemove) {
+                    $programToRemove->estado = '4';
+                    $programToRemove->save();
+                }
+            });
 
-            // Valida en el parametro de titulo si vienen programas para registrar
-            if (isset($request->titulo)) {
+            if (isset($request['titulo'])) {
+                for ($i = 0; $i < count($request['titulo']); $i++) {
+                    $programa = !$this->stringNullToNull($request['id_programa'][$i]) ? new Gcm_Programacion() : Gcm_Programacion::findOrFail($request['id_programa'][$i]);
 
-                for ($i = 0; $i < count($request->titulo); $i++) {
+                    $programa->id_convocado_reunion = $this->stringNullToNull($request['id_convocado_reunion'][$i]);
+                    $programa->descripcion = $this->stringNullToNull($request['descripcion'][$i]);
+                    $programa->id_rol_acta = $this->stringNullToNull($request['id_rol_acta'][$i]);
+                    $programa->estado = $request['estado'][$i] ? $request['estado'][$i] : 0;
+                    $programa->titulo = $this->stringNullToNull($request['titulo'][$i]);
+                    $programa->tipo = $this->stringNullToNull($request['tipo'][$i]);
+                    $programa->id_reunion = $reunion->id_reunion;
+                    $programa->relacion = null;
+                    $programa->orden = $i + 1;
+                    $programa->numeracion = 0;
 
-                    $validator = Validator::make($request->all(), [
-                        'titulo' => 'required|max:500',
-                        'descripcion' => 'max:500',
-                    ], [
-                        'titulo.required' => '*Rellena este campo',
-                        'titulo.max' => '*Máximo 500 caracteres',
-                        'descripcion.max' => '*Maximo 500 caracteres',
-                    ]);
+                    $programa->save();
 
-                    if ($validator->fails()) {
-                        DB::rollback();
-                        Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1216), null);
-                        return response()->json($validator->errors(), 422);
-                    }
+                    $fileList = isset($request['file_viejo' . $i]) ? array_map(function ($data) {
+                        return json_decode($data)->id_archivo_programacion;
+                    }, $request['file_viejo' . $i]) : [];
 
-                    // Registra la programación de una reunion
-                    $programa_nuevo = new Gcm_Programacion;
-                    $programa_nuevo->id_reunion = $this->stringNullToNull($id_reunion);
-                    $programa_nuevo->titulo = $this->stringNullToNull($request->titulo[$i]);
-                    $programa_nuevo->descripcion = $this->stringNullToNull($request->descripcion[$i]);
-                    $programa_nuevo->orden = $i + 1;
-                    $programa_nuevo->numeracion = $this->stringNullToNull($request->numeracion[$i]);
-                    $programa_nuevo->tipo = $this->stringNullToNull($request->tipo[$i]);
-                    $programa_nuevo->relacion = null;
-                    $programa_nuevo->id_rol_acta = null;
-                    $programa_nuevo->id_convocado_reunion = null;
-                    $programa_nuevo->estado = $request->estado[$i] ? $request->estado[$i] : 0;
+                    $removedFileList = Gcm_Archivo_Programacion::where('id_programa', $programa->id_programa)
+                        ->whereNotIn('id_archivo_programacion', $fileList)->get();
 
-                    $response = $programa_nuevo->save();
-
-                    $picture = 0;
+                    $removedFileList->each(function ($fileToRemove) {
+                        $fileToRemove->delete();
+                    });
 
                     if ($request->hasFile('file' . $i)) {
                         $request['file' . $i] = array_values($request['file' . $i]);
 
-                        $subcarpeta = 'archivos_reunion/' . $id_reunion;
+                        $subcarpeta = 'archivos_reunion/' . $reunion->id_reunion;
                         $carpeta = 'storage/app/public/' . $subcarpeta;
 
                         if (!file_exists($carpeta)) {
                             mkdir($carpeta, 0777, true);
+                            chmod($carpeta, 0777);
                         }
 
                         for ($j = 0; $j < count($request['file' . $i]); $j++) {
-
-                            $archivo_nuevo = new Gcm_Archivo_Programacion;
+                            $archivo = new Gcm_Archivo_Programacion();
                             $file = $request['file' . $i][$j];
                             $extension = $file->getClientOriginalExtension();
 
                             if (in_array(strtoupper($extension), $extensiones)) {
-                                $archivo_nuevo->id_programa = $programa_nuevo->id_programa;
-                                $archivo_nuevo->descripcion = $file->getClientOriginalName();
-                                $archivo_nuevo->peso = filesize($file);
+                                $archivo->descripcion = $file->getClientOriginalName();
+                                $archivo->id_programa = $programa->id_programa;
+                                $archivo->peso = filesize($file);
                                 $picture = substr(md5(microtime()), rand(0, 31 - 8), 8) . '.' . $extension;
-                                $archivo_nuevo->url = $subcarpeta . '/' . $picture;
-                                $file->move(storage_path('app/public/archivos_reunion/' . $id_reunion), $picture);
-                                chmod(storage_path('app/public/archivos_reunion/' . $id_reunion . '/' . $picture), 0777);
+                                $archivo->url = $subcarpeta . '/' . $picture;
+                                $file->move(storage_path('app/public/archivos_reunion/' . $reunion->id_reunion), $picture);
+                                chmod(storage_path('app/public/archivos_reunion/' . $reunion->id_reunion . '/' . $picture), 0777);
 
-                                $response = $archivo_nuevo->save();
+                                $archivo->save();
                             } else {
                                 DB::rollback();
                                 Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => 'La extensión del archivo no es permitida'), null);
@@ -1315,79 +953,90 @@ class Gcm_Reunion_Controller extends Controller
                     if (isset($request['file_viejo' . $i])) {
                         $request['file_viejo' . $i] = array_values($request['file_viejo' . $i]);
                         for ($j = 0; $j < count($request['file_viejo' . $i]); $j++) {
-                            $archivo_nuevo = new Gcm_Archivo_Programacion;
                             $file = json_decode($request['file_viejo' . $i][$j]);
-                            $archivo_nuevo->id_programa = $programa_nuevo->id_programa;
-                            $archivo_nuevo->descripcion = $file->name;
-                            $archivo_nuevo->peso = $file->size;
-                            $archivo_nuevo->url = $file->url;
-                            $response = $archivo_nuevo->save();
+
+                            $archivo = !$file->id_archivo_programacion ? new Gcm_Archivo_Programacion() : Gcm_Archivo_Programacion::findOrFail($file->id_archivo_programacion);
+
+                            $archivo->id_programa = $programa->id_programa;
+                            $archivo->descripcion = $file->name;
+                            $archivo->peso = $file->size;
+                            $archivo->url = $file->url;
+                            $archivo->save();
                         }
                     }
+
+                    $optionList = isset($request['opcion_id_programa' . $i]) ? array_values(
+                        array_filter($request['opcion_id_programa' . $i], function ($data) {return $this->stringNullToNull($data) !== null;})
+                    ) : [];
+
+                    $removedOptionList = Gcm_Programacion::where('relacion', $programa->id_programa)
+                        ->whereNotIn('id_programa', $optionList)->get();
+
+                    $removedOptionList->each(function ($optionToRemoveItem) {
+                        $optionToRemove = Gcm_Programacion::find($optionToRemoveItem->id_programa);
+                        if ($optionToRemove) {
+                            $optionToRemove->estado = '4';
+                            $optionToRemove->save();
+                        }
+                    });
 
                     // Valida que si vengan opciones para registrar
                     if (isset($request['opcion_titulo' . $i])) {
 
                         for ($j = 0; $j < count($request['opcion_titulo' . $i]); $j++) {
 
-                            $validator = Validator::make($request->all(), [
-                                'titulo' => 'required|max:500',
-                                'descripcion' => 'max:500',
-                            ], [
-                                'titulo.required' => '*Rellena este campo',
-                                'titulo.max' => '*Máximo 500 caracteres',
-                                'descripcion.max' => '*Maximo 500 caracteres',
-                            ]);
+                            $opcion = !$this->stringNullToNull($request['opcion_id_programa' . $i][$j]) ? new Gcm_Programacion() : Gcm_Programacion::findOrFail($request['opcion_id_programa' . $i][$j]);
 
-                            if ($validator->fails()) {
-                                DB::rollback();
-                                Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 1300), null);
-                                return response()->json($validator->errors(), 422);
-                            }
+                            $opcion->estado = $request['opcion_estado' . $i][$j] ? $request['opcion_estado' . $i][$j] : 0;
+                            $opcion->descripcion = $this->stringNullToNull($request['opcion_descripcion' . $i][$j]);
+                            $opcion->titulo = $this->stringNullToNull($request['opcion_titulo' . $i][$j]);
+                            $opcion->id_reunion = $reunion->id_reunion;
+                            $opcion->relacion = $programa->id_programa;
+                            $opcion->id_convocado_reunion = null;
+                            $opcion->id_rol_acta = null;
+                            $opcion->orden = $j + 1;
+                            $opcion->numeracion = 1;
+                            $opcion->tipo = 0;
 
-                            // Registra las opciones
-                            $opcion_nueva = new Gcm_Programacion;
-                            $opcion_nueva->id_reunion = $this->stringNullToNull($id_reunion);
-                            $opcion_nueva->titulo = $this->stringNullToNull($request['opcion_titulo' . $i][$j]);
-                            $opcion_nueva->descripcion = $this->stringNullToNull($request['opcion_descripcion' . $i][$j]);
-                            $opcion_nueva->orden = $j + 1;
-                            $opcion_nueva->numeracion = 1;
-                            $opcion_nueva->tipo = 0;
-                            $opcion_nueva->relacion = $this->stringNullToNull($programa_nuevo->id_programa);
-                            $opcion_nueva->id_rol_acta = null;
-                            $opcion_nueva->id_convocado_reunion = null;
-                            $opcion_nueva->estado = $request['opcion_estado' . $i][$j] ? $request['opcion_estado' . $i][$j] : 0;
+                            $opcion->save();
 
-                            $response = $opcion_nueva->save();
+                            $optionFileList = isset($request['opcion_file_viejo' . $i . '_' . $j]) ? array_map(function ($data) {
+                                return json_decode($data)->id_archivo_programacion;
+                            }, $request['opcion_file_viejo' . $i . '_' . $j]) : [];
 
-                            $picture = 0;
+                            $removedOptionFileList = Gcm_Archivo_Programacion::where('id_programa', $opcion->id_programa)
+                                ->whereNotIn('id_archivo_programacion', $optionFileList)->get();
+
+                            $removedOptionFileList->each(function ($optionFileToRemove) {
+                                $optionFileToRemove->delete();
+                            });
 
                             if ($request->hasFile('opcion_file' . $i . '_' . $j)) {
                                 $request['opcion_file' . $i . '_' . $j] = array_values($request['opcion_file' . $i . '_' . $j]);
 
-                                $subcarpeta = 'archivos_reunion/' . $id_reunion;
+                                $subcarpeta = 'archivos_reunion/' . $reunion->id_reunion;
                                 $carpeta = 'storage/app/public/' . $subcarpeta;
 
                                 if (!file_exists($carpeta)) {
                                     mkdir($carpeta, 0777, true);
+                                    chmod($carpeta, 0777);
                                 }
 
                                 for ($k = 0; $k < count($request['opcion_file' . $i . '_' . $j]); $k++) {
-
-                                    $archivo_opcion_nuevo = new Gcm_Archivo_Programacion;
                                     $opcion_file = $request['opcion_file' . $i . '_' . $j][$k];
                                     $opcion_extension = $opcion_file->getClientOriginalExtension();
+                                    $archivo = new Gcm_Archivo_Programacion();
 
                                     if (in_array(strtoupper($opcion_extension), $extensiones)) {
-                                        $archivo_opcion_nuevo->id_programa = $opcion_nueva->id_programa;
-                                        $archivo_opcion_nuevo->descripcion = $opcion_file->getClientOriginalName();
-                                        $archivo_opcion_nuevo->peso = filesize($opcion_file);
+                                        $archivo->descripcion = $opcion_file->getClientOriginalName();
+                                        $archivo->id_programa = $opcion->id_programa;
+                                        $archivo->peso = filesize($opcion_file);
                                         $picture = substr(md5(microtime()), rand(0, 31 - 8), 8) . '.' . $opcion_extension;
-                                        $archivo_opcion_nuevo->url = $subcarpeta . '/' . $picture;
-                                        $opcion_file->move(storage_path('app/public/archivos_reunion/' . $id_reunion), $picture);
-                                        chmod(storage_path('app/public/archivos_reunion/' . $id_reunion . '/' . $picture), 0777);
+                                        $archivo->url = $subcarpeta . '/' . $picture;
+                                        $opcion_file->move(storage_path('app/public/archivos_reunion/' . $reunion->id_reunion), $picture);
+                                        chmod(storage_path('app/public/archivos_reunion/' . $reunion->id_reunion . '/' . $picture), 0777);
 
-                                        $response = $archivo_opcion_nuevo->save();
+                                        $archivo->save();
                                     } else {
                                         DB::rollback();
                                         Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => 'La extensión del archivo no es permitida'), null);
@@ -1399,26 +1048,31 @@ class Gcm_Reunion_Controller extends Controller
                             if (isset($request['opcion_file_viejo' . $i . '_' . $j])) {
                                 $request['opcion_file_viejo' . $i . '_' . $j] = array_values($request['opcion_file_viejo' . $i . '_' . $j]);
                                 for ($k = 0; $k < count($request['opcion_file_viejo' . $i . '_' . $j]); $k++) {
-                                    $archivo_opcion_nuevo = new Gcm_Archivo_Programacion;
                                     $opcion_file = json_decode($request['opcion_file_viejo' . $i . '_' . $j][$k]);
-                                    $archivo_opcion_nuevo->id_programa = $opcion_nueva->id_programa;
-                                    $archivo_opcion_nuevo->descripcion = $opcion_file->name;
-                                    $archivo_opcion_nuevo->peso = $opcion_file->size;
-                                    $archivo_opcion_nuevo->url = $opcion_file->url;
-                                    $response = $archivo_opcion_nuevo->save();
+
+                                    $archivo = !$opcion_file->id_archivo_programacion ? new Gcm_Archivo_Programacion() : Gcm_Archivo_Programacion::findOrFail($opcion_file->id_archivo_programacion);
+
+                                    $archivo->id_programa = $programa->id_programa;
+                                    $archivo->descripcion = $opcion_file->name;
+                                    $archivo->peso = $opcion_file->size;
+                                    $archivo->url = $opcion_file->url;
+                                    $archivo->save();
                                 }
                             }
                         }
                     }
+
                 }
             }
 
             DB::commit();
-            return response()->json(["response" => $response, 'data' => $array_id_convocados, 'id_reunion' => $id_reunion], 200);
+            return response()->json(['data' => $array_id_convocados, 'id_reunion' => $reunion->id_reunion], 200);
+            return 'ok';
         } catch (\Throwable $th) {
             DB::rollback();
             Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
-            return response()->json(["error" => $th->getMessage() . $th->getLine()], 500);
+            return $th;
+            return response()->json(["error" => $th->getMessage() . ' - ' . $th->getLine()], 500);
         }
     }
 
@@ -1434,63 +1088,6 @@ class Gcm_Reunion_Controller extends Controller
     }
 
     /**
-     * Realizo el envio de un correo electronico a los convocados de una reunion
-     *
-     * @param Request Aqui toda la información de la reunion, de los convocados y los programas, pero solo se toma los convocados
-     * @return void Retorna un mensaje donde se evidencia si el envio de los correos fue exitoso o fallo
-     */
-    public function enviarCorreos(Request $request)
-    {
-
-        try {
-            $programas = [];
-            $encrypt = new Encrypt();
-
-            $reunion = json_decode($request->reunion, true);
-            $convocados = json_decode($request->convocados, true);
-            $array_id_convocados = json_decode($request->array_id_convocados, true);
-
-            // Aqui realizo un array_map con el objetivo de obtener solo el correo del objeto que llega y que este se almacene en un array nuevo
-            $correosOrganizados = array_map(function ($row) {
-                return $row['correo'];
-            }, $convocados);
-
-            if (isset($request->titulo)) {
-                for ($i = 0; $i < count($request->titulo); $i++) {
-                    array_push($programas, [
-                        'titulo' => $request->titulo[$i],
-                        'orden' => $i + 1,
-                    ]);
-                }
-            }
-
-            for ($i = 0; $i < count($convocados); $i++) {
-                $convocado = Gcm_Convocado_Reunion::findOrFail($array_id_convocados[$i]);
-                $fechaActual = date('Y-m-d H:i:s');
-                $convocado->fecha_envio_invitacion = $fechaActual;
-                $response = $convocado->save();
-
-                $valorEncriptado = $encrypt->encriptar($array_id_convocados[$i]);
-                $detalle = [
-                    'nombre' => $convocados[$i]['nombre'],
-                    'titulo' => $reunion['titulo'],
-                    'descripcion' => $reunion['descripcion'],
-                    'fecha_reunion' => $reunion['fecha_reunion'],
-                    'hora' => $reunion['hora'],
-                    'programas' => $programas,
-                    'url' => env('VIEW_BASE') . '/public/acceso-reunion/acceso/' . $valorEncriptado,
-                ];
-                Mail::to($convocados[$i]['correo'])->send(new TestMail($detalle));
-            }
-            Gcm_Log_Acciones_Sistema_Controller::save(4, array('Descripcion' => 'Envio del primer correo a los convocados de una reunion', 'Correos' => $correosOrganizados), null);
-            return response()->json(["response" => $response], 200);
-        } catch (\Throwable $th) {
-            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
-            return response()->json(["error" => $th->getMessage()], 500);
-        }
-    }
-
-    /**
      * Descarga documento PDF con la programacion de una reunion
      *
      * @param Request $aqui viene toda la programacion de la reunion
@@ -1502,14 +1099,14 @@ class Gcm_Reunion_Controller extends Controller
             # Ingresa al directorio fuente
             $defaultConfig = (new ConfigVariables())->getDefaults();
             $fontDirs = $defaultConfig['fontDir'];
-    
+
             #Tomamos el array donde están todas las fuentes
             $defaultFontConfig = (new FontVariables())->getDefaults();
             $fontData = $defaultFontConfig['fontdata'];
-    
+
             // Configurar un nombre de archivo
             $documentFileName = "fun.pdf";
-    
+
             // Crea el documento PDF
             $document = new MPDF([
                 # Se toma la ruta de donde estan ubicadas las nuevas fuentes
@@ -1555,20 +1152,20 @@ class Gcm_Reunion_Controller extends Controller
                 'margin_bottom' => '20',
                 'margin_footer' => '2',
             ]);
-    
+
             // Establecer algunas informaciones de encabezado para la salida
             $header = [
                 'Content-Type' => 'application/pdf',
                 'Content-Disposition' => 'inline; filename="' . $documentFileName . '"',
             ];
-    
+
             // Escribe un contenido simple
             $document->WriteHTML("<style>$request->styles</style>");
             $document->WriteHTML(str_replace("\n", "<br/>", $request->data));
-    
+
             // Guarde PDF en su almacenamiento público
             Storage::disk('public')->put($documentFileName, $document->Output($documentFileName, "S"));
-    
+
             // Recupere el archivo del almacenamiento con la información del encabezado de dar
             Gcm_Log_Acciones_Sistema_Controller::save(4, array('Descripcion' => 'Descarga del pdf con la programacion de una reunion'), null);
             return Storage::download($documentFileName, 'Request', $header);
@@ -1591,14 +1188,14 @@ class Gcm_Reunion_Controller extends Controller
             # Ingresa al directorio fuente
             $defaultConfig = (new ConfigVariables())->getDefaults();
             $fontDirs = $defaultConfig['fontDir'];
-    
+
             #Tomamos el array donde están todas las fuentes
             $defaultFontConfig = (new FontVariables())->getDefaults();
             $fontData = $defaultFontConfig['fontdata'];
-    
+
             // Configurar un nombre de archivo
             $documentFileName = "fun.pdf";
-    
+
             #Creamos el PDF con las mediadas y orientacion
             $document = new MPDF([
                 # Se toma la ruta de donde estan ubicadas las nuevas fuentes
@@ -1635,12 +1232,12 @@ class Gcm_Reunion_Controller extends Controller
                         'R' => "Montserrat-Thin.ttf",
                     ],
                 ],
-    
+
                 # Fuente por defecto que tendra el PDF
                 'default_font' => 'montserratmedium',
-    
+
             ]);
-    
+
             #Realizamos la estructura del PDF
             $style = "
                 <style>
@@ -1649,27 +1246,27 @@ class Gcm_Reunion_Controller extends Controller
                     format: A4;
                     margin: 0;
                 }
-    
+
                 .centro1raPagina {
                     background-image: url('http://192.168.2.89:4200/assets/img/meets/acta2.JPG');
                     background-size: contain;
                     background-repeat: no-repeat;
                     height: 700px;
                 }
-    
+
                 .pie1raPagina {
                     height: 100%;
                     border-top: 6px solid;
                     border-color: #9F8C5B;
                     background-color: #16151E;
                 }
-    
+
                 .tabla2daPagina {
                     width: 100%;
                     text-align: left;
                     border-bottom: 1px solid black;
                 }
-    
+
                 .thTabla2daPagina {
                     font-weight: bold;
                     background: #171717;
@@ -1681,7 +1278,7 @@ class Gcm_Reunion_Controller extends Controller
                     font-size: 13px;
                     letter-spacing: 0px;
                 }
-    
+
                 .tdTabla2daPagina {
                     width: 25%;
                     padding: 10px;
@@ -1690,7 +1287,7 @@ class Gcm_Reunion_Controller extends Controller
                     font-size: 13px;
                     letter-spacing: 0px;
                 }
-    
+
                 .td-texto {
                     width: 50%;
                     padding: 10px;
@@ -1700,11 +1297,11 @@ class Gcm_Reunion_Controller extends Controller
                     letter-spacing: 0px;
                     text-align: justify;
                 }
-    
+
                 .tabla-cifras {
                     width: 100%;
                 }
-    
+
                 .th-cifras-1raColumna {
                     font-weight: bold;
                     color: #545454;
@@ -1715,7 +1312,7 @@ class Gcm_Reunion_Controller extends Controller
                     font-weight: 500;
                     text-align: left;
                 }
-    
+
                 .th-cifras-2daColumna {
                     font-weight: bold;
                     color: #545454;
@@ -1726,7 +1323,7 @@ class Gcm_Reunion_Controller extends Controller
                     font-weight: 500;
                     text-align: center;
                 }
-    
+
                 .td-cifras-1raColumna {
                     width: 100%;
                     padding: 10px;
@@ -1736,7 +1333,7 @@ class Gcm_Reunion_Controller extends Controller
                     letter-spacing: 0px;
                     text-align: left;
                 }
-    
+
                 .td-cifras-2daColumna {
                     width: 30%;
                     background-color: #171717;
@@ -1747,12 +1344,12 @@ class Gcm_Reunion_Controller extends Controller
                     letter-spacing: 0px;
                     text-align: center;
                 }
-    
+
                 .firma {
                     border-top: 1px solid #DBDBDB;
                     text-align: center;
                 }
-    
+
                 .textoFirma {
                     color: #545454;
                     padding: 10px;
@@ -1761,7 +1358,7 @@ class Gcm_Reunion_Controller extends Controller
                     font-size: 13px;
                     letter-spacing: 0px;
                 }
-    
+
                 .ultimaPagina {
                     background-image: url('http://192.168.2.89:4200/assets/img/meets/back4.jpg');
                     background-position: center center;
@@ -1773,56 +1370,56 @@ class Gcm_Reunion_Controller extends Controller
                 }
                 </style>
                 ";
-    
+
             // background-size: 100% 100%;
             // Establecer algunas informaciones de encabezado para la salida
             $header = [
                 'Content-Type' => 'application/pdf',
                 'Content-Disposition' => 'inline; filename="' . $documentFileName . '"',
             ];
-    
+
             $document->WriteHTML($style);
-    
+
             $html = '
                 <body>
                     <div>
                         <div align="center">
                             <img style="margin-top: 2rem; width: 180px;" src="http://192.168.2.89:4200/assets/img/meets/garantias-comunitarias.png">
                         </div>
-    
+
                         <div>
                             <h5 align="center" style="margin-bottom: 30px; margin-top: 30px; color: #171717; font-family: montserratregular; font-size: 20px; font-weight: 500; letter-spacing: 0px;">
                                 ASAMBLEA GENERAL ORDINARIA DE ACCIONISTAS DE GARANTIAS COMUNITARIAS
                             </h5>
                         </div>
-    
+
                         <div class="centro1raPagina">
                             <h1 align="center" style="margin-top: 510px; color: #9F8C5B; font-family: montserratregular; font-size: 15px; font-weight: 500; letter-spacing: 0px;">GARANTIAS COMUNITARIAS GRUPO S.A.</h1>
                             <h1 align="center" style="margin-top: 25px; color: #FFFFFF; font-family: montserratregular; font-size: 35px; font-weight: bold; letter-spacing: 0px;">CELEBRADA EL DIA 12/01/22</h1>
                         </div>
-    
+
                         <div class="pie1raPagina">
                             <h1 align="center" style="margin-top: 60px; color: #FFFFFF; font-family: montserratregular; font-size: 20px; font-weight: 500; letter-spacing: 0px;">ACTA NO. 1244</h1>
                         </div>
                     </div>
                 </body>
             ';
-    
+
             #Asignamos la estructura al PDF
             $document->WriteHTML($html);
             $document->AddPage();
-    
+
             $html2 = '
                 <body>
                     <div style="padding: 7% 11% 0% 11%;">
                         <h1 style="color: #171717; font-size: 22px; font-family: montserratregular; font-weight: 500; letter-spacing: 0px; text-align: left; margin: 0">
                             Titulo
                         </h1>
-    
+
                         <h2 style="color: #545454; font-size: 16px; font-family: montserratregular; font-weight: 400; letter-spacing: 0px; text-align: left; margin: 0 0 6px 0;">
                             Sub titulo
                         </h2>
-    
+
                         <p style="color: #626262; font-size: 13px; font-family: montserratregular; font-weight: 400; letter-spacing: 0px; text-align: justify; margin: 0;">
                             Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam,
                             eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
@@ -1834,7 +1431,7 @@ class Gcm_Reunion_Controller extends Controller
                             vel illum qui dolorem eum fugiat quo voluptas nulla pariatur?.
                         </p>
                     </div>
-    
+
                     <div style="padding: 2% 11% 0% 11%;">
                         <h1 style="color: #171717; font-size: 22px; font-family: montserratregular; font-weight: 300; letter-spacing: 0px; text-align: left; margin: 0 0 10px 0;">
                             Tabla
@@ -1876,7 +1473,7 @@ class Gcm_Reunion_Controller extends Controller
                             </tbody>
                         </table>
                     </div>
-    
+
                     <div style="padding: 2% 11% 0% 11%;">
                         <table>
                             <tbody>
@@ -1898,7 +1495,7 @@ class Gcm_Reunion_Controller extends Controller
                             </tbody>
                         </table>
                     </div>
-    
+
                     <div style="padding: 2% 11% 0% 11%;">
                         <table>
                             <tbody>
@@ -1920,11 +1517,11 @@ class Gcm_Reunion_Controller extends Controller
                     </div>
                 </body>
             ';
-    
+
             #Asignamos la estructura al PDF
             $document->WriteHTML($html2);
             $document->AddPage();
-    
+
             $html3 = '
                 <body>
                     <div style="padding: 7% 11% 0% 11%;">
@@ -1970,7 +1567,7 @@ class Gcm_Reunion_Controller extends Controller
                             </tbody>
                         </table>
                     </div>
-    
+
                     <div style="padding: 2% 11% 0% 11%;">
                         <table>
                             <tbody>
@@ -1990,7 +1587,7 @@ class Gcm_Reunion_Controller extends Controller
                             </tbody>
                         </table>
                     </div>
-    
+
                     <div style="padding: 8% 11% 0% 11%;">
                         <table style="width: 100%;">
                             <tbody>
@@ -2007,11 +1604,11 @@ class Gcm_Reunion_Controller extends Controller
                     </div>
                 </body>
             ';
-    
+
             #Asignamos la estructura al PDF
             $document->WriteHTML($html3);
             $document->AddPage();
-    
+
             $html4 = '
                 <body>
                     <div class="ultimaPagina">
@@ -2024,17 +1621,17 @@ class Gcm_Reunion_Controller extends Controller
                     </div>
                 </body>
             ';
-    
+
             #Asignamos la estructura al PDF
             $document->WriteHTML($html4);
-    
+
             // Guarde PDF en su almacenamiento público
             Storage::disk('public')->put($documentFileName, $document->Output($documentFileName, "S"));
-    
+
             // Recupere el archivo del almacenamiento con la información del encabezado de dar
             Gcm_Log_Acciones_Sistema_Controller::save(4, array('Descripcion' => 'Descarga del acta de una reunion'), null);
             return Storage::download($documentFileName, 'Request', $header);
-            
+
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
             return response()->json(["error" => $th->getMessage()], 500);
