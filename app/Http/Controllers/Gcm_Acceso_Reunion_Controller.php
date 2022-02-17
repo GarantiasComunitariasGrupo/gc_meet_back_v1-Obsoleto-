@@ -1684,7 +1684,103 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             return response()->json(["status" => true, "message" => 'Correo enviado correctamente'], 200);
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
-            return response()->json(["status" => true, "message" => $th->getMessage() . ' - ' . $th->getLine()], 200);
+            return response()->json(["status" => false, "message" => $th->getMessage() . ' - ' . $th->getLine()], 200);
+        }
+    }
+
+    public function checkElection(Request $request)
+    {
+        try {
+            if (!isset($request->id_reunion)) {throw new \Error("checkElection: El campo {id_reunion} es requerido", 1);}
+            $meet = Gcm_Reunion::find($request->id_reunion);
+            if (!isset($request->id_reunion)) {throw new \Error("checkElection: La reunión no ha sido encontrada", 1);}
+            if ($meet->id_acta == null) {return response()->json(["status" => true, "message" => (object) []], 200);}
+
+            $programList = Gcm_Programacion::join('gcm_roles_actas AS ra', 'gcm_programacion.id_rol_acta', 'ra.id_rol_acta')
+                ->select('gcm_programacion.*', 'ra.descripcion AS rol_acta')->whereNull(['relacion', 'id_convocado_reunion'])
+                ->where([['id_reunion', $meet->id_reunion], ['tipo', '5']])
+                ->whereNotIn('gcm_programacion.estado', [3, 4])
+                ->get();
+            $programIdList = $programList->map(function ($item) {return $item->id_programa;});
+
+            $optionList = Gcm_Programacion::whereIn('relacion', $programIdList)->get();
+            $answerList = Gcm_Respuesta_Convocado::whereIn('id_programa', $programIdList)->get();
+
+            $election = (object) [];
+            $programList->each(function ($program) use ($optionList, $answerList, &$election) {
+                $programOptionList = $optionList->filter(function ($item) use ($program) {return $item->relacion == $program->id_programa;})->values();
+
+                $programAnswerList = $answerList->filter(function ($item) use ($program) {return $item->id_programa == $program->id_programa;})->values()
+                    ->map(function ($item) {return json_decode($item->descripcion)->seleccion[0];});
+
+                $max = 0;
+                $programOptionList = $programOptionList->map(function ($option) use ($programAnswerList, &$max) {
+                    $option->votes = count($programAnswerList->filter(function ($answer) use ($option) {return $answer == $option->id_programa;})->values());
+                    if ($option->votes > $max) {$max = $option->votes;}
+                    return $option;
+                });
+                $election->{$program->id_rol_acta} = [
+                    "elected" => $programOptionList->filter(function ($option) use ($max) {return $option->votes == $max;})->values(),
+                    "description" => $program->rol_acta,
+                ];
+            });
+            return response()->json(["status" => true, "message" => $election], 200);
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
+            return response()->json(["status" => false, "message" => $th->getMessage() . ' - ' . $th->getLine()], 200);
+        }
+    }
+
+    public function saveElection(Request $request)
+    {
+        try {
+            if (!isset($request->data)) {throw new \Error("saveElection: El campo {data} es requerido", 1);}
+            foreach ($request->data as $key => $value) {
+                $option = $value['elected'][0];
+                $program = Gcm_Programacion::find($option['relacion']);
+                if (!$program) {throw new \Error("saveElection: No se ha encontrado el programa", 1);}
+                $summoned = Gcm_Recurso::join('gcm_relaciones AS rlc', 'gcm_recursos.id_recurso', 'rlc.id_recurso')
+                    ->join('gcm_convocados_reunion AS crn', 'crn.id_relacion', 'rlc.id_relacion')
+                    ->where([['identificacion', $option['titulo']], ['crn.id_reunion', $program->id_reunion], ['crn.tipo', '!=', '1'], ['crn.estado', '1']])
+                    ->orderBy('crn.representacion', 'ASC')->first();
+                if (!$summoned) {throw new \Error("saveElection: No se ha encontrado el convocado", 1);}
+                $program->id_convocado_reunion = $summoned->id_convocado_reunion;
+                $program->save();
+            }
+            return response()->json(["status" => true, "message" => 'Elecciones guardadas correctamente'], 200);
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
+            return response()->json(["status" => false, "message" => $th->getMessage() . ' - ' . $th->getLine()], 200);
+        }
+    }
+
+    public function checkFirmaActa(Request $request)
+    {
+        try {
+            if (!isset($request->id_reunion)) {throw new \Error("checkFirmaActa: El campo {id_reunion} es requerido", 1);}
+            $meet = Gcm_Reunion::find($request->id_reunion);
+            if (!isset($request->id_reunion)) {throw new \Error("checkFirmaActa: La reunión no ha sido encontrada", 1);}
+            if ($meet->id_acta == null) {return response()->json(["status" => true, "message" => ['acta' => false]], 200);}
+
+            $summonedList = Gcm_Convocado_Reunion::join('gcm_relaciones AS rlc', 'rlc.id_relacion', 'gcm_convocados_reunion.id_relacion')
+                ->join('gcm_recursos AS rcs', 'rcs.id_recurso', 'rlc.id_recurso')->where([['gcm_convocados_reunion.estado', '1'], ['id_reunion', $meet->id_reunion]])
+                ->select('id_convocado_reunion', 'rcs.identificacion', 'rcs.nombre', 'rcs.correo', 'nit', 'razon_social', 'participacion', 'firma', 'acta')->get();
+
+            $signList = $summonedList->filter(function ($item) {return $item->firma == '1';})->values()->toArray();
+
+            $programList = Gcm_Programacion::join('gcm_roles_actas AS ra', 'gcm_programacion.id_rol_acta', 'ra.id_rol_acta')
+                ->join('gcm_convocados_reunion AS cr', 'cr.id_convocado_reunion', 'gcm_programacion.id_convocado_reunion')
+                ->where([['gcm_programacion.id_reunion', $meet->id_reunion], ['gcm_programacion.tipo', '5'], ['ra.firma', '1']])
+                ->whereNull('gcm_programacion.relacion')->whereNotNull('gcm_programacion.id_convocado_reunion')
+                ->whereNotIn('gcm_programacion.estado', [3, 4])
+                ->select('cr.*')->get();
+
+            $programList->each(function ($summoned) use (&$signList) {array_push($signList, $summoned);});
+
+            return response()->json(["status" => true, "message" => ['acta' => true, 'signList' => $signList]], 200);
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
+            return response()->json(["status" => false, "message" => $th->getMessage() . ' - ' . $th->getLine()], 200);
         }
     }
 

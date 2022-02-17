@@ -274,6 +274,9 @@ Route::group([
     Route::post('/save-program', [Gcm_Acceso_Reunion_Controller::class, 'saveProgram']);
     Route::post('/summon/{id_grupo}/{id_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'summon']);
     Route::post('/send-mail-to-summon', [Gcm_Acceso_Reunion_Controller::class, 'sendMailToSummon']);
+    Route::post('/check-election', [Gcm_Acceso_Reunion_Controller::class, 'checkElection']);
+    Route::post('/save-election', [Gcm_Acceso_Reunion_Controller::class, 'saveElection']);
+    Route::post('/check-firma-acta', [Gcm_Acceso_Reunion_Controller::class, 'checkFirmaActa']);
 });
 
 Route::get('/buscar-archivos', function (Request $request) {
