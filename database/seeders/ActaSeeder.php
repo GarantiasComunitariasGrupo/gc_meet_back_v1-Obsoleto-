@@ -15,7 +15,8 @@ class ActaSeeder extends Seeder
     public function run()
     {
         DB::table('gcm_actas')->insert([
-            'descripcion' => 'Asamblea general de accionistas',
+            'plantilla' => 'asamblea-general-ordinaria-accionistas',
+            'descripcion' => 'Asamblea general ordinaria de accionistas',
             'estado' => 1,
         ]);
     }

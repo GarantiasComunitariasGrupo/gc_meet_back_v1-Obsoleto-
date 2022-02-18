@@ -17,6 +17,7 @@ class CrearGcmActasTabla extends Migration
             $table->bigIncrements('id_acta');
             $table->string('descripcion', 100)->required();
             $table->string('estado', 2)->index()->required();
+            $table->string('plantilla', 100)->required();
         });
     }
 

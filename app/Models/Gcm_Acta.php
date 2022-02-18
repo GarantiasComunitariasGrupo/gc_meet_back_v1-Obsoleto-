@@ -16,6 +16,7 @@ class Gcm_Acta extends Model
     protected $fillable = [
         'id_acta',
         'descripcion',
+        'plantilla',
         'estado',
     ];
 }

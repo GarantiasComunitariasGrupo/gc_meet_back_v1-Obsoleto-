@@ -24,6 +24,7 @@ class Gcm_Reunion extends ModelWithEvents
         'id_acta',
         'programacion',
         'estado',
+        'acta',
     ];
 
 }

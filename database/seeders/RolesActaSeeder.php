@@ -15,19 +15,19 @@ class RolesActaSeeder extends Seeder
     public function run()
     {
         DB::table('gcm_roles_actas')->insert([
-            'id_acta' => 1,
             'descripcion' => 'Presidente',
+            'id_acta' => 1,
+            'estado' => 1,
             'firma' => 1,
             'acta' => 0,
-            'estado' => 1,
         ]);
 
         DB::table('gcm_roles_actas')->insert([
-            'id_acta' => 1,
             'descripcion' => 'Secretario',
+            'id_acta' => 1,
+            'estado' => 1,
             'firma' => 1,
             'acta' => 0,
-            'estado' => 1,
         ]);
     }
 }

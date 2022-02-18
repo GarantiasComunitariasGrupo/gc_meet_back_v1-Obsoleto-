@@ -22,7 +22,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Mpdf\Config\ConfigVariables;
+use Mpdf\Config\FontVariables;
+use Mpdf\Mpdf;
 
 class Gcm_Acceso_Reunion_Controller extends Controller
 {
@@ -886,10 +890,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
             }, $programas);
 
-            return response()->json([
-                'ok' => ($programas) ? true : false,
-                'response' => ($programas) ? $programas : 'No hay resultados',
-            ]);
+            return response()->json(['ok' => true, 'response' => $programas]);
 
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
@@ -1778,6 +1779,155 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             $programList->each(function ($summoned) use (&$signList) {array_push($signList, $summoned);});
 
             return response()->json(["status" => true, "message" => ['acta' => true, 'signList' => $signList]], 200);
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
+            return response()->json(["status" => false, "message" => $th->getMessage() . ' - ' . $th->getLine()], 200);
+        }
+    }
+
+    public function getNumeroActa($id_tipo_reunion)
+    {
+        try {
+            if (!isset($id_tipo_reunion)) {throw new \Error("getNumeroActa: El campo {id_tipo_reunion} es requerido", 1);}
+
+            $actas = Gcm_Reunion::where([['id_tipo_reunion', $id_tipo_reunion]])->whereNotNull('acta')->get();
+
+            return response()->json(["status" => true, "message" => count($actas) + 1], 200);
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
+            return response()->json(["status" => false, "message" => $th->getMessage() . ' - ' . $th->getLine()], 200);
+        }
+    }
+
+    public function getAnnouncementDate($id_reunion)
+    {
+        try {
+            if (!isset($id_reunion)) {throw new \Error("getAnnouncementDate: El campo {id_reunion} es requerido", 1);}
+
+            $firstSummoned = Gcm_Convocado_Reunion::where([['id_reunion', $id_reunion], ['estado', '1']])
+                ->whereNotNull('fecha_envio_invitacion')->orderBy('fecha_envio_invitacion')->first();
+
+            return response()->json(["status" => true, "message" => $firstSummoned ? $firstSummoned->fecha_envio_invitacion : date('Y-m-d H:i:s')], 200);
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
+            return response()->json(["status" => false, "message" => $th->getMessage() . ' - ' . $th->getLine()], 200);
+        }
+    }
+
+    public function downloadActa(Request $request)
+    {
+        try {
+            // Configurar un nombre de archivo
+            $documentFileName = "acta.pdf";
+
+            $header = [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="' . $documentFileName . '"',
+            ];
+
+            // # Ingresa al directorio fuente
+            $defaultConfig = (new ConfigVariables())->getDefaults();
+            $fontDirs = $defaultConfig['fontDir'];
+
+            #Tomamos el array donde están todas las fuentes
+            $defaultFontConfig = (new FontVariables())->getDefaults();
+            $fontData = $defaultFontConfig['fontdata'];
+
+            #Creamos el PDF con las mediadas y orientacion
+            $document = new Mpdf([
+                'mode' => 'utf-8',
+                'format' => [279, 216],
+                #Asignamos la orientacion de las paginas
+                'orientation' => 'L',
+                'margin_bottom' => 0,
+                'margin_right' => 0,
+                'margin_left' => 0,
+                'margin_top' => 0,
+                # Se toma la ruta de donde estan ubicadas las nuevas fuentes
+                'fontDir' => array_merge($fontDirs, [
+                    storage_path('app/public/fonts'),
+                ]),
+                # A las fuentes que ya tenemos adicione las nuevas
+                'fontdata' => $fontData + [
+                    "montserratblack" => [
+                        'R' => "Montserrat-Black.ttf",
+                    ],
+                    "montserratbold" => [
+                        'R' => "Montserrat-Bold.ttf",
+                    ],
+                    "montserratextrabold" => [
+                        'R' => "Montserrat-ExtraBold.ttf",
+                    ],
+                    "montserratextralight" => [
+                        'R' => "Montserrat-ExtraLight.ttf",
+                    ],
+                    "montserratlight" => [
+                        'R' => "Montserrat-Light.ttf",
+                    ],
+                    "montserratmedium" => [
+                        'R' => "Montserrat-Medium.ttf",
+                    ],
+                    "montserratregular" => [
+                        'R' => "Montserrat-Regular.ttf",
+                    ],
+                    "montserratsemibold" => [
+                        'R' => "Montserrat-SemiBold.ttf",
+                    ],
+                    "montserratthin" => [
+                        'R' => "Montserrat-Thin.ttf",
+                    ],
+                ],
+
+                # Fuente por defecto que tendra el PDF
+                'default_font' => 'montserratmedium',
+
+            ]);
+
+            $document->WriteHTML($request->style);
+            $document->WriteHTML(str_replace("\n", "<br/>", "<body style='margin: 0 !important; padding: 0 !important;'>" . $request->pageContent . "</body>"));
+
+            // Guarde PDF en su almacenamiento público
+            Storage::put($documentFileName, $document->Output($documentFileName, "S"));
+
+            // Recupere el archivo del almacenamiento con la información del encabezado de dar
+            Gcm_Log_Acciones_Sistema_Controller::save(4, array('Descripcion' => 'Descarga del acta de una reunion'), null);
+            return Storage::download($documentFileName, 'Request', $header);
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
+            return response()->json(["error" => $th->getMessage()], 500);
+        }
+    }
+
+    public function getSummonedLoggedinList($id_reunion)
+    {
+        try {
+            if (!isset($id_reunion)) {throw new \Error("getSummonedLoggedinList: El campo {id_reunion} es requerido", 1);}
+
+            $resource = Gcm_Convocado_Reunion::join('gcm_relaciones AS rlc', 'rlc.id_relacion', 'gcm_convocados_reunion.id_relacion')
+                ->join('gcm_recursos AS rcs', 'rcs.id_recurso', 'rlc.id_recurso')
+                ->join('gcm_asistencia_reuniones AS arn', 'arn.id_convocado_reunion', 'gcm_convocados_reunion.id_convocado_reunion')
+                ->where([['gcm_convocados_reunion.id_reunion', $id_reunion], ['gcm_convocados_reunion.estado', '1']]);
+
+            $summonedList = $resource->leftJoinSub($resource->select([
+                'gcm_convocados_reunion.id_convocado_reunion', 'nit', 'tipo', 'razon_social',
+                'participacion', 'rcs.identificacion', 'rcs.nombre', 'rcs.correo',
+            ]), 'crn', function ($join) {
+                $join->on('crn.id_convocado_reunion', 'gcm_convocados_reunion.representacion');
+            })->select([
+                DB::raw('IFNULL(crn.id_convocado_reunion, gcm_convocados_reunion.id_convocado_reunion) AS id_convocado_reunion'),
+                DB::raw('IFNULL(crn.tipo, gcm_convocados_reunion.tipo) AS tipo'),
+                DB::raw('IFNULL(crn.nit, gcm_convocados_reunion.nit) AS nit'),
+                DB::raw('IFNULL(crn.razon_social, gcm_convocados_reunion.razon_social) AS razon_social'),
+                DB::raw('IFNULL(crn.participacion, gcm_convocados_reunion.participacion) AS participacion'),
+                DB::raw('IFNULL(crn.identificacion, rcs.identificacion) AS identificacion'),
+                DB::raw('IFNULL(crn.nombre, rcs.nombre) AS nombre'),
+                DB::raw('IFNULL(crn.correo, rcs.correo) AS correo'),
+                DB::raw('IF(crn.id_convocado_reunion IS NULL, null, gcm_convocados_reunion.id_relacion) AS id_representante'),
+                DB::raw('IF(crn.identificacion IS NULL, null, crn.identificacion) AS identificacion_representante'),
+                DB::raw('IF(crn.nombre IS NULL, null, crn.nombre) AS nombre_representante'),
+            ])->groupBy('id_convocado_reunion')->get();
+
+            return response()->json(["status" => true, "message" => $summonedList], 200);
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
             return response()->json(["status" => false, "message" => $th->getMessage() . ' - ' . $th->getLine()], 200);

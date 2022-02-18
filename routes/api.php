@@ -277,6 +277,10 @@ Route::group([
     Route::post('/check-election', [Gcm_Acceso_Reunion_Controller::class, 'checkElection']);
     Route::post('/save-election', [Gcm_Acceso_Reunion_Controller::class, 'saveElection']);
     Route::post('/check-firma-acta', [Gcm_Acceso_Reunion_Controller::class, 'checkFirmaActa']);
+    Route::get('/get-numero-acta/{id_tipo_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'getNumeroActa']);
+    Route::get('/get-announcement-date/{id_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'getAnnouncementDate']);
+    Route::post('/download-acta', [Gcm_Acceso_Reunion_Controller::class, 'downloadActa']);
+    Route::get('/get-summoned-loggedin-list/{id_reunion}', [Gcm_Acceso_Reunion_Controller::class, 'getSummonedLoggedinList']);
 });
 
 Route::get('/buscar-archivos', function (Request $request) {

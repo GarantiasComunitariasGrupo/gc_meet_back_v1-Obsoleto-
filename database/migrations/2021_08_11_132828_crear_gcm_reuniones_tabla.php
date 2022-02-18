@@ -26,6 +26,7 @@ class CrearGcmReunionesTabla extends Migration
             $table->unsignedBigInteger('id_acta')->nullable();
             $table->foreign('id_acta')->references('id_acta')->on('gcm_actas');
             $table->string('programacion', 500)->nullable();
+            $table->string('acta', 500)->nullable();
             $table->string('estado', 2)->index()->required();
         });
     }

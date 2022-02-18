@@ -95,7 +95,8 @@ class Gcm_Reunion_Controller extends Controller
         try {
             $reunion = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
                 ->join('gcm_grupos', 'gcm_tipo_reuniones.id_grupo', '=', 'gcm_grupos.id_grupo')
-                ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo', 'gcm_tipo_reuniones.id_grupo', 'gcm_grupos.logo')
+                ->leftJoin('gcm_actas', 'gcm_actas.id_acta', 'gcm_reuniones.id_acta')
+                ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo', 'gcm_tipo_reuniones.id_grupo', 'gcm_grupos.descripcion AS grupo', 'gcm_grupos.logo', 'gcm_actas.plantilla')
                 ->where([['id_reunion', $id_reunion], ['gcm_reuniones.estado', '!=', '4']])->get();
 
             try {
@@ -1651,7 +1652,7 @@ class Gcm_Reunion_Controller extends Controller
             $document->WriteHTML($html4);
 
             // Guarde PDF en su almacenamiento público
-            Storage::disk('public')->put($documentFileName, $document->Output($documentFileName, "S"));
+            Storage::put($documentFileName, $document->Output($documentFileName, "S"));
 
             // Recupere el archivo del almacenamiento con la información del encabezado de dar
             Gcm_Log_Acciones_Sistema_Controller::save(4, array('Descripcion' => 'Descarga del acta de una reunion'), null);
