@@ -1884,7 +1884,24 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             ]);
 
             $document->WriteHTML($request->style);
-            $document->WriteHTML(str_replace("\n", "<br/>", "<body style='margin: 0 !important; padding: 0 !important;'>" . $request->pageContent . "</body>"));
+
+            // $document->AddPageByArray([
+            //     'margin-left' => 0,
+            //     'margin-right' => 0,
+            //     'margin-top' => 0,
+            //     'margin-bottom' => 0,
+            // ]);
+
+            $document->WriteHTML(str_replace("\n", "<br/>", $request->headerContent));
+
+            $document->AddPageByArray([
+                'margin-left' => 16,
+                'margin-right' => 16,
+                'margin-top' => 16,
+                'margin-bottom' => 16,
+            ]);
+
+            $document->WriteHTML(str_replace("\n", "<br/>", $request->pageContent));
 
             // Guarde PDF en su almacenamiento público
             Storage::put($documentFileName, $document->Output($documentFileName, "S"));

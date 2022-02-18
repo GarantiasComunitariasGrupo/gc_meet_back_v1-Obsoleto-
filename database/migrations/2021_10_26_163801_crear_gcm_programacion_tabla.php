@@ -18,7 +18,7 @@ class CrearGcmProgramacionTabla extends Migration
             $table->unsignedBigInteger('id_reunion');
             $table->foreign('id_reunion')->references('id_reunion')->on('gcm_reuniones');
             $table->string('titulo', 500)->required();
-            $table->string('descripcion', 500)->nullable();
+            $table->string('descripcion', 5000)->nullable();
             $table->integer('orden')->required();
             $table->string('numeracion', 2)->required();
             $table->string('tipo', 2)->index()->required();

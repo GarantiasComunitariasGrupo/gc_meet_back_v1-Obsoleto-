@@ -1190,7 +1190,7 @@ class Gcm_Reunion_Controller extends Controller
             $document->WriteHTML(str_replace("\n", "<br/>", $request->data));
 
             // Guarde PDF en su almacenamiento público
-            Storage::disk('public')->put($documentFileName, $document->Output($documentFileName, "S"));
+            Storage::put($documentFileName, $document->Output($documentFileName, "S"));
 
             // Recupere el archivo del almacenamiento con la información del encabezado de dar
             Gcm_Log_Acciones_Sistema_Controller::save(4, array('Descripcion' => 'Descarga del pdf con la programacion de una reunion'), null);

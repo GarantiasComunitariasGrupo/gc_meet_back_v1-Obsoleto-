@@ -20,7 +20,7 @@ class UsuarioSeeder extends Seeder
             'id_usuario' => 'gc_meet',
             'nombre' => 'GC Meet',
             'correo' => 'danilogg2015@gmail.com',
-            'contrasena' => Hash::make('GCM' . Str::random(8)),
+            'contrasena' => Hash::make('gc_meet'),
             'estado' => 1,
             'tipo' => 0,
         ]);
