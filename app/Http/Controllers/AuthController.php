@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Classes\Encrypt;
-use App\Mail\Recuperar;
+use App\Mail\GestorCorreos;
 use App\Models\Gcm_Usuario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -139,7 +139,6 @@ class AuthController extends Controller
      */
     public function recuperarContrasena(Request $request)
     {
-
         $validator = Validator::make($request->all(), [
             'id_usuario' => 'required',
         ], [
@@ -165,12 +164,14 @@ class AuthController extends Controller
 
                 $valorEncriptado = $encrypt->encriptar($request->id_usuario . '|' . $caducidad);
 
-                $detalle = [
+                $data = [
+                    'view' => 'emails.recuperacion',
+                    'message' => 'Recuperación de cuentas en plataforma de juntas y asambleas',
                     'nombre' => $usuario_existe->nombre,
                     'url' => env('VIEW_BASE') . '/public/login/restablecer/' . $valorEncriptado,
                 ];
 
-                Mail::to($usuario_existe->correo)->send(new Recuperar($detalle));
+                Mail::to($usuario_existe->correo)->send(new GestorCorreos($data));
                 Gcm_Log_Acciones_Sistema_Controller::save(4, array('Descripcion' => 'Envio de link para recuperacion de contrasena', 'Correos' => $usuario_existe->correo), null);
                 return response()->json(["response" => 'Puede ingresar a su correo electronico para continuar con el proceso', 'status' => true], 200);
             }

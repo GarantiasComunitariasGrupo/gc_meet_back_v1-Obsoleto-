@@ -55,9 +55,9 @@
                     <table width="100%">
                         <tr>
                             <td
-                                style="text-align:center; padding: 15px; line-height:28px; font-weight:bold; position:relative; border-bottom: 1px solid #E2E2E2;">
+                                style="text-align:center; line-height:28px; font-weight:bold; position:relative;">
                                 <div>
-                                    <img src="http://burodeconexiones.com/gc_balanced/public/assets/img/test/fondo-con-logo.PNG"
+                                    <img src="https://www.burodeconexiones.com/gc_balanced/public/assets/img/test/GCL.jpg"
                                         style="width:700px; height:277px; display:block; border:none;">
                                 </div>
                             </td>
@@ -81,8 +81,8 @@
                       Puedes ingresar a través del siguiente enlace para continuar con el proceso de recuperación de contraseña:
                     </h1>
 
-                    <a href="{{url($data['url'])}}" style="margin:0; font-size:28px; text-decoration: none; padding: 15px 15px; border-radius: 4px; display: inline-block;">
-                      <span style="font-weight: bold; color: #4883BE; font-family: Helvetica">Haz click aquí</span>
+                    <a href="{{$data['url']}}" style="background: #9F8C5B; margin:0; font-size: 16px; text-decoration: none; padding: 10px 15px; color: #171717; border-radius: 4px; display: inline-block;">
+                        <span style="font-weight: bold; color: #FFFFFF; font-family: Helvetica">Haz click aquí para ingresar</span>
                     </a>
 
                     <p style="margin: 12px; font-size:13px; color: #545454; font-family: Helvetica">
@@ -93,8 +93,8 @@
 
             <tr>
                 <td
-                    style="padding:30px; text-align:center; font-size:13px; background-color:#16151E; border-color: #C6D2DF; opacity: 1; color:#BBB9C8;">
-                    <p style="margin:0; font-size:14px; line-height:20px; color:#BBB9C8; font-family: Helvetica;">
+                    style="padding:30px; text-align:center; background-color:#16151E; border-color: #C6D2DF; opacity: 1; color:#BBB9C8;">
+                    <p style="margin:0; font-size:13px; line-height:20px; color:#BBB9C8; font-family: Helvetica;">
                       Este es un mensaje automático generado por Garantías Comunitarias, por favor no responda este correo.
                     </p>
                 </td>

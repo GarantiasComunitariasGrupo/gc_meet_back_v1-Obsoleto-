@@ -2,11 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App;
 use App\Http\Classes\Encrypt;
-use App\Mail\ReunionCancelada;
-use App\Mail\ReunionReprogramada;
-use App\Mail\TestMail;
+use App\Mail\GestorCorreos;
 use App\Models\Gcm_Acta;
 use App\Models\Gcm_Archivo_Programacion;
 use App\Models\Gcm_Convocado_Reunion;
@@ -104,7 +101,8 @@ class Gcm_Reunion_Controller extends Controller
                     $item->token = (new Encrypt())->encriptar(JWTAuth::user()->id_usuario . '|' . $item->id_reunion); // Genera un token para el acceso del admin a la reunión
                     return $item;
                 });
-            } catch (\Throwable $th) {} // Cuando entra al catch es por que qien consulta es un convocado sin sesión iniciada
+            } catch (\Throwable $th) {
+            } // Cuando entra al catch es por que qien consulta es un convocado sin sesión iniciada
 
             return response()->json($reunion);
         } catch (\Throwable $th) {
@@ -190,10 +188,8 @@ class Gcm_Reunion_Controller extends Controller
                 $item['opciones'] = array_values($item['opciones']);
 
                 return $item;
-
             }, $programas);
             return response()->json($programas);
-
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
             return response()->json(["error" => $th->getMessage() . ' - ' . $th->getLine()], 500);
@@ -244,9 +240,6 @@ class Gcm_Reunion_Controller extends Controller
      */
     public function reenviarCorreos(Request $request)
     {
-        // Eloquent siempre devuelve colecciones
-        // first() trae el primero que encuentre
-
         try {
             // Aqui realizo un array_map con el objetivo de obtener solo el correo del objeto que llega y que este se almacene en un array nuevo
             $correosOrganizados = array_map(function ($row) {
@@ -264,6 +257,19 @@ class Gcm_Reunion_Controller extends Controller
 
             $programas = Gcm_Programacion::where([['gcm_programacion.id_reunion', '=', $id_reunion], ['gcm_programacion.estado', '!=', '4']])
                 ->whereNull('gcm_programacion.relacion')->get();
+
+            $imagenes = [
+                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GCL.jpg',
+                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GCP.jpg',
+                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GBR.jpg',
+                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GM.jpg',
+            ];
+
+            $id_grupo = $request->id_grupo;
+
+            if ($id_grupo) {
+                $imagen = $imagenes[$id_grupo - 1];
+            }
 
             for ($i = 0; $i < count($request->correos); $i++) {
 
@@ -284,6 +290,9 @@ class Gcm_Reunion_Controller extends Controller
                 $valorEncriptado = $encrypt->encriptar($request->correos[$i]['id_convocado']);
 
                 $detalle = [
+                    'view' => 'emails.invitacion',
+                    'message' => 'Reenvío de convocatoria a reunión en plataforma de juntas y asambleas',
+                    'imagen' => $imagen,
                     'nombre' => $recurso['nombre'],
                     'titulo' => $reunion['titulo'],
                     'descripcion' => $reunion['descripcion'],
@@ -292,7 +301,7 @@ class Gcm_Reunion_Controller extends Controller
                     'programas' => $programas,
                     'url' => env('VIEW_BASE') . '/public/acceso-reunion/acceso/' . $valorEncriptado,
                 ];
-                Mail::to($request->correos[$i]['correo'])->send(new TestMail($detalle));
+                Mail::to($request->correos[$i]['correo'])->send(new GestorCorreos($detalle));
             }
             Gcm_Log_Acciones_Sistema_Controller::save(4, array('Descripcion' => 'Reenvio de correos a los convocados a una reunion', 'Correos' => $correosOrganizados), null);
             return response()->json(["response" => 'exitoso'], 200);
@@ -352,29 +361,43 @@ class Gcm_Reunion_Controller extends Controller
      */
     public function correoCancelacion(Request $request)
     {
-        $id_reunion = $request->id_reunion;
-
         try {
             $id_reunion = $request->id_reunion;
             $convocados = $request->convocados;
             $reunion = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
-                ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo')
-                ->where([['gcm_reuniones.id_reunion', '=', $id_reunion], ['gcm_reuniones.estado', '!=', 4]])->firstOrFail();
-
+            ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo')
+            ->where([['gcm_reuniones.id_reunion', '=', $id_reunion], ['gcm_reuniones.estado', '!=', 4]])->firstOrFail();
+            
             // Aqui realizo un array_map con el objetivo de obtener solo el correo del objeto que llega y que este se almacene en un array nuevo
             $correosOrganizados = array_map(function ($row) {
                 return $row['correo'];
             }, $convocados);
+            
+            $imagenes = [
+                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GCL.jpg',
+                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GCP.jpg',
+                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GBR.jpg',
+                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GM.jpg',
+            ];
+            
+            $id_grupo = $request->id_grupo;
+
+            if ($id_grupo) {
+                $imagen = $imagenes[$id_grupo - 1];
+            }
 
             for ($i = 0; $i < count($convocados); $i++) {
                 $detalle = [
+                    'view' => 'emails.reunion_cancelada',
+                    'message' => 'Cancelación de reunión en la plataforma de juntas y asambleas',
+                    'imagen' => $imagen,
                     'nombre' => $convocados[$i]['nombre'],
                     'titulo' => $reunion['titulo'],
                     'descripcion' => $reunion['descripcion'],
                     'fecha_reunion' => $reunion['fecha_reunion'],
                     'hora' => $reunion['hora'],
                 ];
-                Mail::to($convocados[$i]['correo'])->send(new ReunionCancelada($detalle));
+                Mail::to($convocados[$i]['correo'])->send(new GestorCorreos($detalle));
             }
 
             Gcm_Log_Acciones_Sistema_Controller::save(4, array('Descripcion' => 'Envio de correo a los convocados por la cancelacion de una reunion', 'Correos' => $correosOrganizados), null);
@@ -415,6 +438,7 @@ class Gcm_Reunion_Controller extends Controller
     public function reprogramarReunion(Request $request)
     {
         try {
+
             $validator = Validator::make($request->all(), [
                 'fecha_reunion' => 'required',
                 'hora' => 'required',
@@ -422,43 +446,46 @@ class Gcm_Reunion_Controller extends Controller
                 'fecha_reunion.required' => '*Rellena este campo',
                 'hora.required' => '*Rellena este campo',
             ]);
-            
+
             if ($validator->fails()) {
                 Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $validator->errors(), 'linea' => 378), null);
                 return response()->json($validator->errors(), 422);
             }
-            
+
             $reunion = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
-            ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo')
-            ->where([['gcm_reuniones.id_reunion', '=', $request->id_reunion], ['gcm_reuniones.estado', '!=', 4]])->firstOrFail();
-            
+                ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo')
+                ->where([['gcm_reuniones.id_reunion', '=', $request->id_reunion], ['gcm_reuniones.estado', '!=', 4]])->firstOrFail();
+
             $reunion->fecha_reunion = $request->fecha_reunion;
             $reunion->hora = $request->hora;
             $reunion->estado = 0;
             $response = $reunion->save();
-            
+
             $convocados = $request->convocados;
             $encrypt = new Encrypt();
             // Aqui realizo un array_map con el objetivo de obtener solo el correo del objeto que llega y que este se almacene en un array nuevo
             $correosOrganizados = array_map(function ($row) {
                 return $row['correo'];
             }, $convocados);
-            
-            $imagen = '';
 
-            if ($request->id_grupo == 1) {
-                $imagen = 'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GCL.jpg';
-            } else if ($request->id_grupo == 2) {
-                $imagen = 'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GCP.jpg';
-            } else if ($request->id_grupo == 3) {
-                $imagen = 'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GBR.jpg';
-            } else {
-                $imagen = 'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GM.jpg';
+            $imagenes = [
+                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GCL.jpg',
+                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GCP.jpg',
+                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GBR.jpg',
+                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GM.jpg',
+            ];
+            
+            $id_grupo = $request->id_grupo;
+
+            if ($id_grupo) {
+                $imagen = $imagenes[$id_grupo - 1];
             }
 
             for ($i = 0; $i < count($convocados); $i++) {
                 $valorEncriptado = $encrypt->encriptar($convocados[$i]['id_convocado_reunion']);
                 $detalle = [
+                    'view' => 'emails.reunion_reprogramada',
+                    'message' => 'Reprogramación de reunión en la plataforma de juntas y asambleas',
                     'imagen' => $imagen,
                     'nombre' => $convocados[$i]['nombre'],
                     'titulo' => $reunion['titulo'],
@@ -467,7 +494,7 @@ class Gcm_Reunion_Controller extends Controller
                     'hora' => $request->hora,
                     'url' => env('VIEW_BASE') . '/public/acceso-reunion/acceso/' . $valorEncriptado,
                 ];
-                Mail::to($convocados[$i]['correo'])->send(new ReunionReprogramada($detalle));
+                Mail::to($convocados[$i]['correo'])->send(new GestorCorreos($detalle));
             }
             Gcm_Log_Acciones_Sistema_Controller::save(4, array('Descripcion' => 'Envio de correo a los convocados por la reprogramacion de una reunion', 'Correos' => $correosOrganizados), null);
             return response()->json(["response" => $response], 200);
@@ -494,11 +521,11 @@ class Gcm_Reunion_Controller extends Controller
                     ->join('gcm_roles AS s1_rls', 's1_rls.id_rol', 's1_rln.id_rol')
                     ->join('gcm_recursos AS s1_rcs', 's1_rcs.id_recurso', 's1_rln.id_recurso')
                     ->whereNull('s1_crn.representacion')->where([
-                    ['s1_rns.estado', '!=', 4],
-                    ['s1_trs.id_grupo', $id_grupo], ['s1_rcs.estado', 1],
-                    ['s1_rls.estado', 1], ['s1_rln.estado', 1],
-                    ['s1_crn.estado', 1],
-                ])->groupBy('s1_rcs.id_recurso')
+                        ['s1_rns.estado', '!=', 4],
+                        ['s1_trs.id_grupo', $id_grupo], ['s1_rcs.estado', 1],
+                        ['s1_rls.estado', 1], ['s1_rln.estado', 1],
+                        ['s1_crn.estado', 1],
+                    ])->groupBy('s1_rcs.id_recurso')
                     ->select('s1_rln.id_recurso', DB::raw('MAX(s1_crn.fecha) AS fecha'));
                 // Excepciones para consultas where normales
                 foreach ($exceptions as $key => $value) {
@@ -542,10 +569,10 @@ class Gcm_Reunion_Controller extends Controller
                 ->leftJoinSub($rol_recursos, 'rol_recurso', function ($join) {
                     $join->on('rol_recurso.id_recurso', 'rcs.id_recurso');
                 })->leftJoinSub($participacion_recursos, 'participacion_recurso', function ($join) {
-                $join->on('participacion_recurso.id_recurso', 'rcs.id_recurso');
-            })->leftJoinSub($entidad_recursos, 'entidad_recurso', function ($join) {
-                $join->on('entidad_recurso.id_recurso', 'rcs.id_recurso');
-            })
+                    $join->on('participacion_recurso.id_recurso', 'rcs.id_recurso');
+                })->leftJoinSub($entidad_recursos, 'entidad_recurso', function ($join) {
+                    $join->on('entidad_recurso.id_recurso', 'rcs.id_recurso');
+                })
                 ->select(
                     'rcs.*',
                     'rol_recurso.rol',
@@ -712,10 +739,14 @@ class Gcm_Reunion_Controller extends Controller
 
             if (!$tipo_reunion) {
                 $tipo_existe = Gcm_Tipo_Reunion::where([['id_grupo', $data['id_grupo']], ['titulo', $data['titulo']]])->first();
-                if ($tipo_existe) {$tipo_reunion = Gcm_Tipo_Reunion::find($tipo_existe->id_tipo_reunion);}
+                if ($tipo_existe) {
+                    $tipo_reunion = Gcm_Tipo_Reunion::find($tipo_existe->id_tipo_reunion);
+                }
             }
 
-            if (!$tipo_reunion) {$tipo_reunion = new Gcm_Tipo_Reunion();}
+            if (!$tipo_reunion) {
+                $tipo_reunion = new Gcm_Tipo_Reunion();
+            }
 
             $tipo_reunion->imagen = "/assets/img/meets/bg" . random_int(1, 4) . ".png";
             $tipo_reunion->honorifico_representante = 'Representantes';
@@ -730,7 +761,9 @@ class Gcm_Reunion_Controller extends Controller
             $extensionesFirmaProgramacion = array('PNG', 'JPG', 'JPEG', 'PDF');
 
             $reunion = Gcm_Reunion::find($data['id_reunion']);
-            if (!$reunion) {$reunion = new Gcm_Reunion();}
+            if (!$reunion) {
+                $reunion = new Gcm_Reunion();
+            }
 
             $reunion->id_tipo_reunion = $tipo_reunion->id_tipo_reunion;
             $reunion->id_acta = $data['id_acta'] == 0 ? null : $data['id_acta'];
@@ -764,13 +797,17 @@ class Gcm_Reunion_Controller extends Controller
                 $reunion->programacion = $subcarpeta . '/' . $picture;
                 $file->move(storage_path('app/public/archivos_reunion/' . $reunion->id_reunion), $picture);
                 chmod(storage_path('app/public/archivos_reunion/' . $reunion->id_reunion . '/' . $picture), 0777);
-            } else { $reunion->programacion = $data['programacion'];}
+            } else {
+                $reunion->programacion = $data['programacion'];
+            }
 
             $reunion->save();
 
             $convocados = json_decode($request->convocados, true);
 
-            $summonList = array_map(function ($summon) {return $summon['identificacion'];}, $convocados);
+            $summonList = array_map(function ($summon) {
+                return $summon['identificacion'];
+            }, $convocados);
 
             $removedSummonList = Gcm_Convocado_Reunion::join('gcm_relaciones AS rlc', 'gcm_convocados_reunion.id_relacion', '=', 'rlc.id_relacion')
                 ->join('gcm_recursos AS rcs', 'rlc.id_recurso', '=', 'rcs.id_recurso')
@@ -817,7 +854,9 @@ class Gcm_Reunion_Controller extends Controller
                 $recurso_existe = DB::table('gcm_recursos')->where('identificacion', '=', $convocadoItem['identificacion'])->first();
                 $recurso = !$recurso_existe ? new Gcm_Recurso() : Gcm_Recurso::findOrFail($recurso_existe->id_recurso);
 
-                if (!empty($convocadoItem['telefono'])) {$recurso->telefono = $convocadoItem['telefono'];}
+                if (!empty($convocadoItem['telefono'])) {
+                    $recurso->telefono = $convocadoItem['telefono'];
+                }
                 $recurso->identificacion = $convocadoItem['identificacion'];
                 $recurso->nombre = $convocadoItem['nombre'];
                 $recurso->correo = $convocadoItem['correo'];
@@ -899,7 +938,9 @@ class Gcm_Reunion_Controller extends Controller
             $extensiones = array('PNG', 'JPG', 'JPEG', 'GIF', 'XLSX', 'CSV', 'PDF', 'DOCX', 'TXT', 'PPTX', 'SVG', 'PDF');
 
             $programList = isset($request['id_programa']) ? array_values(
-                array_filter($request['id_programa'], function ($program) {return $this->stringNullToNull($program) !== null;})
+                array_filter($request['id_programa'], function ($program) {
+                    return $this->stringNullToNull($program) !== null;
+                })
             ) : [];
 
             $removedProgramList = Gcm_Programacion::where('id_reunion', $reunion->id_reunion)
@@ -1005,7 +1046,9 @@ class Gcm_Reunion_Controller extends Controller
                     }
 
                     $optionList = isset($request['opcion_id_programa' . $i]) ? array_values(
-                        array_filter($request['opcion_id_programa' . $i], function ($data) {return $this->stringNullToNull($data) !== null;})
+                        array_filter($request['opcion_id_programa' . $i], function ($data) {
+                            return $this->stringNullToNull($data) !== null;
+                        })
                     ) : [];
 
                     $removedOptionList = Gcm_Programacion::where('relacion', $programa->id_programa)
@@ -1100,7 +1143,6 @@ class Gcm_Reunion_Controller extends Controller
                             }
                         }
                     }
-
                 }
             }
 
@@ -1208,7 +1250,6 @@ class Gcm_Reunion_Controller extends Controller
             // Recupere el archivo del almacenamiento con la información del encabezado de dar
             Gcm_Log_Acciones_Sistema_Controller::save(4, array('Descripcion' => 'Descarga del pdf con la programacion de una reunion'), null);
             return Storage::download($documentFileName, 'Request', $header);
-
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
             return response()->json(["error" => $th->getMessage()], 500);
@@ -1670,7 +1711,6 @@ class Gcm_Reunion_Controller extends Controller
             // Recupere el archivo del almacenamiento con la información del encabezado de dar
             Gcm_Log_Acciones_Sistema_Controller::save(4, array('Descripcion' => 'Descarga del acta de una reunion'), null);
             return Storage::download($documentFileName, 'Request', $header);
-
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
             return response()->json(["error" => $th->getMessage()], 500);
@@ -1687,5 +1727,4 @@ class Gcm_Reunion_Controller extends Controller
             return response()->json(["status" => false, "message" => $th->getMessage() . ' - ' . $th->getLine()], 200);
         }
     }
-
 }

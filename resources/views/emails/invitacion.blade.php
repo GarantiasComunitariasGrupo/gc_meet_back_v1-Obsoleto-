@@ -1,5 +1,4 @@
-<!DOCTYPE html
-    PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 
 <head>
@@ -54,11 +53,9 @@
                 <td>
                     <table width="100%">
                         <tr>
-                            <td
-                                style="text-align:center; padding: 15px; line-height:28px; font-weight:bold; position:relative; border-bottom: 1px solid #E2E2E2;">
+                            <td style="text-align:center; line-height:28px; font-weight:bold; position:relative;">
                                 <div>
-                                    <img src="http://burodeconexiones.com/gc_balanced/public/assets/img/test/fondo-con-logo.PNG"
-                                        style="width:700px; height:277px; display:block; border:none;">
+                                    <img src="{{$data['imagen']}}" style="width:700px; height:277px; display:block; border:none;">
                                 </div>
                             </td>
                         </tr>
@@ -69,14 +66,14 @@
             <!-- BANNER IMAGE -->
 
             <tr align="center">
-                <td style="padding: 20px; background-color:#ffffff;">
-                    <h1 style="margin-bottom: 13px; font-size: 30px; color: #171717; font-family: Helvetica">¡Hola, {{$data['nombre']}}!</h1>
-                    <h1 style="font-size: 15px; color: #545454; font-family: Helvetica">Has sido invitado a {{$data['titulo']}}</h1>
+                <td style="padding: 15px; background-color:#ffffff;">
+                    <h1 style="margin-bottom: 10px; font-size: 30px; color: #171717; font-family: Helvetica">¡Hola, {{$data['nombre']}}!</h1>
+                    <h1 style="font-size: 15px; color: #545454; font-family: Helvetica">Has sido convocado a la reunión de {{$data['titulo']}}</h1>
                 </td>
             </tr>
 
             <tr align="center">
-                <td style="padding: 20px; background-color:#ffffff; width:100%; padding-bottom:20px;">
+                <td style="padding: 10px; background-color:#ffffff; width:100%; padding-bottom: 10px;">
                     <div class="col-lge">
                         <h1 style="font-family: Helvetica; font-size: 15px; color: #545454;">
                             {{$data['descripcion']}}
@@ -86,12 +83,11 @@
             </tr>
 
             <tr align="center">
-                <td style="padding: 20px; background-color:#ffffff;">
-                    <table class="col-lge" style="padding-bottom:20px; font-size:16px; color:#363636; margin-left: auto; margin-right: auto;">
+                <td style="padding: 15px; background-color:#ffffff;">
+                    <table class="col-lge" style="padding-bottom: 15px; font-size:16px; color:#363636; margin-left: auto; margin-right: auto;">
                         <tr>
                             <td style="margin-top:0; margin-bottom: 12px; padding-right: 12px;">
-                                <img style="width:50px; height: 50px;"
-                                    src="http://burodeconexiones.com/gc_balanced/public/assets/img/test/calendar-bk.png">
+                                <img style="width:50px; height: 50px;" src="http://burodeconexiones.com/gc_balanced/public/assets/img/test/calendar-bk.png">
                                 <div style="align-self: center; text-align: left; padding-left: 15px; display: inline-block;">
                                     <div style="font-size: 16px; color: #545454; font-family: Helvetica">Fecha:</div>
                                     <div style="font-size: 25px; color: #171717; font-family: Helvetica">{{$data['fecha_reunion']}}</div>
@@ -99,8 +95,7 @@
                             </td>
 
                             <td style="margin-top:0; margin-bottom: 12px; padding-left: 12px;">
-                                <img style="width: 50px; height: 50px;"
-                                    src="http://burodeconexiones.com/gc_balanced/public/assets/img/test/clock-bk.png">
+                                <img style="width: 50px; height: 50px;" src="http://burodeconexiones.com/gc_balanced/public/assets/img/test/clock-bk.png">
                                 <div style="align-self: center; text-align: left; padding-left: 15px; display: inline-block;">
                                     <div style="font-size: 16px; color: #545454; font-family: Helvetica">Hora</div>
                                     <div style="font-size: 25px; color: #171717; font-family: Helvetica">{{$data['hora']}}</div>
@@ -112,40 +107,37 @@
             </tr>
 
             <tr align="lef">
-                <td style="padding: 20px; background-color:#ffffff;">
+                <td style="padding: 15px; background-color:#ffffff;">
                     @if(count($data['programas']) > 0)
-                      <h1 style="margin-bottom: 16px; font-size: 15px; color: #171717; font-family: Helvetica">Programación</h1>
+                    <h1 style="margin-bottom: 16px; font-size: 15px; color: #171717; font-family: Helvetica">Programación</h1>
                     @endif
-                    @for($i = 0; $i < count($data['programas']); $i++)
-                        <p style="font-size: 15px; color: #545454; font-family: Helvetica">
-                            {{$data['programas'][$i]['orden']}}. {{$data['programas'][$i]['titulo']}}
+                    @for($i = 0; $i < count($data['programas']); $i++) <p style="font-size: 15px; color: #545454; font-family: Helvetica">
+                        {{$data['programas'][$i]['orden']}}. {{$data['programas'][$i]['titulo']}}
                         </p>
-                    @endfor
+                        @endfor
                 </td>
             </tr>
 
             <tr align="center">
-                <td style="padding:20px; background-color:#ffffff;">
+                <td style="padding: 15px; background-color:#ffffff;">
                     <h1 style="margin: 10px; font-size:15px; color: #545454; font-family: Helvetica">
                         Puedes ingresar a través del siguiente enlace:
                     </h1>
 
-                    <a href="{{$data['url']}}"
-                        style="margin:0; font-size:28px; text-decoration: none; padding: 15px 15px; color: #171717; border-radius: 4px; display: inline-block;">
-                        <span style="font-weight: bold; color: #4883BE; font-family: Helvetica">Haz click aquí</span>
+                    <a href="{{$data['url']}}" style="background: #9F8C5B; margin:0; font-size: 16px; text-decoration: none; padding: 10px 15px; color: #171717; border-radius: 4px; display: inline-block;">
+                        <span style="font-weight: bold; color: #FFFFFF; font-family: Helvetica">Haz click aquí para ingresar</span>
                     </a>
 
                     <p style="margin: 12px; font-size: 14px; color: #545454; font-family: Helvetica">
-                      Este enlace es único e intransferible y es la única manera de ingresar a la reunión
+                        Este enlace es único e intransferible y es la única manera de ingresar a la reunión
                     </p>
                 </td>
             </tr>
 
             <tr>
-                <td
-                    style="padding:30px; text-align:center; font-size:13px; background-color:#16151E; border-color: #C6D2DF; opacity: 1; color:#BBB9C8;">
-                    <p style="margin:0; font-size:14px; line-height:20px; color:#BBB9C8; font-family: Helvetica;">
-                      Este es un mensaje automático generado por Garantías Comunitarias, por favor no responda este correo.
+                <td style="padding: 30px; text-align:center; background-color:#16151E; border-color: #C6D2DF; opacity: 1; color:#BBB9C8;">
+                    <p style="margin: 0; font-size:13px; line-height:20px; color:#BBB9C8; font-family: Helvetica;">
+                        Este es un mensaje automático generado por Garantías Comunitarias, por favor no responda este correo.
                     </p>
                 </td>
             </tr>

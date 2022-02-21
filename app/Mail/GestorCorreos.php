@@ -30,6 +30,6 @@ class GestorCorreos extends Mailable
      */
     public function build()
     {
-        return $this->subject($this->data['subject'])->view($this->data['view'])->with('data', $this->data);
+        return $this->subject($this->data['message'])->view($this->data['view'])->with('data', $this->data);
     }
 }

@@ -53,9 +53,9 @@
                 <td>
                     <table width="100%">
                         <tr>
-                            <td style="text-align:center; padding: 15px; line-height:28px; font-weight:bold; position:relative; border-bottom: 1px solid #E2E2E2;">
+                            <td style="text-align:center; line-height:28px; font-weight:bold; position:relative;">
                                 <div>
-                                    <img src="http://burodeconexiones.com/gc_balanced/public/assets/img/test/fondo-con-logo.PNG" style="width:700px; height:277px; display:block; border:none;">
+                                    <img src="{{$data['imagen']}}" style="width:700px; height:277px; display:block; border:none;">
                                 </div>
                             </td>
                         </tr>
@@ -111,8 +111,8 @@
             </tr>
 
             <tr>
-                <td style="padding:30px; text-align:center; font-size:13px; background-color:#16151E; border-color: #C6D2DF; opacity: 1; color:#BBB9C8;">
-                    <p style="margin:0; font-size:14px; line-height:20px; color:#BBB9C8; font-family: Helvetica;">
+                <td style="padding:30px; text-align:center; background-color:#16151E; border-color: #C6D2DF; opacity: 1; color:#BBB9C8;">
+                    <p style="margin:0; font-size:13px; line-height:20px; color:#BBB9C8; font-family: Helvetica;">
                         Este es un mensaje automático generado por Garantías Comunitarias, por favor no responda este correo.
                     </p>
                 </td>

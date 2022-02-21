@@ -24,8 +24,7 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        // $schedule->command('inspire')->hourly();
-        $schedule->command('test:task')->everyMinute()->weekdays()->between('7:00', '18:00');
+        $schedule->command('test:task')->everyMinute()->weekdays()->timezone('America/Bogota')->between('7:00', '18:00');
     }
 
     /**

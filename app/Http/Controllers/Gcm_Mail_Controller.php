@@ -3,22 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Mail\GestorCorreos;
-use App\Mail\TestMail;
 use Illuminate\Support\Facades\Mail;
 
 class Gcm_Mail_Controller extends Controller
 {
-    public function send($view, $subject, $title, $body, $destinatario)
+    public function send($view, $message, $title, $body, $destinatario)
     {
         $response = array();
 
         try {
-
             $data = array(
                 'view' => $view,
-                'subject' => $subject,
+                'message' => $message,
                 'title' => $title,
-                'body' => $body,
+                'body' => json_decode($body, true),
             );
 
             Mail::to($destinatario)->send(new GestorCorreos($data));
@@ -26,14 +24,14 @@ class Gcm_Mail_Controller extends Controller
             $response = array('ok' => true);
             return $response;
         } catch (\Throwable $th) {
-            $response = array('ok' => false, ' error' => $th->getMessage());
+            $response = array('ok' => false, 'error' => $th->getMessage());
             return $response;
         }
     }
 
     public function sendEmail($title, $detalle, $destinatarios)
     {
-        Mail::to($destinatarios)->send(new TestMail($detalle));
+        Mail::to($destinatarios)->send(new GestorCorreos($detalle));
         return true;
     }
 }
