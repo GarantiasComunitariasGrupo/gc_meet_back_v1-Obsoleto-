@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Classes\Encrypt;
 use App\Http\Controllers\Gcm_Log_Acciones_Sistema_Controller;
 use App\Http\Controllers\Gcm_Mail_Controller;
-use App\Mail\TestMail;
+use App\Mail\GestorCorreos;
 use App\Models\Gcm_Archivo_Programacion;
 use App\Models\Gcm_Asistencia_Reunion;
 use App\Models\Gcm_Convocado_Reunion;
@@ -54,7 +54,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 ->where('gcr.estado', 1)
                 ->whereIn('grns.estado', [0, 1])
                 ->groupBy('gcr.id_reunion')
-                ->select(['gcr.*', 'grcs.*', 'grns.descripcion'])
+                ->select(['gcr.*', 'grcs.*', 'grns.*'])
                 ->get();
 
             /**
@@ -67,46 +67,42 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                  */
                 $correo = $base[0]->correo;
 
-                /**
-                 * Se recorren las reuniones a las que está convocado el recurso
-                 */
-                foreach ($base as $row) {
-
+                // Aqui realizo un array_map con el objetivo de obtener los id_convocado y añadirlo a un nuevo array junto junto con la url de la pagina que se direcciona
+                $arrayUrls = $base->map(function ($row) {
                     $encrypt = new Encrypt();
+                    return env('VIEW_BASE') . '/public/acceso-reunion/acceso/' . $encrypt->encriptar($row->id_convocado_reunion);
+                });
 
-                    $idEncriptado = $encrypt->encriptar($row->id_convocado_reunion);
+                /**
+                 * Se envía correo electrónico con invitación a las reuniones
+                 */
+                $send = $mailController->send(
+                    'emails.buscar_invitaciones',
+                    'Invitaciónes de reuniones en GCMeet',
+                    $arrayUrls,
+                    $base,
+                    $correo,
+                );
 
-                    /**
-                     * Se envía correo electrónico con invitación a las reuniones
-                     */
-                    $send = $mailController->send(
-                        'emails.formato-email',
-                        'Invitación reunión GCMeet',
-                        "Invitación reunión - {$row->descripcion}",
-                        "Este es el cuerpo del correo => " . env('VIEW_BASE') . "/public/acceso-reunion/acceso/{$idEncriptado}",
-                        $correo
-                    );
-
-                    /**
-                     * Si falla en envío de un correo, se guarda log
-                     */
-                    if (!$send['ok']) {
-                        array_push($log, ['reunion' => 'id_reunion', 'error' => $send['error']]);
-                    }
-
-                    /**
-                     * Se guarda log del sistema: Envío de correo electrónico
-                     */
-                    $send['correos'] = $correo;
-                    $send['identificador'] = 'Consulta invitaciones';
-
-                    Gcm_Log_Accion_Sistema::create([
-                        'accion' => 4, 'tabla' => null,
-                        'fecha' => date('Y-m-d H:i:s'), 'lugar' => 'Invitar reunión',
-                        'detalle' => json_encode($send),
-                    ]);
-
+                /**
+                 * Si falla en envío de un correo, se guarda log
+                 */
+                if (!$send['ok']) {
+                    array_push($log, ['reunion' => 'id_reunion', 'error' => $send['error']]);
                 }
+
+                /**
+                 * Se guarda log del sistema: Envío de correo electrónico
+                 */
+                $send['correos'] = $correo;
+                $send['identificador'] = 'Consulta invitaciones';
+
+                Gcm_Log_Accion_Sistema::create([
+                    'accion' => 4, 'tabla' => null,
+                    'fecha' => date('Y-m-d H:i:s'), 'lugar' => 'Invitar reunión',
+                    'detalle' => json_encode($send),
+                ]);
+                // }
 
                 /**
                  * Respuesta
@@ -114,20 +110,17 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 $response = array(
                     'ok' => empty($log) ? true : false,
                     'response' => empty($log) ?
-                    'Invitaciones enviadas correctamente, por favor revisar el correo electrónico.' : $send['error'],
+                        'Invitaciones enviadas correctamente, por favor revisar el correo electrónico.' : $send['error'],
                 );
-
             } else {
                 $response = array('ok' => false, 'response' => 'El usuario no ha sido convocado para ninguna reunión');
             }
 
             return response()->json($response, 200);
-
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
-            return response()->json(['ok' => false, 'response' => $th->getMessage()], 500);
+            return response()->json(['ok' => false, 'response' => $th->getMessage().'-'.$th->getLine()], 500);
         }
-
     }
 
     /**
@@ -170,7 +163,6 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             );
 
             return response()->json($response, 200);
-
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage()], 500);
@@ -205,12 +197,10 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             );
 
             return response()->json($response, 200);
-
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage()], 500);
         }
-
     }
 
     /**
@@ -251,12 +241,10 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             );
 
             return response()->json($response, 200);
-
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage()], 500);
         }
-
     }
 
     /** Si la persona que se elige como representante ha elegido otro representante significa se añade restricción */
@@ -316,16 +304,13 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 /** Se guarda log para acciones del sistema */
                 $response['descripcion'] = 'Envío SMS firma digital';
                 Gcm_Log_Acciones_Sistema_Controller::save(5, $response, null, null);
-
             }
 
             return response()->json($response, 200);
-
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage(), 'linea' => $th->getLine()], 500);
         }
-
     }
 
     /**
@@ -412,7 +397,6 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
                     return response()->json($response, 200);
                 }
-
             }
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
@@ -445,12 +429,10 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             );
 
             return response()->json($response, 200);
-
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage()], 500);
         }
-
     }
 
     /**
@@ -460,7 +442,6 @@ class Gcm_Acceso_Reunion_Controller extends Controller
      */
     public function registrarRepresentante(Request $request)
     {
-        $mailController = new Gcm_Mail_Controller();
         $encrypt = new Encrypt();
         $response = array();
 
@@ -513,11 +494,37 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 'soporte' => $request->params['url_firma'],
             ]);
 
+            /** Se consulta los datos de la reunion */
+            $meet = Gcm_Reunion::join('gcm_tipo_reuniones', 'gcm_reuniones.id_tipo_reunion', '=', 'gcm_tipo_reuniones.id_tipo_reunion')
+                ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo')
+                ->where([['gcm_reuniones.id_reunion', '=', $request->params['id_reunion']], ['gcm_reuniones.estado', '!=', 4]])->firstOrFail();
+
+            /** Se consulta los programas de la reunion */
+            $programList = null;
+
+            if (!$programList) {
+                $programList = Gcm_Programacion::where([['id_reunion', $request->params['id_reunion']], ['estado', '!=', '4']])
+                    ->whereNull('relacion')->orderBy('orden', 'ASC')->get();
+            }
+
             /** Se actualiza número de celular en caso de ser modificado */
             $celular = Gcm_Recurso::where('identificacion', $request->params['identificacion'])
                 ->update(['telefono' => $request->params['celular']]);
 
             DB::commit();
+
+            $imagenes = [
+                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GCL.jpg',
+                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GCP.jpg',
+                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GBR.jpg',
+                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GM.jpg',
+            ];
+
+            $id_grupo = $request->params['id_grupo'];
+
+            if ($id_grupo) {
+                $imagen = $imagenes[$id_grupo - 1];
+            }
 
             /** Se encripta id_convocado_reunion */
             $idConvocadoReunion = $encrypt->encriptar($convocado->id_convocado_reunion);
@@ -527,28 +534,43 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                     Link: " . env('VIEW_BASE') . "/public/acceso-reunion/acceso/{$idConvocadoReunion}";
 
             /** Se envía correo electrónico de invitación al representante */
-            $send = $mailController->send(
-                'emails.formato-email',
-                'Invitación de representación - GCMeet',
-                'Invitación ?',
-                $body,
-                $request->params['correo']
-            );
+            // $send = $mailController->send(
+            //     'emails.formato-email',
+            //     'Invitación de representación - GCMeet',
+            //     'Invitación ?',
+            //     $body,
+            //     $request->params['correo']
+            // );
+
+            $data = [
+                'view' => 'emails.email_representante',
+                'message' => 'Invitación de representación - GCMeet',
+                'imagen' => $imagen,
+                'nombre' => $request->params['nombre'],
+                'nombreAnfitrion' => $request->params['nombreAnfitrion'],
+                'titulo' => $meet->titulo,
+                'descripcion' => $meet->descripcion,
+                'fecha_reunion' => $meet->fecha_reunion,
+                'hora' => $meet->hora,
+                'programas' => $programList,
+                'url' => env('VIEW_BASE') . '/public/acceso-reunion/acceso/' . $idConvocadoReunion,
+            ];
+
+            Mail::to($request->params['correo'])->send(new GestorCorreos($data));
 
             /** Se guarda log de acciones del sistema */
-            $send['correos'] = $request->params['correo'];
-            $send['descripcion'] = 'Correo designación de poder';
-            Gcm_Log_Acciones_Sistema_Controller::save(4, $send, null, null);
+            // $send['correos'] = $request->params['correo'];
+            // $send['descripcion'] = 'Correo designación de poder';
 
-            $response = array('ok' => true, 'response' => ['recurso' => $recurso, 'convocado' => $convocado, 'mail' => $send]);
+            Gcm_Log_Acciones_Sistema_Controller::save(4, array('Descripcion' => 'Correo designación de poder', 'Correos' => $request->params['correo']), null, null);
+
+            $response = array('ok' => true, 'response' => ['recurso' => $recurso, 'convocado' => $convocado, 'mail' => $data]);
             return response()->json($response, 200);
-
         } catch (\Throwable $th) {
             DB::rollback();
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage()], 500);
         }
-
     }
 
     /**
@@ -574,12 +596,10 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             );
 
             return response()->json($response, 200);
-
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage()], 500);
         }
-
     }
 
     /**
@@ -607,12 +627,10 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             );
 
             return response()->json($response, 200);
-
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage()], 500);
         }
-
     }
 
     /**
@@ -634,12 +652,10 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             );
 
             return response()->json($response, 200);
-
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage()], 500);
         }
-
     }
 
     /**
@@ -703,7 +719,6 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                     if (!$change) {
                         array_push($log['change'], ['error' => "Error actualizando {$row['id_convocado_reunion']}"]);
                     }
-
                 }
 
                 /** Se guarda log de acciones del sistema */
@@ -716,18 +731,16 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 $response = array(
                     'ok' => empty($log) ? true : false,
                     'response' => empty($log)
-                    ? 'Las representaciones se han cancelado correctamente.'
-                    : $log,
+                        ? 'Las representaciones se han cancelado correctamente.'
+                        : $log,
                 );
 
                 return response()->json($response, 200);
             }
-
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage()], 500);
         }
-
     }
 
     /**
@@ -754,12 +767,10 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             );
 
             return response()->json($response, 200);
-
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage()], 500);
         }
-
     }
 
     /**
@@ -807,12 +818,10 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             }
 
             return response()->json($response, 200);
-
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage()], 500);
         }
-
     }
 
     /**
@@ -832,16 +841,17 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 ->leftJoinSub($respose, 'rsc', function ($join) {
                     $join->on('rsc.id_programa', '=', 'gcm_programacion.id_programa');
                 })->select(
-                'gcm_programacion.*',
-                'gra.descripcion as rol_acta_descripcion',
-                'gra.firma as rol_acta_firma',
-                'gra.acta as rol_acta_acta',
-                DB::raw('GROUP_CONCAT(gcm_archivos_programacion.id_archivo_programacion SEPARATOR "|") AS id_archivo_programacion_archivos'),
-                DB::raw('GROUP_CONCAT(gcm_archivos_programacion.descripcion SEPARATOR "|") AS descripciones_archivos'),
-                DB::raw('GROUP_CONCAT(gcm_archivos_programacion.id_programa SEPARATOR "|") AS id_programas_archivos'),
-                DB::raw('GROUP_CONCAT(gcm_archivos_programacion.peso SEPARATOR "|") AS pesos_archivos'),
-                DB::raw('GROUP_CONCAT(gcm_archivos_programacion.url SEPARATOR "|") AS url_archivos'),
-                'rsc.descripcion as response')
+                    'gcm_programacion.*',
+                    'gra.descripcion as rol_acta_descripcion',
+                    'gra.firma as rol_acta_firma',
+                    'gra.acta as rol_acta_acta',
+                    DB::raw('GROUP_CONCAT(gcm_archivos_programacion.id_archivo_programacion SEPARATOR "|") AS id_archivo_programacion_archivos'),
+                    DB::raw('GROUP_CONCAT(gcm_archivos_programacion.descripcion SEPARATOR "|") AS descripciones_archivos'),
+                    DB::raw('GROUP_CONCAT(gcm_archivos_programacion.id_programa SEPARATOR "|") AS id_programas_archivos'),
+                    DB::raw('GROUP_CONCAT(gcm_archivos_programacion.peso SEPARATOR "|") AS pesos_archivos'),
+                    DB::raw('GROUP_CONCAT(gcm_archivos_programacion.url SEPARATOR "|") AS url_archivos'),
+                    'rsc.descripcion as response'
+                )
                 ->where([['id_reunion', $id_reunion], ['gcm_programacion.estado', '!=', '4']])
                 ->groupBy('gcm_programacion.id_programa')->get()->toArray();
 
@@ -887,7 +897,6 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 $item['opciones'] = array_values($item['opciones']);
 
                 return $item;
-
             }, $programas);
 
             return response()->json(['ok' => true, 'response' => $programas]);
@@ -913,8 +922,12 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
             if (+$request->estado === 4) { // Si se elimina un programa se actualiza el orden del resto
                 $programList = Gcm_Programacion::where([['estado', '!=', '4'], ['id_reunion', $program->id_reunion]]);
-                if ($program->relacion) {$programList = $programList->whereNotNull('relacion');}
-                if (!$program->relacion) {$programList = $programList->whereNull('relacion');}
+                if ($program->relacion) {
+                    $programList = $programList->whereNotNull('relacion');
+                }
+                if (!$program->relacion) {
+                    $programList = $programList->whereNull('relacion');
+                }
                 $programList = $programList->orderBy('orden', 'ASC')->get();
 
                 $programList->each(function ($item, $i) {
@@ -924,7 +937,6 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             }
 
             return response()->json(['ok' => ($update) ? true : false]);
-
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage()], 500);
@@ -958,7 +970,6 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             );
 
             return response()->json($response, 200);
-
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage()], 500);
@@ -1003,7 +1014,6 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             );
 
             return response()->json($response, 200);
-
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage()], 500);
@@ -1064,7 +1074,6 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             );
 
             return response()->json($response, 200);
-
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage()], 500);
@@ -1087,7 +1096,6 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 ->get();
 
             return response()->json(['status' => true, 'message' => $base], 200);
-
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['status' => false, 'message' => $th->getMessage() . ' - ' . $th->getLine()], 500);
@@ -1119,7 +1127,6 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             );
 
             return response()->json($response, 200);
-
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage()], 500);
@@ -1132,7 +1139,9 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             $data = (new encrypt())->desencriptar($token);
             $data = explode('|', $data);
 
-            if (count($data) !== 2) {return response()->json(['ok' => false, 'response' => 'Token incorrecto', "data" => $data], 200);}
+            if (count($data) !== 2) {
+                return response()->json(['ok' => false, 'response' => 'Token incorrecto', "data" => $data], 200);
+            }
 
             return ["ok" => true, "response" => ["id_usuario" => $data[0], "id_reunion" => $data[1]]];
         } catch (\Throwable $th) {
@@ -1146,16 +1155,24 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         DB::beginTransaction();
         try {
 
-            if (!isset($request->convocatoria)) {throw new \Error("answerQuestion: {convocatoria} es requerido", 1);}
-            if (!isset($request->id_programa)) {throw new \Error("answerQuestion: {id_programa} es requerido", 1);}
-            if (!isset($request->response)) {throw new \Error("answerQuestion: {response} es requerido", 1);}
+            if (!isset($request->convocatoria)) {
+                throw new \Error("answerQuestion: {convocatoria} es requerido", 1);
+            }
+            if (!isset($request->id_programa)) {
+                throw new \Error("answerQuestion: {id_programa} es requerido", 1);
+            }
+            if (!isset($request->response)) {
+                throw new \Error("answerQuestion: {response} es requerido", 1);
+            }
 
             foreach ($request->convocatoria as $id_convocado_reunion) {
                 $summoned = Gcm_Convocado_Reunion::where('id_convocado_reunion', $id_convocado_reunion)->first();
 
                 if ($summoned && +$summoned->tipo !== 1) {
                     $hasAnswered = Gcm_Respuesta_Convocado::where([['id_convocado_reunion', $id_convocado_reunion], ['id_programa', $request->id_programa]])->first();
-                    if ($hasAnswered) {throw new \Error("answerQuestion: No es posible responder de nuevo a la misma pregunta", 1);}
+                    if ($hasAnswered) {
+                        throw new \Error("answerQuestion: No es posible responder de nuevo a la misma pregunta", 1);
+                    }
 
                     $response = new Gcm_Respuesta_Convocado();
                     $response->id_convocado_reunion = $id_convocado_reunion;
@@ -1164,7 +1181,6 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
                     $response->save(); # code...
                 }
-
             }
             DB::commit();
 
@@ -1228,7 +1244,6 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             );
 
             return response()->json($response, 200);
-
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
             return response()->json(['ok' => false, 'response' => $th->getMessage()], 500);
@@ -1282,7 +1297,9 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             $programa_nuevo = new Gcm_Programacion;
             if ($this->stringNullToNull($request->id_programa) !== null) {
                 $programa_nuevo = Gcm_Programacion::find($request->id_programa);
-                if (!$programa_nuevo) {throw new \Error("El programa no existe", 1);}
+                if (!$programa_nuevo) {
+                    throw new \Error("El programa no existe", 1);
+                }
             }
             $programa_nuevo->descripcion = $this->stringNullToNull($request->descripcion);
             $programa_nuevo->estado = $request->estado ? $request->estado : 0;
@@ -1342,7 +1359,6 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                         return response()->json(['error' => 'La extensión del archivo no es permitida'], 500);
                     }
                 }
-
             }
 
             if (isset($request['file_viejo'])) {
@@ -1353,7 +1369,9 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                     $archivo_nuevo = new Gcm_Archivo_Programacion;
                     if ($this->stringNullToNull($file->id_archivo_programacion) !== null) {
                         $archivo_nuevo = Gcm_Archivo_Programacion::find($file->id_archivo_programacion);
-                        if (!$archivo_nuevo) {throw new \Error("El archivo no existe", 1);}
+                        if (!$archivo_nuevo) {
+                            throw new \Error("El archivo no existe", 1);
+                        }
                     }
 
                     $archivo_nuevo->id_programa = $programa_nuevo->id_programa;
@@ -1365,7 +1383,9 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             }
 
             $optionList = isset($request['opcion_id_programa']) ? array_values(
-                array_filter($request['opcion_id_programa'], function ($data) {return $this->stringNullToNull($data) !== null;})
+                array_filter($request['opcion_id_programa'], function ($data) {
+                    return $this->stringNullToNull($data) !== null;
+                })
             ) : [];
 
             $removedOptionList = Gcm_Programacion::where('relacion', $programa_nuevo->id_programa)
@@ -1384,7 +1404,9 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                     $opcion_nueva = new Gcm_Programacion;
                     if ($this->stringNullToNull($request['opcion_id_programa'][$j]) !== null) {
                         $opcion_nueva = Gcm_Programacion::find($request['opcion_id_programa'][$j]);
-                        if (!$opcion_nueva) {throw new \Error("La opción no existe", 1);}
+                        if (!$opcion_nueva) {
+                            throw new \Error("La opción no existe", 1);
+                        }
                     }
 
                     $opcion_nueva->estado = $request['opcion_estado'][$j] ? $request['opcion_estado'][$j] : 0;
@@ -1456,7 +1478,9 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                             $archivo_opcion_nuevo = new Gcm_Archivo_Programacion;
                             if ($this->stringNullToNull($opcion_file->id_archivo_programacion) !== null) {
                                 $archivo_opcion_nuevo = Gcm_Archivo_Programacion::find($opcion_file->id_archivo_programacion);
-                                if (!$archivo_opcion_nuevo) {throw new \Error("El archivo de la opción no existe", 1);}
+                                if (!$archivo_opcion_nuevo) {
+                                    throw new \Error("El archivo de la opción no existe", 1);
+                                }
                             }
 
                             $archivo_opcion_nuevo->id_programa = $opcion_nueva->id_programa;
@@ -1540,7 +1564,9 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
             $recurso_existe->identificacion = $request->identificacion;
             $recurso_existe->nombre = $request->nombre;
-            if (!empty($request->telefono)) {$recurso_existe->telefono = $request->telefono;}
+            if (!empty($request->telefono)) {
+                $recurso_existe->telefono = $request->telefono;
+            }
             $recurso_existe->correo = $request->correo;
             $recurso_existe->estado = 1;
 
@@ -1642,19 +1668,32 @@ class Gcm_Acceso_Reunion_Controller extends Controller
      */
     public function sendMailToSummon(Request $request)
     {
-
         try {
-            if (!isset($request->summonedList)) {throw new \Error("sendMailToSummon: {summonedList} es requerido", 1);}
-            // $programas = [];
+
+            if (!isset($request->summonedList)) {
+                throw new \Error("sendMailToSummon: {summonedList} es requerido", 1);
+            }
+
             $encrypt = new Encrypt();
-            $MC = new Gcm_Mail_Controller();
-
-            $summonedList = json_decode($request->summonedList, true);
-
+            $informacion = json_decode($request->summonedList, true);
+            $summonedList = $informacion['ids'];
             $programList = null;
             $meet = null;
-
             $mailList = [];
+
+            $imagenes = [
+                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GCL.jpg',
+                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GCP.jpg',
+                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GBR.jpg',
+                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GM.jpg',
+            ];
+
+            $id_grupo = $informacion['id_grupo'];
+            $titulo = $informacion['titulo'];
+
+            if ($id_grupo) {
+                $imagen = $imagenes[$id_grupo - 1];
+            }
 
             foreach ($summonedList as $id_convocado_reunion) {
                 $summoned = Gcm_Convocado_Reunion::findOrFail($id_convocado_reunion);
@@ -1664,29 +1703,36 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 $resource = Gcm_Convocado_Reunion::join('gcm_relaciones AS rlc', 'gcm_convocados_reunion.id_relacion', '=', 'rlc.id_relacion')
                     ->join('gcm_recursos AS rcs', 'rlc.id_recurso', '=', 'rcs.id_recurso')->where('id_convocado_reunion', $id_convocado_reunion)->first();
 
-                if (!$resource) {throw new \Error("Recurso no encontrado", 1);}
+                if (!$resource) {
+                    throw new \Error("Recurso no encontrado", 1);
+                }
 
                 if (!$programList) {
                     $programList = Gcm_Programacion::where([['id_reunion', $resource->id_reunion], ['estado', '!=', '4']])
                         ->whereNull('relacion')->orderBy('orden', 'ASC')->get();
                 }
 
-                if (!$meet) {$meet = Gcm_Reunion::where('id_reunion', $resource->id_reunion)->first();}
+                if (!$meet) {
+                    $meet = Gcm_Reunion::where('id_reunion', $resource->id_reunion)->first();
+                }
 
                 $token = $encrypt->encriptar($id_convocado_reunion);
 
-                $detalle = [
+                $data = [
+                    'view' => 'emails.invitacion',
+                    'message' => 'Convocado a reunión en plataforma de juntas y asambleas',
+                    'imagen' => $imagen,
                     'nombre' => $resource->nombre,
-                    'titulo' => $meet->titulo,
+                    'titulo' => $titulo,
                     'descripcion' => $meet->descripcion,
                     'fecha_reunion' => $meet->fecha_reunion,
                     'hora' => $meet->hora,
                     'programas' => $programList,
                     'url' => env('VIEW_BASE') . '/public/acceso-reunion/acceso/' . $token,
                 ];
-                array_push($mailList, $resource->correo);
-                Mail::to($resource->correo)->send(new TestMail($detalle));
 
+                array_push($mailList, $resource->correo);
+                Mail::to($resource->correo)->send(new GestorCorreos($data));
             }
 
             Gcm_Log_Acciones_Sistema_Controller::save(4, array('Descripcion' => 'Envio correo reunión en curso', 'Correos' => $mailList), null);
@@ -1971,5 +2017,4 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             return response()->json(["status" => false, "message" => $th->getMessage() . ' - ' . $th->getLine()], 200);
         }
     }
-
 }

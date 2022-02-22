@@ -66,29 +66,55 @@
             <!-- BANNER IMAGE -->
 
             <tr align="center">
-                <td style="padding: 20px; background-color:#ffffff;">
-                    <h1 style="margin-bottom: 13px; font-size: 30px; color: #171717; font-family: Helvetica">¡Hola, {{$data['nombre']}}!</h1>
-                    <h1 style="font-size: 15px; color: #545454; font-family: Helvetica">Te queremos informar que se ha reprogramado una reunión a la que estas convocado.</h1>
+                <td style="padding: 15px; background-color:#ffffff;">
+                    <h1 style="margin-bottom: 10px; font-size: 30px; color: #171717; font-family: Helvetica">¡Hola, {{$data['nombre']}}!</h1>
+                    <h1 style="font-size: 15px; color: #545454; font-family: Helvetica">{{$data['nombreAnfitrion']}} lo ha convocado a usted a que lo represente en la reunión de {{$data['titulo']}}</h1>
                 </td>
             </tr>
 
             <tr align="center">
-                <td style="padding: 20px; background-color:#ffffff; width:100%; padding-bottom:20px;">
+                <td style="padding: 10px; background-color:#ffffff; width:100%; padding-bottom: 10px;">
                     <div class="col-lge">
                         <h1 style="font-family: Helvetica; font-size: 15px; color: #545454;">
-                            Descripción: {{$data['descripcion']}}
+                            {{$data['descripcion']}}
                         </h1>
                     </div>
-                    <div class="col-lge">
-                        <h1 style="font-family: Helvetica; font-size: 15px; color: #545454;">
-                            Nueva fecha de la reunión: {{$data['fecha_reunion']}}
-                        </h1>
-                    </div>
-                    <div class="col-lge">
-                        <h1 style="font-family: Helvetica; font-size: 15px; color: #545454;">
-                            Nueva hora de la reunión: {{$data['hora']}}
-                        </h1>
-                    </div>
+                </td>
+            </tr>
+
+            <tr align="center">
+                <td style="padding: 15px; background-color:#ffffff;">
+                    <table class="col-lge" style="padding-bottom: 15px; font-size:16px; color:#363636; margin-left: auto; margin-right: auto;">
+                        <tr>
+                            <td style="margin-top:0; margin-bottom: 12px; padding-right: 12px;">
+                                <img style="width:50px; height: 50px;" src="http://burodeconexiones.com/gc_balanced/public/assets/img/test/calendar-bk.png">
+                                <div style="align-self: center; text-align: left; padding-left: 15px; display: inline-block;">
+                                    <div style="font-size: 16px; color: #545454; font-family: Helvetica">Fecha:</div>
+                                    <div style="font-size: 25px; color: #171717; font-family: Helvetica">{{$data['fecha_reunion']}}</div>
+                                </div>
+                            </td>
+
+                            <td style="margin-top:0; margin-bottom: 12px; padding-left: 12px;">
+                                <img style="width: 50px; height: 50px;" src="http://burodeconexiones.com/gc_balanced/public/assets/img/test/clock-bk.png">
+                                <div style="align-self: center; text-align: left; padding-left: 15px; display: inline-block;">
+                                    <div style="font-size: 16px; color: #545454; font-family: Helvetica">Hora</div>
+                                    <div style="font-size: 25px; color: #171717; font-family: Helvetica">{{$data['hora']}}</div>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+
+            <tr align="lef">
+                <td style="padding: 15px; background-color:#ffffff;">
+                    @if(count($data['programas']) > 0)
+                    <h1 style="margin-bottom: 16px; font-size: 15px; color: #171717; font-family: Helvetica">Programación</h1>
+                    @endif
+                    @for($i = 0; $i < count($data['programas']); $i++) <p style="font-size: 15px; color: #545454; font-family: Helvetica">
+                        {{$data['programas'][$i]['orden']}}. {{$data['programas'][$i]['titulo']}}
+                        </p>
+                        @endfor
                 </td>
             </tr>
 
@@ -109,8 +135,8 @@
             </tr>
 
             <tr>
-                <td style="padding:30px; text-align:center; background-color:#16151E; border-color: #C6D2DF; opacity: 1; color:#BBB9C8;">
-                    <p style="margin:0; font-size: 13px; line-height:20px; color:#BBB9C8; font-family: Helvetica;">
+                <td style="padding: 30px; text-align:center; background-color:#16151E; border-color: #C6D2DF; opacity: 1; color:#BBB9C8;">
+                    <p style="margin: 0; font-size:13px; line-height:20px; color:#BBB9C8; font-family: Helvetica;">
                         Este es un mensaje automático generado por Garantías Comunitarias, por favor no responda este correo.
                     </p>
                 </td>
