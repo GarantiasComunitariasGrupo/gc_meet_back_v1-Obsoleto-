@@ -269,7 +269,7 @@ class Gcm_Reunion_Controller extends Controller
             for ($i = 0; $i < count($request->correos); $i++) {
 
                 $convocado = Gcm_Convocado_Reunion::findOrFail($request->correos[$i]['id_convocado']);
-                $fecha = date('Y-m-d h:i:s');
+                $fecha = date('Y-m-d H:i:s');
                 $convocado->fecha_envio_invitacion = $fecha;
                 $response = $convocado->save();
 
@@ -1134,7 +1134,7 @@ class Gcm_Reunion_Controller extends Controller
             $documentFileName = "fun.pdf";
 
             // Crea el documento PDF
-            $document = new MPDF([
+            $document = new Mpdf([
                 # Se toma la ruta de donde estan ubicadas las nuevas fuentes
                 'fontDir' => array_merge($fontDirs, [
                     storage_path('app/public/fonts'),
@@ -1223,7 +1223,7 @@ class Gcm_Reunion_Controller extends Controller
             $documentFileName = "fun.pdf";
 
             #Creamos el PDF con las mediadas y orientacion
-            $document = new MPDF([
+            $document = new Mpdf([
                 # Se toma la ruta de donde estan ubicadas las nuevas fuentes
                 'fontDir' => array_merge($fontDirs, [
                     storage_path('app/public/fonts'),

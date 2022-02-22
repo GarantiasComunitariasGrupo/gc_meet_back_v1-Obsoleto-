@@ -1,7 +1,7 @@
 {
     "private": true,
     "scripts": {
-        "aospina": "php artisan serve --host 192.168.0.4 --port 8803",
+        "aospina": "php artisan serve --host 192.168.0.8 --port 8803",
         "danilo": "php artisan serve --host=192.168.2.89 --port=8800",
         "dev": "npm run development",
         "development": "mix",

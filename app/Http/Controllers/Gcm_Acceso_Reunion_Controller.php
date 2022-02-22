@@ -1019,7 +1019,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
     {
         try {
             if (!isset($request->id_convocado_reunion)) {throw new \Error("guardarAccesoReunion: {id_convocado_reunion} es requerido", 1);}
-            $datetime = date('Y-m-d h:i:s');
+            $datetime = date('Y-m-d H:i:s');
 
             $store = DB::statement("INSERT INTO gcm_asistencia_reuniones (id_convocado_reunion, fecha_ingreso, estado) VALUES ($request->id_convocado_reunion, '{$datetime}', 1) ON DUPLICATE KEY UPDATE estado = 1");
             return response()->json(['status' => ($store) ? true : false, 'message' => 'Se ha guardado correctamente']);
@@ -1103,7 +1103,14 @@ class Gcm_Acceso_Reunion_Controller extends Controller
     {
         try {
 
-            $update = Gcm_Reunion::find($request->id_reunion)->update(['estado' => $request->estado]);
+            $meet = Gcm_Reunion::find($request->id_reunion);
+            $meet->estado = $request->estado;
+            if (+$request->estado === 2) { // Si el estado es finalizada se actualiza la fecha de finalización
+                $meet->fecha_finalizacion = date('Y-m-d H:i:s');
+            }
+
+            $update = $meet->save();
+
             $word = (+$request->estado === 2) ? 'finalizada' : 'cancelada';
 
             $response = array(
@@ -1173,7 +1180,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
     {
         try {
             if (!isset($request->id_convocado_reunion)) {throw new \Error("saveLogout: {id_convocado_reunion} es requerido", 1);}
-            $datetime = date('Y-m-d h:i:s');
+            $datetime = date('Y-m-d H:i:s');
 
             $summoned = Gcm_Asistencia_Reunion::find($request->id_convocado_reunion);
 
@@ -1414,6 +1421,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
                         if (!file_exists($carpeta)) {
                             mkdir($carpeta, 0777, true);
+                            chmod($carpeta, 0777);
                         }
 
                         for ($k = 0; $k < count($request['opcion_file_' . $j]); $k++) {
@@ -1626,12 +1634,12 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         }
     }
 
-/**
- * Realizo el envio de un correo electronico a los convocados de una reunion
- *
- * @param Request Aqui toda la información de la reunion, de los convocados y los programas, pero solo se toma los convocados
- * @return void Retorna un mensaje donde se evidencia si el envio de los correos fue exitoso o fallo
- */
+    /**
+     * Realizo el envio de un correo electronico a los convocados de una reunion
+     *
+     * @param Request Aqui toda la información de la reunion, de los convocados y los programas, pero solo se toma los convocados
+     * @return void Retorna un mensaje donde se evidencia si el envio de los correos fue exitoso o fallo
+     */
     public function sendMailToSummon(Request $request)
     {
 
@@ -1650,7 +1658,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
             foreach ($summonedList as $id_convocado_reunion) {
                 $summoned = Gcm_Convocado_Reunion::findOrFail($id_convocado_reunion);
-                $summoned->fecha_envio_invitacion = date('Y-m-d h:i:s');
+                $summoned->fecha_envio_invitacion = date('Y-m-d H:i:s');
                 $summoned->save();
 
                 $resource = Gcm_Convocado_Reunion::join('gcm_relaciones AS rlc', 'gcm_convocados_reunion.id_relacion', '=', 'rlc.id_relacion')
@@ -1885,13 +1893,6 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
             $document->WriteHTML($request->style);
 
-            // $document->AddPageByArray([
-            //     'margin-left' => 0,
-            //     'margin-right' => 0,
-            //     'margin-top' => 0,
-            //     'margin-bottom' => 0,
-            // ]);
-
             $document->WriteHTML(str_replace("\n", "<br/>", $request->headerContent));
 
             $document->AddPageByArray([
@@ -1903,6 +1904,25 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
             $document->WriteHTML(str_replace("\n", "<br/>", $request->pageContent));
 
+            if ($request->action === 'save') {
+                $subcarpeta = 'archivos_reunion/' . $request->id_reunion;
+                $carpeta = 'app/public/' . $subcarpeta;
+
+                if (!file_exists(storage_path($carpeta))) {
+                    mkdir(storage_path($carpeta), 0777, true);
+                }
+
+                $meet = Gcm_Reunion::find($request->id_reunion);
+
+                $picture = substr(md5(microtime()), rand(0, 31 - 8), 8) . '.pdf';
+                $meet->acta = $subcarpeta . '/' . $picture;
+
+                $document->Output(storage_path($carpeta . '/' . $picture), 'F');
+                chmod(storage_path($carpeta . '/' . $picture), 0777);
+
+                $meet->save();
+            }
+
             // Guarde PDF en su almacenamiento público
             Storage::put($documentFileName, $document->Output($documentFileName, "S"));
 
@@ -1911,7 +1931,8 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             return Storage::download($documentFileName, 'Request', $header);
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
-            return response()->json(["error" => $th->getMessage()], 500);
+            return $th;
+            return response()->json(["error" => $th->getMessage() . ' - ' . $th->getLine()], 500);
         }
     }
 
