@@ -51,10 +51,10 @@ class VerificacionFechaReunion extends Command
             if (count($reuniones) > 0) {
 
                 $imagenes = [
-                    'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GCL.jpg',
-                    'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GCP.jpg',
-                    'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GBR.jpg',
-                    'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GM.jpg',
+                    'https://gc.gcbloomrisk.com/assets/images/test/GCL.jpg',
+                    'https://gc.gcbloomrisk.com/assets/images/test/GCP.jpg',
+                    'https://gc.gcbloomrisk.com/assets/images/test/GBR.jpg',
+                    'https://gc.gcbloomrisk.com/assets/images/test/GM.jpg',
                 ];
 
                 for ($i = 0; $i < count($reuniones); $i++) {

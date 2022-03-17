@@ -47,7 +47,7 @@
             <tr>
                 <td style="text-align:center; line-height:28px; font-weight:bold; position:relative;">
                     <div>
-                        <img src="http://burodeconexiones.com/gc_balanced/public/assets/img/test/GCL.jpg"
+                        <img src="https://gc.gcbloomrisk.com/assets/images/test/GCL.jpg"
                             style="width:700px; height:277px; display:block; border:none;">
                     </div>
                 </td>
@@ -80,7 +80,7 @@
                                 </td>
                                 <td align="end">
                                     <img style="width: 40px; height: 40px;"
-                                        src="http://burodeconexiones.com/gc_balanced/public/assets/img/test/calendar-bk.png">
+                                        src="https://gc.gcbloomrisk.com/assets/images/test/calendar-bk.png">
                                     <div
                                         style="align-self: center; text-align: left; padding-left: 15px; padding-right: 16px; display: inline-block;">
                                         <div
@@ -91,7 +91,7 @@
                                     </div>
 
                                     <img style="width: 40px; height: 40px;"
-                                        src="http://burodeconexiones.com/gc_balanced/public/assets/img/test/clock-bk.png">
+                                        src="https://gc.gcbloomrisk.com/assets/images/test/clock-bk.png">
                                     <div
                                         style="align-self: center; text-align: left; padding-left: 15px; display: inline-block;">
                                         <div

@@ -168,7 +168,7 @@ class AuthController extends Controller
                     'view' => 'emails.recuperacion',
                     'message' => 'Recuperación de cuentas en plataforma de juntas y asambleas',
                     'nombre' => $usuario_existe->nombre,
-                    'url' => env('VIEW_BASE') . '/public/login/restablecer/' . $valorEncriptado,
+                    'url' => env('VIEW_BASE') . '/public/restablecer/' . $valorEncriptado,
                 ];
 
                 Mail::to($usuario_existe->correo)->send(new GestorCorreos($data));

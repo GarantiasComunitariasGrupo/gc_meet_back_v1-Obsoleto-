@@ -87,7 +87,7 @@
                     <table class="col-lge" style="padding-bottom: 15px; font-size:16px; color:#363636; margin-left: auto; margin-right: auto;">
                         <tr>
                             <td style="margin-top:0; margin-bottom: 12px; padding-right: 12px;">
-                                <img style="width:50px; height: 50px;" src="http://burodeconexiones.com/gc_balanced/public/assets/img/test/calendar-bk.png">
+                                <img style="width:50px; height: 50px;" src="https://gc.gcbloomrisk.com/assets/images/test/calendar-bk.png">
                                 <div style="align-self: center; text-align: left; padding-left: 15px; display: inline-block;">
                                     <div style="font-size: 16px; color: #545454; font-family: Helvetica">Fecha:</div>
                                     <div style="font-size: 25px; color: #171717; font-family: Helvetica">{{$data['fecha_reunion']}}</div>
@@ -95,7 +95,7 @@
                             </td>
 
                             <td style="margin-top:0; margin-bottom: 12px; padding-left: 12px;">
-                                <img style="width: 50px; height: 50px;" src="http://burodeconexiones.com/gc_balanced/public/assets/img/test/clock-bk.png">
+                                <img style="width: 50px; height: 50px;" src="https://gc.gcbloomrisk.com/assets/images/test/clock-bk.png">
                                 <div style="align-self: center; text-align: left; padding-left: 15px; display: inline-block;">
                                     <div style="font-size: 16px; color: #545454; font-family: Helvetica">Hora</div>
                                     <div style="font-size: 25px; color: #171717; font-family: Helvetica">{{$data['hora']}}</div>

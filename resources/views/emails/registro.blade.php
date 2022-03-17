@@ -57,7 +57,7 @@
                             <td
                                 style="text-align:center; padding: 15px; line-height:28px; font-weight:bold; position:relative; border-bottom: 1px solid #E2E2E2;">
                                 <div>
-                                    <img src="http://burodeconexiones.com/gc_balanced/public/assets/img/test/fondo-con-logo.PNG"
+                                    <img src="https://gc.gcbloomrisk.com/assets/images/test/fondo-con-logo.PNG"
                                         style="width:700px; height:277px; display:block; border:none;">
                                 </div>
                             </td>

@@ -256,14 +256,17 @@ class Gcm_Reunion_Controller extends Controller
                 ->select('gcm_reuniones.*', 'gcm_tipo_reuniones.titulo')
                 ->where([['gcm_reuniones.id_reunion', '=', $id_reunion], ['gcm_reuniones.estado', '!=', 4]])->first();
 
-            $programas = Gcm_Programacion::where([['gcm_programacion.id_reunion', '=', $id_reunion], ['gcm_programacion.estado', '!=', '4']])
-                ->whereNull('gcm_programacion.relacion')->get();
+            // $programas = Gcm_Programacion::where([['gcm_programacion.id_reunion', '=', $id_reunion], ['gcm_programacion.estado', '!=', '4']])
+            //     ->whereNull('gcm_programacion.relacion')->get();
+
+            $accesoReunion = new Gcm_Acceso_Reunion_Controller();
+            $programas = $accesoReunion->getProgramas($id_reunion);
 
             $imagenes = [
-                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GCL.jpg',
-                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GCP.jpg',
-                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GBR.jpg',
-                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GM.jpg',
+                'https://gc.gcbloomrisk.com/assets/images/test/GCL.jpg',
+                'https://gc.gcbloomrisk.com/assets/images/test/GCP.jpg',
+                'https://gc.gcbloomrisk.com/assets/images/test/GBR.jpg',
+                'https://gc.gcbloomrisk.com/assets/images/test/GM.jpg',
             ];
 
             $id_grupo = $request->id_grupo;
@@ -375,10 +378,10 @@ class Gcm_Reunion_Controller extends Controller
             }, $convocados);
             
             $imagenes = [
-                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GCL.jpg',
-                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GCP.jpg',
-                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GBR.jpg',
-                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GM.jpg',
+                'https://gc.gcbloomrisk.com/assets/images/test/GCL.jpg',
+                'https://gc.gcbloomrisk.com/assets/images/test/GCP.jpg',
+                'https://gc.gcbloomrisk.com/assets/images/test/GBR.jpg',
+                'https://gc.gcbloomrisk.com/assets/images/test/GM.jpg',
             ];
             
             $id_grupo = $request->id_grupo;
@@ -470,10 +473,10 @@ class Gcm_Reunion_Controller extends Controller
             }, $convocados);
 
             $imagenes = [
-                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GCL.jpg',
-                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GCP.jpg',
-                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GBR.jpg',
-                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GM.jpg',
+                'https://gc.gcbloomrisk.com/assets/images/test/GCL.jpg',
+                'https://gc.gcbloomrisk.com/assets/images/test/GCP.jpg',
+                'https://gc.gcbloomrisk.com/assets/images/test/GBR.jpg',
+                'https://gc.gcbloomrisk.com/assets/images/test/GM.jpg',
             ];
             
             $id_grupo = $request->id_grupo;

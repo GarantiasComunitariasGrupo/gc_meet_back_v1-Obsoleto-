@@ -514,10 +514,10 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             DB::commit();
 
             $imagenes = [
-                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GCL.jpg',
-                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GCP.jpg',
-                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GBR.jpg',
-                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GM.jpg',
+                'https://gc.gcbloomrisk.com/assets/images/test/GCL.jpg',
+                'https://gc.gcbloomrisk.com/assets/images/test/GCP.jpg',
+                'https://gc.gcbloomrisk.com/assets/images/test/GBR.jpg',
+                'https://gc.gcbloomrisk.com/assets/images/test/GM.jpg',
             ];
 
             $id_grupo = $request->params['id_grupo'];
@@ -1660,6 +1660,68 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         }
     }
 
+    public function getProgramas($id_reunion) {
+        $base = Gcm_Programacion::leftJoin('gcm_archivos_programacion', 'gcm_archivos_programacion.id_programa', '=', 'gcm_programacion.id_programa')
+        ->leftJoin('gcm_roles_actas as gra', 'gcm_programacion.id_rol_acta', '=', 'gra.id_rol_acta')
+        ->select(
+            'gcm_programacion.*',
+            'gra.descripcion as rol_acta_descripcion',
+            'gra.firma as rol_acta_firma',
+            'gra.acta as rol_acta_acta',
+            DB::raw('GROUP_CONCAT(gcm_archivos_programacion.id_archivo_programacion SEPARATOR "|") AS id_archivo_programacion_archivos'),
+            DB::raw('GROUP_CONCAT(gcm_archivos_programacion.descripcion SEPARATOR "|") AS descripciones_archivos'),
+            DB::raw('GROUP_CONCAT(gcm_archivos_programacion.id_programa SEPARATOR "|") AS id_programas_archivos'),
+            DB::raw('GROUP_CONCAT(gcm_archivos_programacion.peso SEPARATOR "|") AS pesos_archivos'),
+            DB::raw('GROUP_CONCAT(gcm_archivos_programacion.url SEPARATOR "|") AS url_archivos')
+        )->where([['gcm_programacion.id_reunion', $id_reunion], ['gcm_programacion.estado', '!=', '4']])->groupBy('gcm_programacion.id_programa')->get()->toArray();
+
+    $base = array_map(function ($item) {
+        $item['archivos'] = [];
+        if (!empty($item['descripciones_archivos'])) {
+            $descripcionesArchivo = explode('|', $item['descripciones_archivos']);
+            $idArchivo = explode('|', $item['id_archivo_programacion_archivos']);
+            $idPrograma = explode('|', $item['id_programas_archivos']);
+            $pesosArchivo = explode('|', $item['pesos_archivos']);
+            $urlArchivo = explode('|', $item['url_archivos']);
+
+            for ($i = 0; $i < count($descripcionesArchivo); $i++) {
+                array_push($item['archivos'], [
+                    "id_archivo_programacion" => $idArchivo[$i],
+                    "descripcion" => $descripcionesArchivo[$i],
+                    "id_programa" => $idPrograma[$i],
+                    "peso" => $pesosArchivo[$i],
+                    "url" => $urlArchivo[$i],
+                ]);
+            }
+        }
+
+        unset($item['id_archivo_programacion_archivos']);
+        unset($item['descripciones_archivos']);
+        unset($item['id_programas_archivos']);
+        unset($item['pesos_archivos']);
+        unset($item['url_archivos']);
+
+        return $item;
+    }, $base);
+
+    $programas = array_filter($base, function ($item) {
+        return $item['relacion'] === null || $item['relacion'] === '';
+    });
+
+    $programas = array_values($programas);
+
+    $programas = array_map(function ($item) use ($base) {
+        $item['opciones'] = array_filter($base, function ($elm) use ($item) {
+            return $elm['relacion'] === $item['id_programa'];
+        });
+        $item['opciones'] = array_values($item['opciones']);
+
+        return $item;
+    }, $programas);
+
+    return $programas;
+    }
+
     /**
      * Realizo el envio de un correo electronico a los convocados de una reunion
      *
@@ -1677,15 +1739,21 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             $encrypt = new Encrypt();
             $informacion = json_decode($request->summonedList, true);
             $summonedList = $informacion['ids'];
+
+
             $programList = null;
+
+
+
+
             $meet = null;
             $mailList = [];
 
             $imagenes = [
-                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GCL.jpg',
-                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GCP.jpg',
-                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GBR.jpg',
-                'http://burodeconexiones.com/gc_balanced/public/assets/img/test/GM.jpg',
+                'https://gc.gcbloomrisk.com/assets/images/test/GCL.jpg',
+                'https://gc.gcbloomrisk.com/assets/images/test/GCP.jpg',
+                'https://gc.gcbloomrisk.com/assets/images/test/GBR.jpg',
+                'https://gc.gcbloomrisk.com/assets/images/test/GM.jpg',
             ];
 
             $id_grupo = $informacion['id_grupo'];
@@ -1708,8 +1776,9 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 }
 
                 if (!$programList) {
-                    $programList = Gcm_Programacion::where([['id_reunion', $resource->id_reunion], ['estado', '!=', '4']])
-                        ->whereNull('relacion')->orderBy('orden', 'ASC')->get();
+                    // $programList = Gcm_Programacion::where([['id_reunion', $resource->id_reunion], ['estado', '!=', '4']])
+                    //     ->whereNull('relacion')->orderBy('orden', 'ASC')->get();
+                    $programList = $this->getProgramas($resource->id_reunion);
                 }
 
                 if (!$meet) {
@@ -1728,7 +1797,8 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                     'fecha_reunion' => $meet->fecha_reunion,
                     'hora' => $meet->hora,
                     'programas' => $programList,
-                    'url' => env('VIEW_BASE') . '/public/acceso-reunion/acceso/' . $token,
+                    // 'url' => env('VIEW_BASE') . '/public/acceso-reunion/acceso/' . $token,
+                    'url' => 'https://gcmeet.garantiascomunitarias.com' . '/public/reunion/acceso/' . $token,
                 ];
 
                 array_push($mailList, $resource->correo);
