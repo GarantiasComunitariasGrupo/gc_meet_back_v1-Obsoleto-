@@ -51,10 +51,10 @@ class VerificacionFechaReunion extends Command
             if (count($reuniones) > 0) {
 
                 $imagenes = [
-                    'https://gc.gcbloomrisk.com/assets/images/test/GCL.jpg',
-                    'https://gc.gcbloomrisk.com/assets/images/test/GCP.jpg',
-                    'https://gc.gcbloomrisk.com/assets/images/test/GBR.jpg',
-                    'https://gc.gcbloomrisk.com/assets/images/test/GM.jpg',
+                    env('API_BASE') . '/storage/images/mail/GCL.jpg',
+                    env('API_BASE') . '/storage/images/mail/GCP.jpg',
+                    env('API_BASE') . '/storage/images/mail/GBR.jpg',
+                    env('API_BASE') . '/storage/images/mail/GM.jpg',
                 ];
 
                 for ($i = 0; $i < count($reuniones); $i++) {

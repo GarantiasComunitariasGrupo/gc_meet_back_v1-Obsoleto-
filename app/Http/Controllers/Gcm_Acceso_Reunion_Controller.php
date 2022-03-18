@@ -70,7 +70,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 // Aqui realizo un array_map con el objetivo de obtener los id_convocado y añadirlo a un nuevo array junto junto con la url de la pagina que se direcciona
                 $arrayUrls = $base->map(function ($row) {
                     $encrypt = new Encrypt();
-                    return env('VIEW_BASE') . '/public/acceso-reunion/acceso/' . $encrypt->encriptar($row->id_convocado_reunion);
+                    return env('VIEW_BASE') . '/public/reunion/acceso/' . $encrypt->encriptar($row->id_convocado_reunion);
                 });
 
                 /**
@@ -280,7 +280,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
             /**Se encripta id_convocado_reunion */
             $id = $encrypt->encriptar($request->idConvocadoReunion);
-            $txtSMS = "Para acceder a la reunión, debe acceder al siguiente link: " . env('VIEW_BASE') . "/public/acceso-reunion/firma/{$id}";
+            $txtSMS = "Para acceder a la reunión, debe acceder al siguiente link: " . env('VIEW_BASE') . "/public/reunion/firma/{$id}";
 
             /** Petición HTTP::POST para consumir servicio de envío SMS */
             $request = Http::post(env('GCAPI_BASE') . "/api/messenger/enviar-sms/{$request->numeroCelular}", [
@@ -514,10 +514,10 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             DB::commit();
 
             $imagenes = [
-                'https://gc.gcbloomrisk.com/assets/images/test/GCL.jpg',
-                'https://gc.gcbloomrisk.com/assets/images/test/GCP.jpg',
-                'https://gc.gcbloomrisk.com/assets/images/test/GBR.jpg',
-                'https://gc.gcbloomrisk.com/assets/images/test/GM.jpg',
+                env('API_BASE') . '/storage/images/mail/GCL.jpg',
+                env('API_BASE') . '/storage/images/mail/GCP.jpg',
+                env('API_BASE') . '/storage/images/mail/GBR.jpg',
+                env('API_BASE') . '/storage/images/mail/GM.jpg',
             ];
 
             $id_grupo = $request->params['id_grupo'];
@@ -531,7 +531,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
             /** Cuerpo del correo */
             $body = "{$request->params['nombreAnfitrion']} lo ha invitado a usted a que lo represente en una reunión.
-                    Link: " . env('VIEW_BASE') . "/public/acceso-reunion/acceso/{$idConvocadoReunion}";
+                    Link: " . env('VIEW_BASE') . "/public/reunion/acceso/{$idConvocadoReunion}";
 
             /** Se envía correo electrónico de invitación al representante */
             // $send = $mailController->send(
@@ -553,7 +553,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 'fecha_reunion' => $meet->fecha_reunion,
                 'hora' => $meet->hora,
                 'programas' => $programList,
-                'url' => env('VIEW_BASE') . '/public/acceso-reunion/acceso/' . $idConvocadoReunion,
+                'url' => env('VIEW_BASE') . '/public/reunion/acceso/' . $idConvocadoReunion,
             ];
 
             Mail::to($request->params['correo'])->send(new GestorCorreos($data));
@@ -1750,10 +1750,10 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             $mailList = [];
 
             $imagenes = [
-                'https://gc.gcbloomrisk.com/assets/images/test/GCL.jpg',
-                'https://gc.gcbloomrisk.com/assets/images/test/GCP.jpg',
-                'https://gc.gcbloomrisk.com/assets/images/test/GBR.jpg',
-                'https://gc.gcbloomrisk.com/assets/images/test/GM.jpg',
+                env('API_BASE') . '/storage/images/mail/GCL.jpg',
+                env('API_BASE') . '/storage/images/mail/GCP.jpg',
+                env('API_BASE') . '/storage/images/mail/GBR.jpg',
+                env('API_BASE') . '/storage/images/mail/GM.jpg',
             ];
 
             $id_grupo = $informacion['id_grupo'];
@@ -1797,8 +1797,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                     'fecha_reunion' => $meet->fecha_reunion,
                     'hora' => $meet->hora,
                     'programas' => $programList,
-                    // 'url' => env('VIEW_BASE') . '/public/acceso-reunion/acceso/' . $token,
-                    'url' => 'https://gcmeet.garantiascomunitarias.com' . '/public/reunion/acceso/' . $token,
+                    'url' => env('VIEW_BASE') . '/public/reunion/acceso/' . $token,
                 ];
 
                 array_push($mailList, $resource->correo);

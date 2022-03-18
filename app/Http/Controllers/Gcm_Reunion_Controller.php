@@ -263,10 +263,10 @@ class Gcm_Reunion_Controller extends Controller
             $programas = $accesoReunion->getProgramas($id_reunion);
 
             $imagenes = [
-                'https://gc.gcbloomrisk.com/assets/images/test/GCL.jpg',
-                'https://gc.gcbloomrisk.com/assets/images/test/GCP.jpg',
-                'https://gc.gcbloomrisk.com/assets/images/test/GBR.jpg',
-                'https://gc.gcbloomrisk.com/assets/images/test/GM.jpg',
+                env('API_BASE') . '/storage/images/mail/GCL.jpg',
+                env('API_BASE') . '/storage/images/mail/GCP.jpg',
+                env('API_BASE') . '/storage/images/mail/GBR.jpg',
+                env('API_BASE') . '/storage/images/mail/GM.jpg',
             ];
 
             $id_grupo = $request->id_grupo;
@@ -280,7 +280,7 @@ class Gcm_Reunion_Controller extends Controller
                 $convocado = Gcm_Convocado_Reunion::findOrFail($request->correos[$i]['id_convocado']);
                 $fecha = date('Y-m-d H:i:s');
                 $convocado->fecha_envio_invitacion = $fecha;
-                $response = $convocado->save();
+                $convocado->save();
 
                 $recurso = Gcm_Recurso::join('gcm_relaciones', 'gcm_relaciones.id_recurso', '=', 'gcm_recursos.id_recurso')
                     ->join('gcm_convocados_reunion', 'gcm_relaciones.id_relacion', '=', 'gcm_convocados_reunion.id_relacion')
@@ -289,7 +289,7 @@ class Gcm_Reunion_Controller extends Controller
 
                 $recurso_actualizar = Gcm_Recurso::findOrFail($recurso['id_recurso']);
                 $recurso_actualizar->correo = $request->correos[$i]['correo'];
-                $response = $recurso_actualizar->save();
+                $recurso_actualizar->save();
 
                 $valorEncriptado = $encrypt->encriptar($request->correos[$i]['id_convocado']);
 
@@ -303,7 +303,7 @@ class Gcm_Reunion_Controller extends Controller
                     'fecha_reunion' => $reunion['fecha_reunion'],
                     'hora' => $reunion['hora'],
                     'programas' => $programas,
-                    'url' => env('VIEW_BASE') . '/public/acceso-reunion/acceso/' . $valorEncriptado,
+                    'url' => env('VIEW_BASE') . '/public/reunion/acceso/' . $valorEncriptado,
                 ];
                 Mail::to($request->correos[$i]['correo'])->send(new GestorCorreos($detalle));
             }
@@ -378,10 +378,10 @@ class Gcm_Reunion_Controller extends Controller
             }, $convocados);
             
             $imagenes = [
-                'https://gc.gcbloomrisk.com/assets/images/test/GCL.jpg',
-                'https://gc.gcbloomrisk.com/assets/images/test/GCP.jpg',
-                'https://gc.gcbloomrisk.com/assets/images/test/GBR.jpg',
-                'https://gc.gcbloomrisk.com/assets/images/test/GM.jpg',
+                env('API_BASE') . '/storage/images/mail/GCL.jpg',
+                env('API_BASE') . '/storage/images/mail/GCP.jpg',
+                env('API_BASE') . '/storage/images/mail/GBR.jpg',
+                env('API_BASE') . '/storage/images/mail/GM.jpg',
             ];
             
             $id_grupo = $request->id_grupo;
@@ -473,10 +473,10 @@ class Gcm_Reunion_Controller extends Controller
             }, $convocados);
 
             $imagenes = [
-                'https://gc.gcbloomrisk.com/assets/images/test/GCL.jpg',
-                'https://gc.gcbloomrisk.com/assets/images/test/GCP.jpg',
-                'https://gc.gcbloomrisk.com/assets/images/test/GBR.jpg',
-                'https://gc.gcbloomrisk.com/assets/images/test/GM.jpg',
+                env('API_BASE') . '/storage/images/mail/GCL.jpg',
+                env('API_BASE') . '/storage/images/mail/GCP.jpg',
+                env('API_BASE') . '/storage/images/mail/GBR.jpg',
+                env('API_BASE') . '/storage/images/mail/GM.jpg',
             ];
             
             $id_grupo = $request->id_grupo;
@@ -496,7 +496,7 @@ class Gcm_Reunion_Controller extends Controller
                     'descripcion' => $reunion['descripcion'],
                     'fecha_reunion' => $request->fecha_reunion,
                     'hora' => $request->hora,
-                    'url' => env('VIEW_BASE') . '/public/acceso-reunion/acceso/' . $valorEncriptado,
+                    'url' => env('VIEW_BASE') . '/public/reunion/acceso/' . $valorEncriptado,
                 ];
                 Mail::to($convocados[$i]['correo'])->send(new GestorCorreos($detalle));
             }

@@ -1,4 +1,7 @@
 *
 !fonts
+!images
 !fonts/*
+!images/*
+!images/*/*
 !.gitignore
