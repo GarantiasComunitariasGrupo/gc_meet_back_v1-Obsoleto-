@@ -18,7 +18,7 @@ class ModelWithEvents extends Model
         parent::boot();
 
         $authorization = request()->header('Authorization');
-        if(isset($authorization) && explode('|', $authorization)[0] > 0) {
+        if(isset($authorization) && count(explode('|', $authorization)) > 1) {
             static::$userLogModel = '\App\Http\Controllers\Gcm_Log_Acciones_Convocado_Controller';
         } else {
             static::$userLogModel = '\App\Http\Controllers\Gcm_Log_Acciones_Usuario_Controller';

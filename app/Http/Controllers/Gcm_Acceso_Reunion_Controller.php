@@ -110,7 +110,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 $response = array(
                     'ok' => empty($log) ? true : false,
                     'response' => empty($log) ?
-                        'Invitaciones enviadas correctamente, por favor revisar el correo electrónico.' : $send['error'],
+                    'Invitaciones enviadas correctamente, por favor revisar el correo electrónico.' : $send['error'],
                 );
             } else {
                 $response = array('ok' => false, 'response' => 'El usuario no ha sido convocado para ninguna reunión');
@@ -119,7 +119,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             return response()->json($response, 200);
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
-            return response()->json(['ok' => false, 'response' => $th->getMessage().'-'.$th->getLine()], 500);
+            return response()->json(['ok' => false, 'response' => $th->getMessage() . '-' . $th->getLine()], 500);
         }
     }
 
@@ -731,8 +731,8 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 $response = array(
                     'ok' => empty($log) ? true : false,
                     'response' => empty($log)
-                        ? 'Las representaciones se han cancelado correctamente.'
-                        : $log,
+                    ? 'Las representaciones se han cancelado correctamente.'
+                    : $log,
                 );
 
                 return response()->json($response, 200);
@@ -841,17 +841,17 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 ->leftJoinSub($respose, 'rsc', function ($join) {
                     $join->on('rsc.id_programa', '=', 'gcm_programacion.id_programa');
                 })->select(
-                    'gcm_programacion.*',
-                    'gra.descripcion as rol_acta_descripcion',
-                    'gra.firma as rol_acta_firma',
-                    'gra.acta as rol_acta_acta',
-                    DB::raw('GROUP_CONCAT(gcm_archivos_programacion.id_archivo_programacion SEPARATOR "|") AS id_archivo_programacion_archivos'),
-                    DB::raw('GROUP_CONCAT(gcm_archivos_programacion.descripcion SEPARATOR "|") AS descripciones_archivos'),
-                    DB::raw('GROUP_CONCAT(gcm_archivos_programacion.id_programa SEPARATOR "|") AS id_programas_archivos'),
-                    DB::raw('GROUP_CONCAT(gcm_archivos_programacion.peso SEPARATOR "|") AS pesos_archivos'),
-                    DB::raw('GROUP_CONCAT(gcm_archivos_programacion.url SEPARATOR "|") AS url_archivos'),
-                    'rsc.descripcion as response'
-                )
+                'gcm_programacion.*',
+                'gra.descripcion as rol_acta_descripcion',
+                'gra.firma as rol_acta_firma',
+                'gra.acta as rol_acta_acta',
+                DB::raw('GROUP_CONCAT(gcm_archivos_programacion.id_archivo_programacion SEPARATOR "|") AS id_archivo_programacion_archivos'),
+                DB::raw('GROUP_CONCAT(gcm_archivos_programacion.descripcion SEPARATOR "|") AS descripciones_archivos'),
+                DB::raw('GROUP_CONCAT(gcm_archivos_programacion.id_programa SEPARATOR "|") AS id_programas_archivos'),
+                DB::raw('GROUP_CONCAT(gcm_archivos_programacion.peso SEPARATOR "|") AS pesos_archivos'),
+                DB::raw('GROUP_CONCAT(gcm_archivos_programacion.url SEPARATOR "|") AS url_archivos'),
+                'rsc.descripcion as response'
+            )
                 ->where([['id_reunion', $id_reunion], ['gcm_programacion.estado', '!=', '4']])
                 ->groupBy('gcm_programacion.id_programa')->get()->toArray();
 
@@ -1009,8 +1009,8 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 ])->get();
 
             $response = array(
-                'ok' => (count($base) > 0) ? true : false,
-                'response' => (count($base) > 0) ? $base : 'No hay resultados',
+                'ok' => true,
+                'response' => $base,
             );
 
             return response()->json($response, 200);
@@ -1239,8 +1239,8 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 ])->get();
 
             $response = array(
-                'ok' => (count($base) > 0) ? true : false,
-                'response' => (count($base) > 0) ? $base : 'No hay resultados',
+                'ok' => true,
+                'response' => $base,
             );
 
             return response()->json($response, 200);
@@ -1660,66 +1660,67 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         }
     }
 
-    public function getProgramas($id_reunion) {
+    public function getProgramas($id_reunion)
+    {
         $base = Gcm_Programacion::leftJoin('gcm_archivos_programacion', 'gcm_archivos_programacion.id_programa', '=', 'gcm_programacion.id_programa')
-        ->leftJoin('gcm_roles_actas as gra', 'gcm_programacion.id_rol_acta', '=', 'gra.id_rol_acta')
-        ->select(
-            'gcm_programacion.*',
-            'gra.descripcion as rol_acta_descripcion',
-            'gra.firma as rol_acta_firma',
-            'gra.acta as rol_acta_acta',
-            DB::raw('GROUP_CONCAT(gcm_archivos_programacion.id_archivo_programacion SEPARATOR "|") AS id_archivo_programacion_archivos'),
-            DB::raw('GROUP_CONCAT(gcm_archivos_programacion.descripcion SEPARATOR "|") AS descripciones_archivos'),
-            DB::raw('GROUP_CONCAT(gcm_archivos_programacion.id_programa SEPARATOR "|") AS id_programas_archivos'),
-            DB::raw('GROUP_CONCAT(gcm_archivos_programacion.peso SEPARATOR "|") AS pesos_archivos'),
-            DB::raw('GROUP_CONCAT(gcm_archivos_programacion.url SEPARATOR "|") AS url_archivos')
-        )->where([['gcm_programacion.id_reunion', $id_reunion], ['gcm_programacion.estado', '!=', '4']])->groupBy('gcm_programacion.id_programa')->get()->toArray();
+            ->leftJoin('gcm_roles_actas as gra', 'gcm_programacion.id_rol_acta', '=', 'gra.id_rol_acta')
+            ->select(
+                'gcm_programacion.*',
+                'gra.descripcion as rol_acta_descripcion',
+                'gra.firma as rol_acta_firma',
+                'gra.acta as rol_acta_acta',
+                DB::raw('GROUP_CONCAT(gcm_archivos_programacion.id_archivo_programacion SEPARATOR "|") AS id_archivo_programacion_archivos'),
+                DB::raw('GROUP_CONCAT(gcm_archivos_programacion.descripcion SEPARATOR "|") AS descripciones_archivos'),
+                DB::raw('GROUP_CONCAT(gcm_archivos_programacion.id_programa SEPARATOR "|") AS id_programas_archivos'),
+                DB::raw('GROUP_CONCAT(gcm_archivos_programacion.peso SEPARATOR "|") AS pesos_archivos'),
+                DB::raw('GROUP_CONCAT(gcm_archivos_programacion.url SEPARATOR "|") AS url_archivos')
+            )->where([['gcm_programacion.id_reunion', $id_reunion], ['gcm_programacion.estado', '!=', '4']])->groupBy('gcm_programacion.id_programa')->get()->toArray();
 
-    $base = array_map(function ($item) {
-        $item['archivos'] = [];
-        if (!empty($item['descripciones_archivos'])) {
-            $descripcionesArchivo = explode('|', $item['descripciones_archivos']);
-            $idArchivo = explode('|', $item['id_archivo_programacion_archivos']);
-            $idPrograma = explode('|', $item['id_programas_archivos']);
-            $pesosArchivo = explode('|', $item['pesos_archivos']);
-            $urlArchivo = explode('|', $item['url_archivos']);
+        $base = array_map(function ($item) {
+            $item['archivos'] = [];
+            if (!empty($item['descripciones_archivos'])) {
+                $descripcionesArchivo = explode('|', $item['descripciones_archivos']);
+                $idArchivo = explode('|', $item['id_archivo_programacion_archivos']);
+                $idPrograma = explode('|', $item['id_programas_archivos']);
+                $pesosArchivo = explode('|', $item['pesos_archivos']);
+                $urlArchivo = explode('|', $item['url_archivos']);
 
-            for ($i = 0; $i < count($descripcionesArchivo); $i++) {
-                array_push($item['archivos'], [
-                    "id_archivo_programacion" => $idArchivo[$i],
-                    "descripcion" => $descripcionesArchivo[$i],
-                    "id_programa" => $idPrograma[$i],
-                    "peso" => $pesosArchivo[$i],
-                    "url" => $urlArchivo[$i],
-                ]);
+                for ($i = 0; $i < count($descripcionesArchivo); $i++) {
+                    array_push($item['archivos'], [
+                        "id_archivo_programacion" => $idArchivo[$i],
+                        "descripcion" => $descripcionesArchivo[$i],
+                        "id_programa" => $idPrograma[$i],
+                        "peso" => $pesosArchivo[$i],
+                        "url" => $urlArchivo[$i],
+                    ]);
+                }
             }
-        }
 
-        unset($item['id_archivo_programacion_archivos']);
-        unset($item['descripciones_archivos']);
-        unset($item['id_programas_archivos']);
-        unset($item['pesos_archivos']);
-        unset($item['url_archivos']);
+            unset($item['id_archivo_programacion_archivos']);
+            unset($item['descripciones_archivos']);
+            unset($item['id_programas_archivos']);
+            unset($item['pesos_archivos']);
+            unset($item['url_archivos']);
 
-        return $item;
-    }, $base);
+            return $item;
+        }, $base);
 
-    $programas = array_filter($base, function ($item) {
-        return $item['relacion'] === null || $item['relacion'] === '';
-    });
-
-    $programas = array_values($programas);
-
-    $programas = array_map(function ($item) use ($base) {
-        $item['opciones'] = array_filter($base, function ($elm) use ($item) {
-            return $elm['relacion'] === $item['id_programa'];
+        $programas = array_filter($base, function ($item) {
+            return $item['relacion'] === null || $item['relacion'] === '';
         });
-        $item['opciones'] = array_values($item['opciones']);
 
-        return $item;
-    }, $programas);
+        $programas = array_values($programas);
 
-    return $programas;
+        $programas = array_map(function ($item) use ($base) {
+            $item['opciones'] = array_filter($base, function ($elm) use ($item) {
+                return $elm['relacion'] === $item['id_programa'];
+            });
+            $item['opciones'] = array_values($item['opciones']);
+
+            return $item;
+        }, $programas);
+
+        return $programas;
     }
 
     /**
@@ -1740,11 +1741,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             $informacion = json_decode($request->summonedList, true);
             $summonedList = $informacion['ids'];
 
-
             $programList = null;
-
-
-
 
             $meet = null;
             $mailList = [];
