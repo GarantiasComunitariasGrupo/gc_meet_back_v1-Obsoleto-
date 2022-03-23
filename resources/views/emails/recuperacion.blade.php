@@ -57,7 +57,6 @@
                             <td
                                 style="text-align:center; line-height:28px; font-weight:bold; position:relative;">
                                 <div>
-                                    {{env('API_BASE') . '/storage/images/mail/GCL.jpg'}}
                                     <img src="{{env('API_BASE') . '/storage/images/mail/GCL.jpg'}}"
                                         style="width:700px; height:277px; display:block; border:none;">
                                 </div>
