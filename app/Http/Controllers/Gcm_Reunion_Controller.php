@@ -311,7 +311,7 @@ class Gcm_Reunion_Controller extends Controller
             return response()->json(["response" => 'exitoso'], 200);
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
-            return response()->json(["error" => $th->getMessage()], 500);
+            return response()->json(["error" => $th->getMessage() . ' - ' . $th->getLine()], 500);
         }
     }
 

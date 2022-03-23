@@ -1009,8 +1009,8 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 ])->get();
 
             $response = array(
-                'ok' => (count($base) > 0) ? true : false,
-                'response' => (count($base) > 0) ? $base : 'No hay resultados',
+                'ok' => true,
+                'response' => $base,
             );
 
             return response()->json($response, 200);
@@ -1239,8 +1239,8 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 ])->get();
 
             $response = array(
-                'ok' => (count($base) > 0) ? true : false,
-                'response' => (count($base) > 0) ? $base : 'No hay resultados',
+                'ok' => true,
+                'response' => $base,
             );
 
             return response()->json($response, 200);
