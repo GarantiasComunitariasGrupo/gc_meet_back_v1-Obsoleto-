@@ -256,11 +256,11 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             ->join('gcm_recursos AS grc', 'grc.id_recurso', 'grl.id_recurso')
             ->where([['gcr.estado', 1], ['grc.identificacion', $identificacion], ['gcr.id_reunion', '=', function ($query) use ($idConvocadoReunion) {
                 $query->from('gcm_convocados_reunion')->where('id_convocado_reunion', $idConvocadoReunion)->select('id_reunion');
-            }]])->whereNotNull('gcr.representacion')->select('grc.identificacion');
+            }]])->whereNotNull('gcr.representacion')->select('grc.identificacion')->get();
 
         $response = array(
-            'ok' => (count($restricciones->get()) > 0) ? true : false,
-            'response' => (count($restricciones->get()) > 0) ? [['descripcion' => 'No es posible designar a un representante que ha notificado la no asistencia a la reunión']] : ('No hay resultados' . $restricciones->toSql()),
+            'ok' => (count($restricciones) > 0) ? true : false,
+            'response' => (count($restricciones) > 0) ? [['descripcion' => 'No es posible designar a un representante que ha notificado la no asistencia a la reunión']] : ('No hay resultados'),
         );
 
         return response()->json($response, 200);
@@ -280,10 +280,10 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
             /**Se encripta id_convocado_reunion */
             $id = $encrypt->encriptar($request->idConvocadoReunion);
-            $txtSMS = "Para acceder a la reunión, debe acceder al siguiente link: " . env('VIEW_BASE') . "/public/reunion/firma/{$id}";
+            $txtSMS = "Para continuar con el proceso de designación de poder, debe acceder al siguiente link: " . env('VIEW_BASE') . "/public/reunion/firma/{$id}";
 
             /** Petición HTTP::POST para consumir servicio de envío SMS */
-            $request = Http::post(env('GCAPI_BASE') . "/api/messenger/enviar-sms/{$request->numeroCelular}", [
+            $request = Http::withHeaders(['Origin' => env('API_BASE')])->post(env('GCAPI_BASE') . "/api/messenger/enviar-sms/{$request->numeroCelular}", [
                 'password' => env('GCAPI_PASS'),
                 'sms' => $txtSMS,
             ]);
@@ -375,28 +375,31 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 /**
                  * Se realiza petición HTTP::GET para enviar URL de la firma a el socket de NODEJS
                  */
-                $request = Http::withOptions([
-                    'curl' => array(CURLOPT_SSL_VERIFYPEER => false, CURLOPT_SSL_VERIFYHOST => false),
-                    'verify' => false,
-                ])->get(env('API_SOCKETS') . "/get-url-firma", [
-                    'url_firma' => "firmas/{$reunion->id_reunion}/{$filename}",
-                    'id_convocado_reunion' => $id,
-                ]);
+
+                // $request = Http::withOptions([
+                //     'curl' => array(CURLOPT_SSL_VERIFYPEER => false, CURLOPT_SSL_VERIFYHOST => false),
+                //     'verify' => false,
+                // ])->get(env('API_SOCKETS') . "/get-url-firma", [
+                //     'url_firma' => "firmas/{$reunion->id_reunion}/{$filename}",
+                //     'id_convocado_reunion' => $id,
+                // ]);
 
                 /** Se valida estado de la petición */
-                if ($request->status() === 200) {
+                // if ($request->status() === 200) {
 
-                    /** Se captura respuesta de la petición */
-                    $result = $request->json();
+                //     /** Se captura respuesta de la petición */
+                //     $result = $request->json();
 
-                    if ($result['ok']) {
-                        $response = array('ok' => true, 'response' => 'Firma ok');
-                    } else {
-                        $response = array('ok' => false, 'response' => 'Proceso finalizado por el usuario');
-                    }
+                //     if ($result['ok']) {
+                //         $response = array('ok' => true, 'response' => 'Firma ok');
+                //     } else {
+                //         $response = array('ok' => false, 'response' => 'Proceso finalizado por el usuario');
+                //     }
 
-                    return response()->json($response, 200);
-                }
+                //     return response()->json($response, 200);
+                // }
+
+                return response()->json(['ok' => true, 'url_firma' => "firmas/{$reunion->id_reunion}/{$filename}", 'id_convocado_reunion' => $id], 200);
             }
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, ['error' => $th->getMessage(), 'linea' => $th->getLine()], null, null);
@@ -503,8 +506,9 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             $programList = null;
 
             if (!$programList) {
-                $programList = Gcm_Programacion::where([['id_reunion', $request->params['id_reunion']], ['estado', '!=', '4']])
-                    ->whereNull('relacion')->orderBy('orden', 'ASC')->get();
+                // $programList = Gcm_Programacion::where([['id_reunion', $request->params['id_reunion']], ['estado', '!=', '4']])
+                //     ->whereNull('relacion')->orderBy('orden', 'ASC')->get();
+                $programList = $this->getProgramas($request->params['id_reunion']);
             }
 
             /** Se actualiza número de celular en caso de ser modificado */

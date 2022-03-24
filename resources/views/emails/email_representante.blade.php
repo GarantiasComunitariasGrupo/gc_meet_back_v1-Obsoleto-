@@ -109,10 +109,17 @@
             <tr align="lef">
                 <td style="padding: 15px; background-color:#ffffff;">
                     @if(count($data['programas']) > 0)
-                    <h1 style="margin-bottom: 16px; font-size: 15px; color: #171717; font-family: Helvetica">Programación</h1>
+                    <h1 style="margin-bottom: 16px; font-size: 15px; color: #171717; font-family: Helvetica">Orden del día</h1>
                     @endif
                     @for($i = 0; $i < count($data['programas']); $i++) <p style="font-size: 15px; color: #545454; font-family: Helvetica">
                         {{$data['programas'][$i]['orden']}}. {{$data['programas'][$i]['titulo']}}
+                        @php
+                        $letra = 'a';
+                        @endphp
+                        @for($j = 0; $j < count($data['programas'][$i]['opciones']); $j++) <p style="margin-left: 10px; font-size: 15px; color: #545454; font-family: Helvetica">
+                        {{$letra++}}. {{$data['programas'][$i]['opciones'][$j]['titulo']}}
+                        </p>
+                        @endfor
                         </p>
                         @endfor
                 </td>
