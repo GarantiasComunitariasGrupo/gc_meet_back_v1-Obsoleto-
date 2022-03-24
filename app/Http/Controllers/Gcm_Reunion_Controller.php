@@ -606,7 +606,7 @@ class Gcm_Reunion_Controller extends Controller
                 return $row->identificacion;
             }, json_decode($recursos));
 
-            $recursos_gcm = Http::post(env('GCAPI_BASE') . '/api/gccrm/get-employees', ['password' => env('GCAPI_PASS'), 'excluded_identifications' => json_encode($data)]);
+            $recursos_gcm = Http::withHeaders(['Origin' => env('API_BASE')])->post(env('GCAPI_BASE') . '/api/gccrm/get-employees', ['password' => env('GCAPI_PASS'), 'excluded_identifications' => json_encode($data)]);
             return response()->json($recursos_gcm->json());
         } catch (\Throwable $th) {
             Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);

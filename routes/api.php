@@ -172,6 +172,8 @@ Route::group([
     'prefix' => 'meets',
 ], function ($router) {
     Route::get('/traer-reunion/{id_reunion}', [Gcm_Reunion_Controller::class, 'getReunion']);
+    // Programas
+    Route::get('/traer-programas/{id_reunion}', [Gcm_Reunion_Controller::class, 'getProgramas']);
 });
 
 /**
@@ -190,8 +192,6 @@ Route::group([
     Route::post('/reprogramar-reunion', [Gcm_Reunion_Controller::class, 'reprogramarReunion']);
     // Grupos
     Route::get('/traer-grupos', [Gcm_Reunion_Controller::class, 'getGrupos']);
-    // Programas
-    Route::get('/traer-programas/{id_reunion}', [Gcm_Reunion_Controller::class, 'getProgramas']);
     // Convocados
     Route::get('/traer-convocados/{id_reunion}', [Gcm_Reunion_Controller::class, 'getConvocados']);
     Route::post('/reenviar-correos', [Gcm_Reunion_Controller::class, 'reenviarCorreos']);
