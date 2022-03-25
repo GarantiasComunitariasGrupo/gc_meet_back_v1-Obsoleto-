@@ -64,7 +64,7 @@
                 </td>
             </tr>
 
-            @for($i = 0; $i < count($data['body']); $i++) 
+            @for($i = 0; $i < count($data['body']); $i++)
             <tr>
                 <td>
                     <div class="card"
@@ -116,7 +116,7 @@
                                     </a>
                                 </td>
                             </tr>
-                            
+
                         </table>
                     </div>
                 </td>
