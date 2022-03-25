@@ -58,7 +58,7 @@
             <tr align="center">
                 <td style="padding: 15px; background-color:#ffffff;">
                     <h1 style="margin-bottom: 10px; font-size: 30px; color: #171717; font-family: Helvetica">¡Hola,
-                        Danilo!</h1>
+                        {{$data['body'][0]['nombre']}}!</h1>
                     <h1 style="font-size: 15px; color: #545454; font-family: Helvetica">Has sido convocado a las
                         siguientes reuniones en la plataforma de GcMeet:</h1>
                 </td>
