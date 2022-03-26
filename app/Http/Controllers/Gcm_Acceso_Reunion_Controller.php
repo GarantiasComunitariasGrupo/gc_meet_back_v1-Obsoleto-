@@ -981,7 +981,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
     }
 
     /**
-     * Función encargada de obtener la lista de convocados para una reunión
+     * Función encargada de obtener la lista de convocados para una reunión (No repite recurso)
      * @param $idReunion => id_reunion
      * @return JSON
      */
@@ -1217,6 +1217,11 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         }
     }
 
+    /**
+     * Función encargada de obtener la lista de convocados para una reunión (Repite recurso)
+     * @param $idReunion => id_reunion
+     * @return JSON
+     */
     public function getAllSummonedList($idReunion)
     {
         $response = array();
@@ -1227,12 +1232,14 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 ->join(DB::raw('gcm_relaciones AS grc'), 'gcr.id_relacion', '=', 'grc.id_relacion')
                 ->join(DB::raw('gcm_recursos AS grs'), 'grc.id_recurso', '=', 'grs.id_recurso')
                 ->join(DB::raw('gcm_roles AS grl'), 'grc.id_rol', '=', 'grl.id_rol')
+                ->leftJoin(DB::raw('gcm_asistencia_reuniones AS gar'), 'gar.id_convocado_reunion', '=', 'gcr.id_convocado_reunion')
                 ->where(DB::raw('gcr.id_reunion'), $idReunion)
                 ->where('gcr.estado', 1)
                 ->select([
                     DB::raw('grs.*'),
                     DB::raw('grl.id_rol'),
                     DB::raw('grl.descripcion AS rol'),
+                    DB::raw('IF(gar.id_convocado_reunion, 1, 0) AS hasLoggedin'),
                     'grc.id_grupo',
                     'gcr.id_convocado_reunion',
                     'gcr.tipo',
@@ -1826,6 +1833,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 ->where([['id_reunion', $meet->id_reunion], ['tipo', '5']])
                 ->whereNotIn('gcm_programacion.estado', [3, 4])
                 ->get();
+
             $programIdList = $programList->map(function ($item) {return $item->id_programa;});
 
             $optionList = Gcm_Programacion::whereIn('relacion', $programIdList)->get();
@@ -1834,6 +1842,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             $election = (object) [];
             $programList->each(function ($program) use ($optionList, $answerList, &$election) {
                 $programOptionList = $optionList->filter(function ($item) use ($program) {return $item->relacion == $program->id_programa;})->values();
+                $programOptionList->push((object)['id_programa' => '0', 'descripcion' => 'Rechazar (requiere otra elección)']);
 
                 $programAnswerList = $answerList->filter(function ($item) use ($program) {return $item->id_programa == $program->id_programa;})->values()
                     ->map(function ($item) {return json_decode($item->descripcion)->seleccion[0];});

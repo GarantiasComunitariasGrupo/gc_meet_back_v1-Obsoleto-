@@ -67,8 +67,8 @@
 
             <tr align="center">
                 <td style="padding: 15px; background-color:#ffffff;">
-                    <h1 style="margin-bottom: 10px; font-size: 30px; color: #171717; font-family: Helvetica">¡Hola, {{$data['nombre']}}!</h1>
-                    <h1 style="font-size: 15px; color: #545454; font-family: Helvetica">{{$data['nombreAnfitrion']}} lo ha convocado a usted a que lo represente en la reunión de {{$data['titulo']}}</h1>
+                    <h1 style="margin-bottom: 10px; font-size: 30px; color: #171717; font-family: Helvetica;">¡Hola, {{$data['nombre']}}!</h1>
+                    <h1 style="font-size: 15px; color: #545454; font-family: Helvetica;">{{$data['nombreAnfitrion']}} lo ha convocado a usted a que lo represente en la reunión de {{$data['titulo']}}</h1>
                 </td>
             </tr>
 
@@ -89,16 +89,16 @@
                             <td style="margin-top:0; margin-bottom: 12px; padding-right: 12px;">
                                 <img style="width:50px; height: 50px;" src="{{env('API_BASE') . '/storage/images/mail/calendar-bk.png'}}">
                                 <div style="align-self: center; text-align: left; padding-left: 15px; display: inline-block;">
-                                    <div style="font-size: 16px; color: #545454; font-family: Helvetica">Fecha:</div>
-                                    <div style="font-size: 25px; color: #171717; font-family: Helvetica">{{$data['fecha_reunion']}}</div>
+                                    <div style="font-size: 16px; color: #545454; font-family: Helvetica;">Fecha:</div>
+                                    <div style="font-size: 25px; color: #171717; font-family: Helvetica;">{{$data['fecha_reunion']}}</div>
                                 </div>
                             </td>
 
                             <td style="margin-top:0; margin-bottom: 12px; padding-left: 12px;">
                                 <img style="width: 50px; height: 50px;" src="{{env('API_BASE') . '/storage/images/mail/clock-bk.png'}}">
                                 <div style="align-self: center; text-align: left; padding-left: 15px; display: inline-block;">
-                                    <div style="font-size: 16px; color: #545454; font-family: Helvetica">Hora</div>
-                                    <div style="font-size: 25px; color: #171717; font-family: Helvetica">{{$data['hora']}}</div>
+                                    <div style="font-size: 16px; color: #545454; font-family: Helvetica;">Hora</div>
+                                    <div style="font-size: 25px; color: #171717; font-family: Helvetica;">{{$data['hora']}}</div>
                                 </div>
                             </td>
                         </tr>
@@ -109,15 +109,15 @@
             <tr align="lef">
                 <td style="padding: 15px; background-color:#ffffff;">
                     @if(count($data['programas']) > 0)
-                    <h1 style="margin-bottom: 16px; font-size: 15px; color: #171717; font-family: Helvetica">Orden del día</h1>
+                    <h1 style="margin-bottom: 16px; font-size: 15px; color: #171717; font-family: Helvetica; font-weight: bold;">Orden del día</h1>
                     @endif
-                    @for($i = 0; $i < count($data['programas']); $i++) <p style="font-size: 15px; color: #545454; font-family: Helvetica">
-                        {{$data['programas'][$i]['orden']}}. {{$data['programas'][$i]['titulo']}}
+                    @for($i = 0; $i < count($data['programas']); $i++) <p style="font-size: 15px; color: #545454; font-family: Helvetica;">
+                        <b>{{$data['programas'][$i]['orden']}}</b>. {{$data['programas'][$i]['titulo']}}
                         @php
                         $letra = 'a';
                         @endphp
-                        @for($j = 0; $j < count($data['programas'][$i]['opciones']); $j++) <p style="margin-left: 10px; font-size: 15px; color: #545454; font-family: Helvetica">
-                        {{$letra++}}. {{$data['programas'][$i]['opciones'][$j]['titulo']}}
+                        @for($j = 0; $j < count($data['programas'][$i]['opciones']); $j++) <p style="margin-left: 15px; font-size: 15px; color: #545454; font-family: Helvetica;">
+                        <b>{{$letra++}}</b>. {{$data['programas'][$i]['tipo'] == '5' ?  strtoupper($data['programas'][$i]['opciones'][$j]['descripcion']) : $data['programas'][$i]['opciones'][$j]['titulo']}}
                         </p>
                         @endfor
                         </p>
@@ -127,16 +127,16 @@
 
             <tr align="center">
                 <td style="padding: 15px; background-color:#ffffff;">
-                    <h1 style="margin: 10px; font-size:15px; color: #545454; font-family: Helvetica">
+                    <h1 style="margin: 10px; font-size:15px; color: #545454; font-family: Helvetica;">
                         Puedes ingresar a través del siguiente enlace:
                     </h1>
 
                     <a href="{{$data['url']}}" style="background: #9F8C5B; margin:0; font-size: 16px; text-decoration: none; padding: 10px 15px; color: #171717; border-radius: 4px; display: inline-block;">
-                        <span style="font-weight: bold; color: #FFFFFF; font-family: Helvetica">Haz click aquí para ingresar</span>
+                        <span style="font-weight: bold; color: #FFFFFF; font-family: Helvetica;">Haz click aquí para ingresar</span>
                     </a>
 
-                    <p style="margin: 12px; font-size: 14px; color: #545454; font-family: Helvetica">
-                        Este enlace es único e intransferible y es la única manera de ingresar a la reunión
+                    <p style="margin: 12px; font-size: 14px; color: #545454; font-family: Helvetica;">
+                        Este enlace es único e intransferible, además es la única manera de ingresar a la reunión
                     </p>
                 </td>
             </tr>
