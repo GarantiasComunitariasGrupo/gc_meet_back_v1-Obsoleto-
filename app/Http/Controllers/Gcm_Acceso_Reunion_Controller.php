@@ -839,7 +839,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
             $respose = Gcm_Respuesta_Convocado::where('id_convocado_reunion', $id_convocado_reunion)->select();
 
-            //toma todos los datos de programacion sin importar si tiene o no archivos
+            // toma todos los datos de programacion sin importar si tiene o no archivos
             $base = Gcm_Programacion::leftJoin('gcm_archivos_programacion', 'gcm_archivos_programacion.id_programa', '=', 'gcm_programacion.id_programa')
                 ->leftJoin('gcm_roles_actas as gra', 'gcm_programacion.id_rol_acta', '=', 'gra.id_rol_acta')
                 ->leftJoinSub($respose, 'rsc', function ($join) {
@@ -899,6 +899,15 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                     return $elm['relacion'] === $item['id_programa'];
                 });
                 $item['opciones'] = array_values($item['opciones']);
+
+                $item['opciones'] = array_map(function ($element) use ($base) {
+                    $element['opciones'] = array_filter($base, function ($el) use ($element) {
+                        return $el['relacion'] === $element['id_programa'];
+                    });
+                    $element['opciones'] = array_values($element['opciones']);
+
+                    return $element;
+                }, $item['opciones']);
 
                 return $item;
             }, $programas);
@@ -1290,15 +1299,23 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 $this->liberarOrden($request->id_reunion, $request->orden);
             }
 
-            $id_rol_acta = null;
-            if ($request->id_acta != null && isset($request->rol_acta_descripcion)) {
-                $rol_acta_existe = Gcm_Rol_Acta::where([['id_acta', $request->id_acta], ['descripcion', $request->rol_acta_descripcion]])->first();
+            $id_rol_acta = $this->stringNullToNull($request->id_rol_acta);
+            $idActaReq = $this->stringNullToNull($request->id_acta);
+            $rolActaReq = $this->stringNullToNull($request->rol_acta_descripcion);
+            if ($idActaReq != null && isset($rolActaReq)) {
+                $rol_acta_existe = null;
+                if (isset($id_rol_acta)) {
+                    $rol_acta_existe = Gcm_Rol_Acta::where('id_rol_acta', $id_rol_acta)->first();
+                }
+                if (!isset($rol_acta_existe)) {
+                    $rol_acta_existe = Gcm_Rol_Acta::where([['id_acta', $idActaReq], ['descripcion', $rolActaReq]])->first();
+                }
                 $rol_acta = !$rol_acta_existe ? new Gcm_Rol_Acta() : Gcm_Rol_Acta::findOrFail($rol_acta_existe->id_rol_acta);
 
-                $rol_acta->descripcion = $request->rol_acta_descripcion;
                 $rol_acta->firma = $request->rol_acta_firma;
                 $rol_acta->acta = $request->rol_acta_acta;
-                $rol_acta->id_acta = $request->id_acta;
+                $rol_acta->descripcion = $rolActaReq;
+                $rol_acta->id_acta = $idActaReq;
                 $rol_acta->estado = 1;
                 $rol_acta->save();
                 $id_rol_acta = $rol_acta->id_rol_acta;
@@ -1317,6 +1334,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             $programa_nuevo->titulo = $this->stringNullToNull($request->titulo);
             $programa_nuevo->tipo = $this->stringNullToNull($request->tipo);
             $programa_nuevo->id_reunion = $this->stringNullToNull($request->id_reunion);
+            $programa_nuevo->id_convocado_reunion = $this->stringNullToNull($request->id_convocado_reunion);
             $programa_nuevo->id_rol_acta = $id_rol_acta;
             $programa_nuevo->relacion = null;
             $programa_nuevo->orden = $request->orden;
@@ -1408,8 +1426,33 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
             // Valida que si vengan opciones para registrar
             if (isset($request['opcion_titulo'])) {
-
+                $realIndex = 0;
                 for ($j = 0; $j < count($request['opcion_titulo']); $j++) {
+
+                    $opcionTipo = $this->stringNullToNull($request['opcion_tipo'][$j]);
+
+                    $id_rol_acta_opcion = null;
+                    if ($idActaReq != null && $opcionTipo == 5) {
+                        $id_rol_acta_opcion = $this->stringNullToNull($request['opcion_id_rol_acta'][$j]);
+                        $rol_acta_opcion_existe = null;
+
+                        if (isset($id_rol_acta_opcion)) {
+                            $rol_acta_opcion_existe = Gcm_Rol_Acta::where('id_rol_acta', $id_rol_acta_opcion)->first();
+                        }
+                        if (!isset($rol_acta_opcion_existe)) {
+                            $rol_acta_opcion_existe = Gcm_Rol_Acta::where([['id_acta', $idActaReq], ['descripcion', $request['opcion_titulo'][$j]]])->first();
+                        }
+
+                        $rol_acta_opcion = !$rol_acta_opcion_existe ? new Gcm_Rol_Acta() : Gcm_Rol_Acta::findOrFail($rol_acta_opcion_existe->id_rol_acta);
+
+                        $rol_acta_opcion->descripcion = $request['opcion_titulo'][$j];
+                        $rol_acta_opcion->id_acta = $idActaReq;
+                        $rol_acta_opcion->estado = 1;
+                        $rol_acta_opcion->firma = 1;
+                        $rol_acta_opcion->acta = 0;
+                        $rol_acta_opcion->save();
+                        $id_rol_acta_opcion = $rol_acta_opcion->id_rol_acta;
+                    }
 
                     // Registra las opciones
                     $opcion_nueva = new Gcm_Programacion;
@@ -1425,11 +1468,15 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                     $opcion_nueva->titulo = $this->stringNullToNull($request['opcion_titulo'][$j]);
                     $opcion_nueva->id_reunion = $this->stringNullToNull($request->id_reunion);
                     $opcion_nueva->relacion = $this->stringNullToNull($programa_nuevo->id_programa);
-                    $opcion_nueva->id_convocado_reunion = null;
-                    $opcion_nueva->id_rol_acta = null;
-                    $opcion_nueva->orden = $j + 1;
+                    $opcion_nueva->id_rol_acta = $id_rol_acta_opcion;
+                    $opcion_nueva->id_convocado_reunion = $this->stringNullToNull($request['opcion_id_convocado_reunion'][$j]);
+                    $opcion_nueva->tipo = $opcionTipo;
+                    $opcion_nueva->orden = $realIndex + 1;
                     $opcion_nueva->numeracion = 1;
-                    $opcion_nueva->tipo = 0;
+
+                    if (in_array($opcion_nueva->estado, [0, '0', 1, '1', 2, '2'])) {
+                        $realIndex++;
+                    }
 
                     $opcion_nueva->save();
 
@@ -1501,6 +1548,50 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                             $archivo_opcion_nuevo->save();
                         }
                     }
+
+                    $option2List = isset($request['opcion_id_programa_' . $j]) ? array_values(
+                        array_filter($request['opcion_id_programa_' . $j], function ($data) {
+                            return $this->stringNullToNull($data) !== null;
+                        })
+                    ) : [];
+
+                    $removedOption2List = Gcm_Programacion::where('relacion', $opcion_nueva->id_programa)
+                        ->whereNotIn('id_programa', $option2List)->get();
+
+                    $removedOption2List->each(function ($option2ToRemove) {
+                        $option2ToRemove->delete();
+                    });
+
+                    // Valida si la opción tiene opciones
+                    if (isset($request['opcion_titulo_' . $j])) {
+
+                        for ($k = 0; $k < count($request['opcion_titulo_' . $j]); $k++) {
+
+                            // Registra las opciones
+                            $opcion_nueva_hija = new Gcm_Programacion;
+                            if ($this->stringNullToNull($request['opcion_id_programa_' . $j][$k]) !== null) {
+                                $opcion_nueva_hija = Gcm_Programacion::find($request['opcion_id_programa_' . $j][$k]);
+                                if (!$opcion_nueva_hija) {
+                                    throw new \Error("La opción no existe", 1);
+                                }
+                            }
+
+                            $opcion_nueva_hija->estado = $request['opcion_estado_' . $j][$k] ? $request['opcion_estado_' . $j][$k] : 0;
+                            $opcion_nueva_hija->descripcion = $this->stringNullToNull($request['opcion_descripcion_' . $j][$k]);
+                            $opcion_nueva_hija->titulo = $this->stringNullToNull($request['opcion_titulo_' . $j][$k]);
+                            $opcion_nueva_hija->id_reunion = $this->stringNullToNull($request->id_reunion);
+                            $opcion_nueva_hija->relacion = $this->stringNullToNull($opcion_nueva->id_programa);
+                            $opcion_nueva_hija->tipo = $this->stringNullToNull($request['opcion_tipo_' . $j][$k]);
+                            $opcion_nueva_hija->id_convocado_reunion = null;
+                            $opcion_nueva_hija->id_rol_acta = null;
+                            $opcion_nueva_hija->orden = $k + 1;
+                            $opcion_nueva_hija->numeracion = 2;
+
+                            $opcion_nueva_hija->save();
+                        }
+
+                    }
+
                 }
             }
 
@@ -1820,6 +1911,88 @@ class Gcm_Acceso_Reunion_Controller extends Controller
         }
     }
 
+    public function sendMailToSummonRunning(Request $request)
+    {
+        try {
+
+            if (!isset($request->summonedList)) {
+                throw new \Error("sendMailToSummon: {summonedList} es requerido", 1);
+            }
+
+            $encrypt = new Encrypt();
+
+            $summonedList = json_decode($request->summonedList, true);
+
+            $programList = null;
+
+            $meet = null;
+            $mailList = [];
+
+            $imagenes = [
+                env('API_BASE') . '/storage/images/mail/GCL.jpg',
+                env('API_BASE') . '/storage/images/mail/GCP.jpg',
+                env('API_BASE') . '/storage/images/mail/GBR.jpg',
+                env('API_BASE') . '/storage/images/mail/GM.jpg',
+            ];
+
+            foreach ($summonedList as $id_convocado_reunion) {
+                $summoned = Gcm_Convocado_Reunion::findOrFail($id_convocado_reunion);
+                $summoned->fecha_envio_invitacion = date('Y-m-d H:i:s');
+                $summoned->save();
+
+                $resource = Gcm_Convocado_Reunion::join('gcm_relaciones AS rlc', 'gcm_convocados_reunion.id_relacion', '=', 'rlc.id_relacion')
+                    ->join('gcm_recursos AS rcs', 'rlc.id_recurso', '=', 'rcs.id_recurso')->where('id_convocado_reunion', $id_convocado_reunion)->first();
+
+                if (!$resource) {
+                    throw new \Error("Recurso no encontrado", 1);
+                }
+
+                if (!$programList) {
+                    // $programList = Gcm_Programacion::where([['id_reunion', $resource->id_reunion], ['estado', '!=', '4']])
+                    //     ->whereNull('relacion')->orderBy('orden', 'ASC')->get();
+                    $programList = $this->getProgramas($resource->id_reunion);
+                }
+
+                if (!$meet) {
+                    $meet = Gcm_Reunion::where('id_reunion', $resource->id_reunion)
+                        ->join('gcm_tipo_reuniones', 'gcm_tipo_reuniones.id_tipo_reunion', 'gcm_reuniones.id_tipo_reunion')
+                        ->first();
+
+                    $id_grupo = $meet->id_grupo;
+                    $titulo = $meet->titulo;
+
+                    if ($id_grupo) {
+                        $imagen = $imagenes[$id_grupo - 1];
+                    }
+                }
+
+                $token = $encrypt->encriptar($id_convocado_reunion);
+
+                $data = [
+                    'view' => 'emails.invitacion',
+                    'message' => 'Convocado a reunión en plataforma de juntas y asambleas',
+                    'imagen' => $imagen,
+                    'nombre' => $resource->nombre,
+                    'titulo' => $titulo,
+                    'descripcion' => $meet->descripcion,
+                    'fecha_reunion' => $meet->fecha_reunion,
+                    'hora' => $meet->hora,
+                    'programas' => $programList,
+                    'url' => env('VIEW_BASE') . '/public/reunion/acceso/' . $token,
+                ];
+
+                array_push($mailList, $resource->correo);
+                Mail::to($resource->correo)->send(new GestorCorreos($data));
+            }
+
+            Gcm_Log_Acciones_Sistema_Controller::save(4, array('Descripcion' => 'Envio correo reunión en curso', 'Correos' => $mailList), null);
+            return response()->json(["status" => true, "message" => 'Correo enviado correctamente'], 200);
+        } catch (\Throwable $th) {
+            Gcm_Log_Acciones_Sistema_Controller::save(7, array('mensaje' => $th->getMessage(), 'linea' => $th->getLine()), null);
+            return response()->json(["status" => false, "message" => $th->getMessage() . ' - ' . $th->getLine()], 200);
+        }
+    }
+
     public function checkElection(Request $request)
     {
         try {
@@ -1829,7 +2002,8 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             if ($meet->id_acta == null) {return response()->json(["status" => true, "message" => (object) []], 200);}
 
             $programList = Gcm_Programacion::join('gcm_roles_actas AS ra', 'gcm_programacion.id_rol_acta', 'ra.id_rol_acta')
-                ->select('gcm_programacion.*', 'ra.descripcion AS rol_acta')->whereNull(['relacion', 'id_convocado_reunion'])
+                ->select('gcm_programacion.*', 'ra.descripcion AS rol_acta')->whereNull(['id_convocado_reunion'])
+            // ->whereNull(['relacion', 'id_convocado_reunion'])
                 ->where([['id_reunion', $meet->id_reunion], ['tipo', '5']])
                 ->whereNotIn('gcm_programacion.estado', [3, 4])
                 ->get();
@@ -1842,7 +2016,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             $election = (object) [];
             $programList->each(function ($program) use ($optionList, $answerList, &$election) {
                 $programOptionList = $optionList->filter(function ($item) use ($program) {return $item->relacion == $program->id_programa;})->values();
-                $programOptionList->push((object)['id_programa' => '0', 'descripcion' => 'Rechazar (requiere otra elección)']);
+                $programOptionList->push((object) ['id_programa' => '0', 'titulo' => null, 'descripcion' => 'Rechazar (requiere otra elección)', 'relacion' => $program->id_programa]);
 
                 $programAnswerList = $answerList->filter(function ($item) use ($program) {return $item->id_programa == $program->id_programa;})->values()
                     ->map(function ($item) {return json_decode($item->descripcion)->seleccion[0];});
@@ -1873,13 +2047,34 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 $option = $value['elected'][0];
                 $program = Gcm_Programacion::find($option['relacion']);
                 if (!$program) {throw new \Error("saveElection: No se ha encontrado el programa", 1);}
-                $summoned = Gcm_Recurso::join('gcm_relaciones AS rlc', 'gcm_recursos.id_recurso', 'rlc.id_recurso')
-                    ->join('gcm_convocados_reunion AS crn', 'crn.id_relacion', 'rlc.id_relacion')
-                    ->where([['identificacion', $option['titulo']], ['crn.id_reunion', $program->id_reunion], ['crn.tipo', '!=', '1'], ['crn.estado', '1']])
-                    ->orderBy('crn.representacion', 'ASC')->first();
-                if (!$summoned) {throw new \Error("saveElection: No se ha encontrado el convocado", 1);}
-                $program->id_convocado_reunion = $summoned->id_convocado_reunion;
-                $program->save();
+
+                if ($option['id_programa'] == '0') { // Si se rechaza la elección se cancela el programa y se duplica
+                    $programTarget = Gcm_Programacion::where('id_programa', $option['relacion'])->first();
+                    $programClone = $programTarget->replicate();
+                    $programTarget->estado = 3;
+                    $programTarget->save();
+                    $programClone->estado = 0;
+                    $programClone->save();
+
+                    $optionTargetList = Gcm_Programacion::where('relacion', $option['relacion'])->get();
+                    foreach ($optionTargetList as $optionTarget) {
+                        $optionClone = $optionTarget->replicate();
+                        $optionTarget->estado = 3;
+                        $optionTarget->save();
+                        $optionClone->relacion = $programClone->id_programa;
+                        $optionClone->estado = 0;
+                        $optionClone->save();
+                    }
+                } else {
+                    $summoned = Gcm_Recurso::join('gcm_relaciones AS rlc', 'gcm_recursos.id_recurso', 'rlc.id_recurso')
+                        ->join('gcm_convocados_reunion AS crn', 'crn.id_relacion', 'rlc.id_relacion')
+                        ->where([['identificacion', $option['titulo']], ['crn.id_reunion', $program->id_reunion], ['crn.tipo', '!=', '1'], ['crn.estado', '1']])
+                        ->orderBy('crn.representacion', 'ASC')->first();
+                    if (!$summoned) {throw new \Error("saveElection: No se ha encontrado el convocado", 1);}
+                    $program->id_convocado_reunion = $summoned->id_convocado_reunion;
+                    $program->save();
+                }
+
             }
             return response()->json(["status" => true, "message" => 'Elecciones guardadas correctamente'], 200);
         } catch (\Throwable $th) {
@@ -1905,7 +2100,8 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             $programList = Gcm_Programacion::join('gcm_roles_actas AS ra', 'gcm_programacion.id_rol_acta', 'ra.id_rol_acta')
                 ->join('gcm_convocados_reunion AS cr', 'cr.id_convocado_reunion', 'gcm_programacion.id_convocado_reunion')
                 ->where([['gcm_programacion.id_reunion', $meet->id_reunion], ['gcm_programacion.tipo', '5'], ['ra.firma', '1']])
-                ->whereNull('gcm_programacion.relacion')->whereNotNull('gcm_programacion.id_convocado_reunion')
+                // ->whereNull('gcm_programacion.relacion')
+                ->whereNotNull('gcm_programacion.id_convocado_reunion')
                 ->whereNotIn('gcm_programacion.estado', [3, 4])
                 ->select('cr.*')->get();
 
