@@ -29,8 +29,6 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 class Gcm_Reunion_Controller extends Controller
 {
 
-    // MEETS MEETS MEETS MEETS MEETS MEETS MEETS MEETS MEETS MEETS MEETS MEETS MEETS MEETS MEETS MEETS MEETS MEETS MEETS
-
     /**
      * Trae todos los grupos registrados por un usuario con un estado en comun
      */
