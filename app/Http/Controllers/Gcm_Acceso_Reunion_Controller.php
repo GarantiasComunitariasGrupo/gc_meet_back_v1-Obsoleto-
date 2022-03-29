@@ -1420,6 +1420,15 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             $removedOptionList = Gcm_Programacion::where('relacion', $programa_nuevo->id_programa)
                 ->whereNotIn('id_programa', $optionList)->get();
 
+            // Elimina las opciones de las opciones
+            $childList = $removedOptionList->map(function ($child) {
+                return $child->id_programa;
+            });
+            $removedOptionChildList = Gcm_Programacion::whereIn('relacion', $childList->toArray())->get();
+            $removedOptionChildList->each(function ($optionChildToRemove) {
+                $optionChildToRemove->delete();
+            });
+
             $removedOptionList->each(function ($optionToRemove) {
                 $optionToRemove->delete();
             });
@@ -2100,7 +2109,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
             $programList = Gcm_Programacion::join('gcm_roles_actas AS ra', 'gcm_programacion.id_rol_acta', 'ra.id_rol_acta')
                 ->join('gcm_convocados_reunion AS cr', 'cr.id_convocado_reunion', 'gcm_programacion.id_convocado_reunion')
                 ->where([['gcm_programacion.id_reunion', $meet->id_reunion], ['gcm_programacion.tipo', '5'], ['ra.firma', '1']])
-                // ->whereNull('gcm_programacion.relacion')
+            // ->whereNull('gcm_programacion.relacion')
                 ->whereNotNull('gcm_programacion.id_convocado_reunion')
                 ->whereNotIn('gcm_programacion.estado', [3, 4])
                 ->select('cr.*')->get();
