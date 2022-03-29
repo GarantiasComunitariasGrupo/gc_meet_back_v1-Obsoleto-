@@ -2221,9 +2221,9 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
             ]);
 
-            $document->WriteHTML($request->style);
+            $document->WriteHTML(str_replace("styli", "style", $request->style));
 
-            $document->WriteHTML(str_replace("\n", "<br/>", $request->headerContent));
+            $document->WriteHTML(str_replace("\n", "<br/>", str_replace("styli", "style", $request->headerContent)));
 
             $document->AddPageByArray([
                 'margin-left' => 16,
@@ -2232,7 +2232,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
                 'margin-bottom' => 16,
             ]);
 
-            $document->WriteHTML(str_replace("\n", "<br/>", $request->pageContent));
+            $document->WriteHTML(str_replace("\n", "<br/>", str_replace("styli", "style", $request->pageContent)));
 
             if ($request->action === 'save') {
                 $subcarpeta = 'archivos_reunion/' . $request->id_reunion;
@@ -2240,6 +2240,7 @@ class Gcm_Acceso_Reunion_Controller extends Controller
 
                 if (!file_exists(storage_path($carpeta))) {
                     mkdir(storage_path($carpeta), 0777, true);
+                    chmod(storage_path($carpeta), 0777);
                 }
 
                 $meet = Gcm_Reunion::find($request->id_reunion);
